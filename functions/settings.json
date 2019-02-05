@@ -1,0 +1,19 @@
+
+{
+  "FEATURELEVEL": 1,
+  "CHANGELOG": "",
+
+  "PRIVATE_KEY": "",
+  
+  "CLOUD_FUNCTIONS_BASE": "",
+  
+  "SERVICEACCOUNT": "",
+
+  "AUDIENCE_URI": "",
+  "CLIENT_ID": "",
+  
+  "AUTH0_ACCOUNT": "",
+  "AUTH0_MGM_CLIENTID": "",
+  "AUTH0_MGM_CLIENTSECRET": "",
+  "AUTH0_DOMAIN": ""
+}
