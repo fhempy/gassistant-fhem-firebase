@@ -1521,7 +1521,7 @@ function registerClientApi(app) {
   app.post('/initsync', utils.jwtCheck, async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'initiate sync');
-    var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync?key=AIzaSyCpDJ9ZxUBW5V5lm5PSxdXrwA8LQz98Kjc', {
+    var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync?key=' + settings.HOMEGRAPH_APIKEY, {
       method: 'POST',
       headers: {
         'content-type': 'application/json'
