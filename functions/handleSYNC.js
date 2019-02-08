@@ -113,7 +113,7 @@ var processSYNC = function (devices) {
                     d.type = 'action.devices.types.SWITCH';
                 } else if (device.service_name === 'outlet') {
                     d.type = 'action.devices.types.OUTLET';
-                } else if (device.service_name === 'thermostat') {
+                } else if (device.service_name === 'thermostat' || device.service_name == 'thermometer') {
                     d.type = 'action.devices.types.THERMOSTAT';
                 } else if (device.service_name === 'coffeemaker') {
                     d.type = 'action.devices.types.COFFEE_MAKER';

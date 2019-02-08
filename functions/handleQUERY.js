@@ -4,6 +4,7 @@ const utils = require('./utils');
 const createDirective = require('./utils.js').createDirective;
 
 const uidlog = require('./logger').uidlog;
+const uiderror = require('./logger').uiderror;
 
 async function handleQUERY(uid, reqId, res, input) {
   await createQUERYPayloadResponse(input, uid, reqId, res);
@@ -18,13 +19,19 @@ async function createQUERYPayloadResponse(input, uid, reqId, res) {
   res.send(response);
 }
 
-async function processQUERY(uid, input) {
+async function processQUERY(uid, input, reportstate) {
     let response = null;
 
     let devices = {};
 
     for (d of input.payload.devices) {
-        let device = await utils.loadDevice(uid, d.customData.device);
+        let device;
+        try {
+          device = await utils.loadDevice(uid, d.customData.device);
+        } catch (err) {
+          uiderror(uid, err);
+          continue;
+        }
         uidlog(uid, "QUERY: " + device.name);
         devices[d.id] = {};
 		
@@ -108,7 +115,11 @@ async function processQUERY(uid, input) {
                 devices[d.id].color.temperatureK = await cached2Format(uid, device.mappings.ColorTemperature);
             } else {
                 //RGB mode
-                devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
+                if (reportstate) {
+                  devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB);
+                } else {
+                  devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
+                }
             }
         } else {
             if (device.mappings.Hue) {

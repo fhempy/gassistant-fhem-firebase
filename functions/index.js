@@ -2,6 +2,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const utils = require('./utils');
 const uidlog = require('./logger').uidlog;
+const uiderror = require('./logger').uiderror;
 const settings = require('./settings.json');
 
 admin.initializeApp(functions.config().firebase);

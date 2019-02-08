@@ -172,41 +172,6 @@ async function generateTraits(uid, batch, device) {
       mappings.Saturation = {reading: 'sat', cmd: 'sat', max: max, maxValue: 1};
   }
   
-  if (s.Internals.TYPE === 'KNX') {
-    var defmatch = s.Internals.DEF.match(/([\S]+:[\S]+)\b/g);
-    var servicetmp = 'switch';
-    var gadcnt = 1;
-    
-    for (let i=0; i<defmatch.length; i++) {
-      var reg = /^\S+?:(\S+?)(?=:|$)(\S+?)?(?=:|$)(\S+?)?$/;
-      var def = reg.exec(defmatch[i]);
-      var dpt = def[1];
-      var gadname = def[2] ? def[2].replace(':', '') : '';
-      var setget = def[3] ? def[3].replace(':', '') : '';
-      
-      if (setget === 'set' || setget === '') {
-        if (gadname === '') {
-          gadname = 'g' + gadcnt;
-          gadcnt++;
-        }
-        if (dpt === 'dpt1.001') {
-          mappings.On = {reading: 'state', valueOff: '/off|0 \%/', cmdOn: gadname + ' on', cmdOff: gadname + ' off'};
-        } else if (dpt === 'dpt5.001') {
-          servicetmp = 'light';
-          mappings.Brightness = {reading: 'state', part: 1, cmd: gadname, max: 100, maxValue: 100};
-        }
-      }
-    }
-    if (!service_name) service_name = servicetmp;
-  }
-  
-  if (s.Internals.TYPE === 'HomeConnect') {
-    if (s.Internals.type === 'Washer') {
-      if (!service_name) service_name = 'washer';
-      mappings.On = {reading: 'BSH.Common.Root.ActiveProgram', valueOff: '-', cmdOn: 'startProgram', cmdOff: 'stopProgram'};
-    }
-  }
-
   if (s.Internals.TYPE === 'MilightDevice'
       && s.PossibleSets.match(/(^| )dim\b/)) {
       // MilightDevice
@@ -802,6 +767,61 @@ async function generateTraits(uid, batch, device) {
   //        format: 'UINT16',
   //        factor: 1
   //    };
+  
+  //DEVICE SPECIFIC MAPPINGS BASED ON TYPE
+  if (s.Internals.TYPE === 'KNX') {
+    var defmatch = s.Internals.DEF.match(/([\S]+:[\S]+)\b/g);
+    var servicetmp = 'switch';
+    var gadcnt = 1;
+    var usedDpts = {};
+    
+    for (let i=0; i<defmatch.length; i++) {
+      var reg = /^\S+?:(\S+?)(?=:|$)(\S+?)?(?=:|$)(\S+?)?$/;
+      var def = reg.exec(defmatch[i]);
+      var dpt = def[1];
+      var gadname = def[2] ? def[2].replace(':', '') : '';
+      var setget = def[3] ? def[3].replace(':', '') : '';
+      
+      if (setget === 'set' || setget === '') {
+        if (gadname === '') {
+          gadname = 'g' + gadcnt;
+          gadcnt++;
+        }
+
+        //check if dpt was already assigned
+        if (usedDpts[dpt] !== undefined)
+          continue;
+
+        usedDpts[dpt] = 1;
+        if (dpt === 'dpt1.001') {
+          mappings.On = {reading: 'state', valueOff: '/off|0 \%/', cmdOn: gadname + ' on', cmdOff: gadname + ' off'};
+        } else if (dpt === 'dpt5.001') {
+          servicetmp = 'light';
+          mappings.Brightness = {reading: 'state', part: 1, cmd: gadname, max: 100, maxValue: 100};
+        } else if (dpt === 'dpt1.008') {
+          servicetmp = 'light';
+          mappings.On = {reading: 'state', valueOff: '0 %', cmdOn: gadname + ' up', cmdOff: gadname + ' down'};
+        } else {
+          delete usedDpts[dpt];
+        }
+      }
+    }
+    if (!service_name) service_name = servicetmp;
+  }
+  
+  if (s.Internals.TYPE === 'tahoma') {
+    if (s.Internals.SUBTYPE === 'DEVICE' && s.Internals.inControllable === 'rts:BlindRTSComponent') {
+      mappings.On = {reading: 'state', valueOff: '0', cmdOn: 'up', cmdOff: 'down' };
+    }
+  }
+  
+  if (s.Internals.TYPE === 'HomeConnect') {
+    if (s.Internals.type === 'Washer') {
+      if (!service_name) service_name = 'washer';
+      mappings.On = {reading: 'BSH.Common.Root.ActiveProgram', valueOff: '-', cmdOn: 'startProgram', cmdOff: 'stopProgram'};
+    }
+  }
+
 
   if (service_name === 'thermostat')
       mappings.CurrentHeatingCoolingState = {default: 'HEAT'};
@@ -1615,60 +1635,60 @@ function registerClientApi(app) {
     const device = req.body.device;
     
     //reportstate
-    await utils.setInformId(uid, informId, device, orig, {onlycache: 1});
+    await utils.setInformId(uid, informId, device, orig);
     await utils.reportState(uid, informId, device);
     
-    //limit number of requests to 10 per 30s, further 2 per 30s if still high rate
-    if (!FHEM_informidVal[informId] || FHEM_informidVal[informId].value != orig) {
-      if (FHEM_informidVal[informId]) {
-        //informid already updated once
-        if ((FHEM_informidVal[informId].time + 30000) > Date.now()) {
-          //ein weiteres Update innerhalb von 30s erkannt
-          FHEM_informidVal[informId].counter++;
-          FHEM_informidVal[informId].value = orig;
-          if (FHEM_informidVal[informId].counter > 5) {
-            //mehr als 10 Updates innerhalb der letzten 30s
-            uidlog(uid, 'Overload of informid ' + informId + ' update, update blocked');
-            res.send({});
-            return;
-          } else if (FHEM_informidVal[informId].counter > 2) {
-            uidlog(uid, 'Overload of informid ' + informId + ' update possible, check for the next 30s');
-            await utils.setInformId(uid, informId, device, orig);
-            res.send({});
-            return;
-          } else {
-            await utils.setInformId(uid, informId, device, orig);
-            res.send({});
-            return;
-          }
-        } else {
-          if (FHEM_informidVal[informId].counter > 5) {
-            uidlog(uid, 'Overload of informid ' + informId + ' update, reduce possible load');
-            FHEM_informidVal[informId] = {
-              value: orig,
-              time: Date.now(),
-              counter: 4
-            };
-          } else {
-            //update after 30s
-            FHEM_informidVal[informId] = {
-              value: orig,
-              time: Date.now(),
-              counter: 1
-            };
-          }
-          await utils.setInformId(uid, informId, device, orig);
-        }
-      } else {
-        //informid was never updated
-        FHEM_informidVal[informId] = {
-          value: orig,
-          time: Date.now(),
-          counter: 1
-        };
-        await utils.setInformId(uid, informId, device, orig);
-      }
-    }
+    // //limit number of requests to 10 per 30s, further 2 per 30s if still high rate
+    // if (!FHEM_informidVal[informId] || FHEM_informidVal[informId].value != orig) {
+    //   if (FHEM_informidVal[informId]) {
+    //     //informid already updated once
+    //     if ((FHEM_informidVal[informId].time + 30000) > Date.now()) {
+    //       //ein weiteres Update innerhalb von 30s erkannt
+    //       FHEM_informidVal[informId].counter++;
+    //       FHEM_informidVal[informId].value = orig;
+    //       if (FHEM_informidVal[informId].counter > 5) {
+    //         //mehr als 10 Updates innerhalb der letzten 30s
+    //         uidlog(uid, 'Overload of informid ' + informId + ' update, update blocked');
+    //         res.send({});
+    //         return;
+    //       } else if (FHEM_informidVal[informId].counter > 2) {
+    //         uidlog(uid, 'Overload of informid ' + informId + ' update possible, check for the next 30s');
+    //         await utils.setInformId(uid, informId, device, orig);
+    //         res.send({});
+    //         return;
+    //       } else {
+    //         await utils.setInformId(uid, informId, device, orig);
+    //         res.send({});
+    //         return;
+    //       }
+    //     } else {
+    //       if (FHEM_informidVal[informId].counter > 5) {
+    //         uidlog(uid, 'Overload of informid ' + informId + ' update, reduce possible load');
+    //         FHEM_informidVal[informId] = {
+    //           value: orig,
+    //           time: Date.now(),
+    //           counter: 4
+    //         };
+    //       } else {
+    //         //update after 30s
+    //         FHEM_informidVal[informId] = {
+    //           value: orig,
+    //           time: Date.now(),
+    //           counter: 1
+    //         };
+    //       }
+    //       await utils.setInformId(uid, informId, device, orig);
+    //     }
+    //   } else {
+    //     //informid was never updated
+    //     FHEM_informidVal[informId] = {
+    //       value: orig,
+    //       time: Date.now(),
+    //       counter: 1
+    //     };
+    //     await utils.setInformId(uid, informId, device, orig);
+    //   }
+    // }
     res.send({});
   });
   
@@ -1692,7 +1712,8 @@ function registerClientApi(app) {
         }
       });
     }
-    var deviceQueryRes = await hquery.processQUERY(uid, query);
+    const reportstate = 1;
+    var deviceQueryRes = await hquery.processQUERY(uid, query, reportstate);
     
     //prepare response
     var dev = {

@@ -8,7 +8,7 @@ const uiderror = require('./logger').uiderror;
 const settings = require('./settings.json');
 
 var allDevices = {};
-var allInformIds = {};
+//var allInformIds = {};
 var googleToken = '';
 
 const jwtCheck = jwt({
@@ -39,7 +39,6 @@ async function loadDevice(uid, devicename) {
   var docRef = await admin.firestore().collection(uid).doc('devices').collection('attributes').doc(devicename).get();
   var device = docRef.data();
   if (!device || !device.mappings) {
-    uiderror(uid, 'No mappings defined for ' + devicename);
     throw new Error('No mappings defined for ' + devicename);
   }
   for (characteristic_type in device.mappings) {
@@ -147,23 +146,19 @@ async function getSyncFeatureLevel(uid) {
 }
 
 async function getInformId(uid, informId) {
-  if (!allInformIds[uid])
-    allInformIds[uid] = {};
-
-    //var informIdRef = await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).get();
+  //var informIdRef = await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).get();
   var clientstate = await admin.database().ref('/users/' + uid + '/informids/' + informId).once('value');
   if (clientstate.val() && clientstate.val().value) {
-    allInformIds[uid][informId] = {value: clientstate.val().value, device: clientstate.val().device};
-    uidlog(uid, 'getInformId from db: ' + informId + ' = ' + allInformIds[uid][informId].value);
-    return allInformIds[uid][informId].value;
+    uidlog(uid, 'getInformId from db: ' + informId + ' = ' + clientstate.val().value);
+    return clientstate.val().value;
   }
   
-  //FIXME cache is not used any more
-  if (allInformIds[uid] && allInformIds[uid][informId]) {
-    //console.error('cached informid ' + informId + ' returned ' + allInformIds[uid][informId]);
-    uidlog(uid, 'getInformId from cache: ' + informId + ' = ' + allInformIds[uid][informId].value);
-    return allInformIds[uid][informId].value;
-  }
+  // //FIXME cache is not used any more
+  // if (allInformIds[uid] && allInformIds[uid][informId]) {
+  //   //console.error('cached informid ' + informId + ' returned ' + allInformIds[uid][informId]);
+  //   uidlog(uid, 'getInformId from cache: ' + informId + ' = ' + allInformIds[uid][informId].value);
+  //   return allInformIds[uid][informId].value;
+  // }
 
   return undefined;
 };
@@ -172,23 +167,10 @@ async function setInformId(uid, informId, device, val, options) {
   if (!val)
     val = '';
 
-  if (!allInformIds[uid]) {
-    allInformIds[uid] = {};
-  }
-  
-  if (options && options.onlycache) {
-    uidlog(uid, 'informid onlycache updated ' + informId + ' = ' + val);
-    allInformIds[uid][informId] = {value: val, device: device};
-  } else {
-    if ((options && options.force) || !allInformIds[uid][informId] || allInformIds[uid][informId] != val) {
-      //only update on change
-      uidlog(uid, 'informid updated ' + informId + ' = ' + val);
-      allInformIds[uid][informId] = {value: val, device: device};
-      await admin.database().ref('/users/' + uid + '/informids/' + informId).set({value: val, device: device});
-      //await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).set({value: val}, {merge: true});
-    }
-  }
-};
+  await admin.database().ref('/users/' + uid + '/informids/' + informId).set({value: val, device: device});
+  uidlog(uid, 'informid updated ' + informId + ' = ' + val);
+  //await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).set({value: val}, {merge: true});
+}
 
 async function retrieveGoogleToken(uid) {
   var token = jsonwt.sign({
@@ -228,7 +210,7 @@ async function reportState(uid, informid, device) {
   const hquery = require('./handleQUERY');
   
   //FIXME device parameter missing, informid doesn't include device name
-  
+  const reportstate = 1;
   var deviceQueryRes = await hquery.processQUERY(uid, {
       intent: 'action.devices.QUERY',
       payload: {
@@ -239,7 +221,7 @@ async function reportState(uid, informid, device) {
           }
         }]
       }
-  });
+  }, reportstate);
   
   //prepare response
   var dev = {
