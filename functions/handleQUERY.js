@@ -27,12 +27,12 @@ async function processQUERY(uid, input, reportstate) {
     for (d of input.payload.devices) {
         let device;
         try {
+          uidlog(uid, "QUERY: " + d.customData.device);
           device = await utils.loadDevice(uid, d.customData.device);
         } catch (err) {
           uiderror(uid, err);
           continue;
         }
-        uidlog(uid, "QUERY: " + device.name);
         devices[d.id] = {};
 		
         // If there is a current or a target temperature, we probably have a thermostat
