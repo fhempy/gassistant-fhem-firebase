@@ -33,11 +33,11 @@ async function generateTraits(uid, batch, device) {
   var connection = device.connection;
   //uidlog(uid, 'generateTraits: ' + JSON.stringify(s));
   if (!s.Readings) {
-      console.error('ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without readings');
+      uiderror(uid, 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without readings');
       return;
   }
   if (!s.Attributes) {
-      console.error('ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without attributes');
+      uiderror(uid, 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without attributes');
       return;
   }
 
@@ -131,8 +131,6 @@ async function generateTraits(uid, batch, device) {
   
   if (match = s.PossibleSets.match(/(^| )rgb:colorpicker/)) {
       //Hue RGB mode
-      mappings.On = {reading: 'onoff', valueOff: '0', cmdOn: 'on', cmdOff: 'off'};
-      
       mappings.RGB = {reading: 'rgb', cmd: 'rgb'};
       mappings.RGB.reading2homekit = function (mapping, orig) {
           return parseInt('0x' + orig);
@@ -832,7 +830,7 @@ async function generateTraits(uid, batch, device) {
   if (service_name !== undefined) {
       uidlog(uid, s.Internals.NAME + ' is ' + service_name);
   } else if (!mappings) {
-      console.error(s.Internals.NAME + ': no service type detected');
+      uiderror(uid, s.Internals.NAME + ': no service type detected');
       return;
   }
 
@@ -976,6 +974,10 @@ async function generateTraits(uid, batch, device) {
       }
   }
   
+  if (mappings === {}) {
+    throw new Error('No mappings found for ' + s.Iternals.NAME);
+  }
+
   var deviceAttributes =
   {
    'name': s.Internals.NAME,
@@ -1039,7 +1041,7 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
         try {
             homebridgeMapping = JSON.parse(homebridgeMapping);
         } catch (err) {
-            console.error('  fromHomebridgeMapping JSON.parse: ' + err);
+            uiderror(uid, '  fromHomebridgeMapping JSON.parse: ' + err);
             return;
         }
 
@@ -1062,7 +1064,7 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
 
         var match = mapping.match(/(^.*?)(:|=)(.*)/);
         if (match === null || match.length < 4 || !match[3]) {
-            console.error('  wrong syntax: ' + mapping);
+            uiderror(uid, '  wrong syntax: ' + mapping);
             continue;
         }
 
@@ -1144,7 +1146,7 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
                 }
 
             } else {
-                console.error('  wrong syntax: ' + param);
+                uiderror(uid, '  wrong syntax: ' + param);
 
             }
         }
@@ -1564,7 +1566,7 @@ function registerClientApi(app) {
         batch.delete(r.ref);
       }
     } catch (err) {
-      console.error('Device deletion failed: ' + err);
+      uiderror(uid, 'Device deletion failed: ' + err);
     }
     try {
       var ref = await admin.firestore().collection(uid).doc('devices').collection('attributes').get();
@@ -1572,7 +1574,7 @@ function registerClientApi(app) {
         batch.delete(r.ref);
       }
     } catch (err) {
-      console.error('Attribute deletion failed: ' + err);
+      uiderror(uid, 'Attribute deletion failed: ' + err);
     }
     try {
       var ref = await admin.firestore().collection(uid).get();
@@ -1580,7 +1582,7 @@ function registerClientApi(app) {
         batch.delete(r.ref);
       }
     } catch (err) {
-      console.error('InformIds deletion failed: ' + err);
+      uiderror(uid, 'InformIds deletion failed: ' + err);
     }
     batch.commit();
     

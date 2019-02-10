@@ -4,6 +4,7 @@ const utils = require('./utils');
 const settings = require('./settings.json');
 
 const uidlog = require('./logger.js').uidlog;
+const uiderror = require('./logger.js').uiderror;
 const createDirective = require('./utils.js').createDirective;
 
 var syncactive = {};
@@ -17,7 +18,8 @@ async function setSyncActive(uid) {
 async function setSyncFinished(uid) {
   syncactive[uid] = 0;
   await admin.firestore().collection(uid).doc('state').set({syncactive: 0, featurelevel: settings.FEATURELEVEL}, {merge: true});
-  admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
+  await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
+  await admin.database().ref('/users/' + uid + '/lastSYNC').set({timestamp: Date.now()});
 };
 
 async function setConnected(uid) {
@@ -55,7 +57,7 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   res.send(response);
 }
 
-var processSYNC = function (devices) {
+var processSYNC = function (uid, devices) {
     const payload = {
         devices: []
     };
@@ -144,7 +146,7 @@ var processSYNC = function (devices) {
                 } else if (device.service_name === 'door') {
                     d.type = 'action.devices.types.DOOR';
                 } else {
-                    console.error("genericDeviceType " + device.service_name + " not supported in ghome-fhem");
+                    uiderror(uid, "genericDeviceType " + device.service_name + " not supported in gassistant-fhem");
                     continue;
                 }
             } else {

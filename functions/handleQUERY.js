@@ -262,7 +262,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = value.split(' ')[mapping.part];
 
             if (mapped === undefined) {
-                console.error(mapping.informId + ' value ' + value + ' has no part ' + mapping.part);
+                uiderror(uid, mapping.informId + ' value ' + value + ' has no part ' + mapping.part);
                 return value;
             }
             console.debug(mapping.informId + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
@@ -301,7 +301,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
                 mapped = mapping.default;
 
             if (mapped === undefined) {
-                console.error(mapping.informId + ' value ' + value + ' not handled in values');
+                uiderror(uid, mapping.informId + ' value ' + value + ' not handled in values');
                 return undefined;
             }
             
@@ -364,7 +364,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = parseFloat(value);
 
             if (typeof mapped !== 'number') {
-                console.error(mapping.informId + ' is not a number: ' + value);
+                uiderror(uid, mapping.informId + ' is not a number: ' + value);
                 return undefined;
             }
             value = mapped;
@@ -378,7 +378,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = parseFloat(value);
 
             if (typeof mapped !== 'number') {
-                console.error(mapping.informId + ' not a number: ' + value);
+                uiderror(uid, mapping.informId + ' not a number: ' + value);
                 return undefined;
             }
             value = mapped;
@@ -422,7 +422,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
         if (typeof value === 'number') {
             var mapped = value;
             if (isNaN(value)) {
-                console.error(mapping.informId + ' not a number: ' + orig);
+                uiderror(uid, mapping.informId + ' not a number: ' + orig);
                 return undefined;
             } else if (mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined) {
                 mapped = mapping.maxValue - value + mapping.minValue;
@@ -451,11 +451,11 @@ function FHEM_reading2homekit(uid, mapping, orig) {
         try {
             value = mapping.reading2homekit(mapping, orig);
         } catch (err) {
-            console.error(mapping.informId + ' reading2homekit: ' + err);
+            uiderror(uid, mapping.informId + ' reading2homekit: ' + err);
             return undefined;
         }
         if (typeof value === 'number' && isNaN(value)) {
-            console.error(mapping.informId + ' not a number: ' + orig + ' => ' + value);
+            uiderror(uid, mapping.informId + ' not a number: ' + orig + ' => ' + value);
             return undefined;
         }
 

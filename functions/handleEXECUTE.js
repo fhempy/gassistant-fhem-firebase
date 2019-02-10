@@ -107,7 +107,7 @@ async function processEXECUTE(uid, reqId, input) {
                     
                 default:
                     //return unsupported operation
-                    console.error("Error", "Unsupported operation" + requestedName);
+                    uiderror(uid, "Unsupported operation" + requestedName);
                     return {errorCode: 'functionNotSupported'};
             }// switch
         }
@@ -552,7 +552,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
             try {
                 value = await mapping.homekit2reading(mapping, value);
             } catch (err) {
-                console.error(mapping.informId + ' homekit2reading: ' + err);
+                uiderror(uid, mapping.informId + ' homekit2reading: ' + err);
                 return;
             }
             if (value === undefined) {
@@ -620,7 +620,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
         }
 
         if (cmd === undefined) {
-            console.error(device.name + ' no cmd for ' + c + ', value ' + value);
+            uiderror(uid, device.name + ' no cmd for ' + c + ', value ' + value);
             return;
         }
 
@@ -629,7 +629,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
     }
 
     if (command === undefined) {
-        console.error(device.name + ' Unhandled command! cmd=' + c + ', value ' + value);
+        uiderror(uid, device.name + ' Unhandled command! cmd=' + c + ', value ' + value);
         return;
     }
 
