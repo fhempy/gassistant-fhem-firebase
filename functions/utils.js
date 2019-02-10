@@ -41,20 +41,21 @@ async function getLastSyncTimestamp(uid) {
 async function loadDevice(uid, devicename) {
   //TODO cache also just one device
   var lastSync = await getLastSyncTimestamp(uid);
-  if (allDevices[uid] === undefined || allDevices[uid]['.lastSYNC'] === undefined || allDevices[uid]['.lastSYNC'] < lastSync) {
-    const NO_CACHE = 1;
-    await loadDevices(uid, NO_CACHE);
-    allDevices[uid]['.lastSYNC'] = lastSync;
-  }
+  // if (allDevices[uid] === undefined || allDevices[uid]['.lastSYNC'] === undefined || allDevices[uid]['.lastSYNC'] < lastSync) {
+  //   const NO_CACHE = 1;
+  //   await loadDevices(uid, NO_CACHE);
+  //   allDevices[uid]['.lastSYNC'] = lastSync;
+  // }
 
-  if (allDevices[uid] && allDevices[uid][devicename]) {
-    return allDevices[uid][devicename];
+  if (allDevices[uid] && allDevices[uid][devicename] && allDevices[uid][devicename].timestamp >= lastSync) {
+    uidlog(uid, 'CACHE READ: loadDevice, devices/attributes/' + devicename);
+    return allDevices[uid][devicename].device;
   }
   if (!allDevices[uid]) {
     allDevices[uid] = {};
   }
 
-  uidlog(uid, 'FIRESTORE READ: devices/attributes/ ' + devicename);
+  uidlog(uid, 'FIRESTORE READ: loadDevice, devices/attributes/' + devicename);
 
   var docRef = await admin.firestore().collection(uid).doc('devices').collection('attributes').doc(devicename).get();
   var device = docRef.data();
@@ -87,27 +88,21 @@ async function loadDevice(uid, devicename) {
       }
     }
   }
-  allDevices[uid][devicename] = device;
+  allDevices[uid][devicename] = {'device': device, 'timestamp': lastSync};
   return device;
 }
 
 async function loadDevices(uid, nocache) {
-  if (nocache) {
-    delete allDevices[uid];
-  }
-  
-  if (!allDevices[uid])
-    allDevices[uid] = {};
-  else {
-    return allDevices[uid];
-  }
-  
+  var lastSync = await getLastSyncTimestamp(uid);
+
+  allDevices[uid] = {};
+
   var devices = {};
   var attributesRef = await admin.firestore().collection(uid).doc('devices').collection('attributes');
   var attrRef = await attributesRef.get();
   for (attr of attrRef.docs) {
     var d = attr.data();
-    uidlog(uid, 'FIRESTORE READ: devices/attributes/ ' + d.name);
+    uidlog(uid, 'FIRESTORE READ: loadDevices, devices/attributes/' + d.name);
     for (characteristic_type in d.mappings) {
       let mappingChar = d.mappings[characteristic_type];
       //mappingChar = Modes array
@@ -135,7 +130,7 @@ async function loadDevices(uid, nocache) {
       }
     }
     devices[d.name] = d;
-    allDevices[uid][d.name] = d;
+    allDevices[uid][d.name] = {'device': d, 'timestamp': lastSync};
   }
   return devices;
 }

@@ -318,7 +318,7 @@ var processSYNC = function (uid, devices) {
 async function createSYNCResponse(uid) {
   var devices = await utils.loadDevices(uid);
   //generate sync response
-  var response = processSYNC(devices);
+  var response = processSYNC(uid, devices);
   //await uidlog(uid, 'sync response: ' + JSON.stringify(response));
   return response;
 }

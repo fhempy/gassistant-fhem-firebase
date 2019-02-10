@@ -1534,9 +1534,6 @@ function registerClientApi(app) {
     uidlog(uid, 'generateRoomHint finished');
     await batch.commit();
     uidlog(uid, 'BATCH FINISHED');
-    //warm up database
-    const NO_CACHE = 1;
-    await utils.loadDevices(uid, NO_CACHE);
     res.send({});
   });
   
@@ -1550,7 +1547,7 @@ function registerClientApi(app) {
       },
       body: JSON.stringify({agentUserId: uid})
     });
-    console.log('SYNC initiated');
+    uidlog(uid, 'SYNC initiated');
     res.send({});
   });
   
