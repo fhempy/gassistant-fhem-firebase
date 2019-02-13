@@ -181,52 +181,18 @@ async function generateTraits(uid, batch, device) {
           mappings.HSVBrightness = {reading: 'brightness', cmd: 'dim', max: 100, maxValue: 1, delay: true};
       }
 
-  } else if (s.Internals.TYPE === 'WifiLight' && s.PossibleSets.match(/(^| )HSV\b/)
+  } else if (s.Internals.TYPE === 'WifiLight' && s.PossibleSets.match(/(^| )RGB\b/)
       && s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined) {
       // WifiLight
       console.debug('detected WifiLight');
-      mappings.Hue = {reading: 'hue', cmd: 'HSV', max: 359, maxValue: 359};
-      mappings.Saturation = {reading: 'saturation', cmd: 'HSV', max: 100, maxValue: 1};
-      mappings.Brightness = {reading: 'brightness', cmd: 'dim', max: 100, maxValue: 100, delay: true};
-      mappings.HSVBrightness = {reading: 'brightness', cmd: 'HSV', max: 100, maxValue: 1, delay: true};
-
-      homekit2reading = async function (mapping, orig) {
-          const utils = require('./utils');
-          let h = await utils.getInformId(uid, mapping.device + '-hue');
-          let s = await utils.getInformId(uid, mapping.device + '-saturation');
-          let v = await utils.getInformId(uid, mapping.device + '-brightness');
-          //mapping.log( ' from cached : [' + h + ',' + s + ',' + v + ']' );
-
-          if (h === undefined) h = 0;
-          if (s === undefined) s = 100;
-          if (v === undefined) v = 100;
-          //mapping.log( ' old : [' + h + ',' + s + ',' + v + ']' );
-
-          if (mapping.characteristic_type === 'Hue') {
-              h = orig;
-
-              await utils.setInformId(uid, mapping.device + '-hue', mapping.device, h);
-
-          } else if (mapping.characteristic_type === 'Saturation') {
-              s = orig;
-
-              await utils.setInformId(uid, mapping.device + '-saturation', mapping.device, s);
-
-          } else if (mapping.characteristic_type === 'Brightness') {
-              v = orig;
-
-              await utils.setInformId(uid, mapping.device + '-brightness', mapping.device, v);
-
-          }
-          //mapping.log( ' new : [' + h + ',' + s + ',' + v + ']' );
-
-          return h + ',' + s + ',' + v;
+      mappings.RGB = {reading: 'RGB', cmd: 'RGB'};
+      mappings.RGB.reading2homekit = function (mapping, orig) {
+          return parseInt('0x' + orig);
       };
-
-      mappings.Hue.homekit2reading = homekit2reading;
-      mappings.Saturation.homekit2reading = homekit2reading;
-      mappings.HSVBrightness.homekit2reading = homekit2reading;
-
+      mappings.RGB.homekit2reading = function (mapping, orig) {
+          return ("000000" + orig.toString(16)).substr(-6);
+      };
+      mappings.Brightness = {reading: 'brightness', cmd: 'dim', max: 100, maxValue: 100};
   }
   
   if (!mappings.Hue || s.Internals.TYPE === 'SWAP_0000002200000003') {
@@ -958,7 +924,7 @@ async function generateTraits(uid, batch, device) {
       
       				} else {
       					if (!mapping.nocache && mapping.reading) {
-      						await utils.setInformId(uid, mapping.informId, mapping.device, orig, {force: 1});
+      						await utils.setInformId(uid, mapping.informId, mapping.device, orig, {init: 1, reading: mapping.reading});
       					}
       
               if (typeof mapping.reading2homekit === 'function')
@@ -1610,6 +1576,7 @@ function registerClientApi(app) {
     });
     
     //delete Firebase user
+    var firebase = require('firebase');
     var user = firebase.auth().currentUser;
     await user.delete();
 

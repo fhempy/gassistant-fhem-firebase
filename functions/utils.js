@@ -186,6 +186,15 @@ async function setInformId(uid, informId, device, val, options) {
 
   await admin.database().ref('/users/' + uid + '/informids/' + informId).set({value: val, device: device});
   uidlog(uid, 'informid updated ' + informId + ' = ' + val);
+
+  if (options && options.init) {
+    if (options.reading) {
+      var format = '';
+      if (options.reading.match(/temp|humidity/))
+        format = 'float0.5';
+      await admin.database().ref('/users/' + uid + '/informiddefs/' + informId).set({'reading': options.reading, 'format': format});
+    }
+  }
   //await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).set({value: val}, {merge: true});
 }
 
