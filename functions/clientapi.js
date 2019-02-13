@@ -210,83 +210,12 @@ async function generateTraits(uid, batch, device) {
       }
 
       if (reading && cmd) {
-          mappings.Hue = {reading: reading, cmd: cmd, max: 359, maxValue: 359};
-          mappings.Saturation = {reading: reading, cmd: cmd, max: 100, maxValue: 1};
-          mappings.HSVBrightness = {reading: reading, cmd: cmd, max: 100, maxValue: 1, delay: true};
-          mappings.Brightness = {reading: reading, cmd: 'pct', max: 100, maxValue: 100, delay: true};
-
-          homekit2reading = async function (mapping, orig) {
-              const utils = require('./utils');
-              let h = await utils.getInformId(uid, mapping.device + '-h');
-              let s = await utils.getInformId(uid, mapping.device + '-s');
-              let v = await utils.getInformId(uid, mapping.device + '-v');
-              //mapping.log( ' from cached : [' + h + ',' + s + ',' + v + ']' );
-
-              if (h === undefined) h = 0.0;
-              if (s === undefined) s = 1.0;
-              if (v === undefined) v = 1.0;
-              //mapping.log( ' old : [' + h + ',' + s + ',' + v + ']' );
-
-              if (mapping.characteristic_type === 'Hue') {
-                  h = orig / 360.0;
-                  await utils.setInformId(uid, mapping.device + '-h', mapping.device, h);
-
-              } else if (mapping.characteristic_type === 'Saturation') {
-                  s = orig / 100.0;
-                  await utils.setInformId(uid, mapping.device + '-s', mapping.device, s);
-
-              } else if (mapping.characteristic_type === 'Brightness') {
-                  v = orig / 100.0;
-                  await utils.setInformId(uid, mapping.device + '-v', mapping.device, v);
-
-              }
-              //mapping.log( ' new : [' + h + ',' + s + ',' + v + ']' );
-
-              const value = FHEM_hsv2rgb(h, s, v);
-              if (value === await utils.getInformId(uid, mapping.informId))
-                  return undefined;
-
-              FHEM_update(mapping.informId, value, true);
-              //mapping.log( ' rgb : [' + value + ']' );
-
-              return value;
-          };
-
-          if (mappings.Hue) {
-              mappings.Hue.reading2homekit = async function (mapping, orig) {
-                  const utils = require('./utils');
-                  var hsv = FHEM_rgb2hsv(orig);
-                  var hue = parseInt(hsv[0] * mapping.maxValue);
-
-                  await utils.setInformId(uid, mapping.device + '-h', mapping.device, hsv[0]);
-
-                  return hue;
-              };
-              mappings.Hue.homekit2reading = homekit2reading;
-          }
-          if (mappings.Saturation) {
-              mappings.Saturation.reading2homekit = async function (mapping, orig) {
-                  const utils = require('./utils');
-                  const hsv = FHEM_rgb2hsv(orig);
-                  const sat = parseInt(hsv[1] * mapping.maxValue);
-
-                  await utils.setInformId(uid, mapping.device + '-s', mapping.device, hsv[1]);
-
-                  return sat;
-              };
-              mappings.Saturation.homekit2reading = homekit2reading;
-          }
-          if (mappings.HSVBrightness) {
-              mappings.HSVBrightness.reading2homekit = async function (mapping, orig) {
-                  const utils = require('./utils');
-                  var hsv = FHEM_rgb2hsv(orig);
-                  var bri = parseInt(hsv[2] * mapping.maxValue);
-
-                  await utils.setInformId(uid, mapping.device + '-v', mapping.device, hsv[2]);
-
-                  return bri;
-              };
-              mappings.HSVBrightness.homekit2reading = homekit2reading;
+          mappings.RGB = {reading: reading, cmd: cmd};
+          // mappings.Hue = {reading: reading, cmd: cmd, max: 359, maxValue: 359};
+          // mappings.Saturation = {reading: reading, cmd: cmd, max: 100, maxValue: 1};
+          // mappings.HSVBrightness = {reading: reading, cmd: cmd, max: 100, maxValue: 1, delay: true};
+          if (s.PossibleSets.match(/(^| )pct\b/)) {
+            mappings.Brightness = {reading: reading, cmd: 'pct', max: 100, maxValue: 100, delay: true};
           }
       }
   }
