@@ -109,17 +109,26 @@ async function processQUERY(uid, input, reportstate) {
         if (device.mappings.RGB) {
             devices[d.id].color = {};
             const rgb = await cached2Format(uid, device.mappings.RGB);
-            const colormode = await cached2Format(uid, device.mappings.ColorMode);
-            if (colormode == device.mappings.ColorMode.valueCt) {
-                //color temperature mode
-                devices[d.id].color.temperatureK = await cached2Format(uid, device.mappings.ColorTemperature);
+            if (device.mappings.ColorMode) {
+              const colormode = await cached2Format(uid, device.mappings.ColorMode);
+              if (colormode == device.mappings.ColorMode.valueCt) {
+                  //color temperature mode
+                  devices[d.id].color.temperatureK = await cached2Format(uid, device.mappings.ColorTemperature);
+              } else {
+                  //RGB mode
+                  if (reportstate) {
+                    devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB);
+                  } else {
+                    devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
+                  }
+              }
             } else {
-                //RGB mode
-                if (reportstate) {
-                  devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB);
-                } else {
-                  devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
-                }
+              //RGB mode
+              if (reportstate) {
+                devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB);
+              } else {
+                devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
+              }
             }
         } else {
             if (device.mappings.Hue) {
