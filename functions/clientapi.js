@@ -195,7 +195,7 @@ async function generateTraits(uid, batch, device) {
       mappings.Brightness = {reading: 'brightness', cmd: 'dim', max: 100, maxValue: 100};
   }
   
-  if (!mappings.Hue || s.Internals.TYPE === 'SWAP_0000002200000003') {
+  if (!mappings.RGB || s.Internals.TYPE === 'SWAP_0000002200000003') {
       // rgb/RGB
       let reading = undefined;
       let cmd = undefined;
