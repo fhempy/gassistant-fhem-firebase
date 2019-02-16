@@ -699,24 +699,16 @@ async function generateTraits(uid, batch, device) {
       }
     }
     if (!service_name) service_name = servicetmp;
-  }
-  
-  if (s.Internals.TYPE === 'tahoma') {
+  } else if (s.Internals.TYPE === 'tahoma') {
     if (s.Internals.SUBTYPE === 'DEVICE' && s.Internals.inControllable === 'rts:BlindRTSComponent') {
       mappings.On = {reading: 'state', valueOff: '0', cmdOn: 'up', cmdOff: 'down' };
     }
-  }
-  
-  if (s.Internals.TYPE === 'HomeConnect') {
+  } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
       if (!service_name) service_name = 'washer';
       mappings.On = {reading: 'BSH.Common.Root.ActiveProgram', valueOff: '-', cmdOn: 'startProgram', cmdOff: 'stopProgram'};
     }
   }
-
-
-  if (service_name === 'thermostat')
-      mappings.CurrentHeatingCoolingState = {default: 'HEAT'};
 
   fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
   console.debug('mappings for ' + s.Internals.NAME + ': ' + util.inspect(mappings));
