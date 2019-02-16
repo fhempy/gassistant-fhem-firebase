@@ -12,7 +12,6 @@ const util = require('util');
 const settings = require('./settings.json');
 
 var deviceRooms = {};
-var FHEM_informidVal = {};
 
 async function generateAttributes(uid, batch) {
   //generate traits in firestore
@@ -1532,58 +1531,6 @@ function registerClientApi(app) {
     //reportstate
     await utils.setInformId(uid, informId, device, orig);
     await utils.reportState(uid, informId, device);
-    
-    // //limit number of requests to 10 per 30s, further 2 per 30s if still high rate
-    // if (!FHEM_informidVal[informId] || FHEM_informidVal[informId].value != orig) {
-    //   if (FHEM_informidVal[informId]) {
-    //     //informid already updated once
-    //     if ((FHEM_informidVal[informId].time + 30000) > Date.now()) {
-    //       //ein weiteres Update innerhalb von 30s erkannt
-    //       FHEM_informidVal[informId].counter++;
-    //       FHEM_informidVal[informId].value = orig;
-    //       if (FHEM_informidVal[informId].counter > 5) {
-    //         //mehr als 10 Updates innerhalb der letzten 30s
-    //         uidlog(uid, 'Overload of informid ' + informId + ' update, update blocked');
-    //         res.send({});
-    //         return;
-    //       } else if (FHEM_informidVal[informId].counter > 2) {
-    //         uidlog(uid, 'Overload of informid ' + informId + ' update possible, check for the next 30s');
-    //         await utils.setInformId(uid, informId, device, orig);
-    //         res.send({});
-    //         return;
-    //       } else {
-    //         await utils.setInformId(uid, informId, device, orig);
-    //         res.send({});
-    //         return;
-    //       }
-    //     } else {
-    //       if (FHEM_informidVal[informId].counter > 5) {
-    //         uidlog(uid, 'Overload of informid ' + informId + ' update, reduce possible load');
-    //         FHEM_informidVal[informId] = {
-    //           value: orig,
-    //           time: Date.now(),
-    //           counter: 4
-    //         };
-    //       } else {
-    //         //update after 30s
-    //         FHEM_informidVal[informId] = {
-    //           value: orig,
-    //           time: Date.now(),
-    //           counter: 1
-    //         };
-    //       }
-    //       await utils.setInformId(uid, informId, device, orig);
-    //     }
-    //   } else {
-    //     //informid was never updated
-    //     FHEM_informidVal[informId] = {
-    //       value: orig,
-    //       time: Date.now(),
-    //       counter: 1
-    //     };
-    //     await utils.setInformId(uid, informId, device, orig);
-    //   }
-    // }
     res.send({});
   });
   
