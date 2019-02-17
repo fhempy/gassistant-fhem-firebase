@@ -6,6 +6,7 @@ const utils = require('./utils');
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const uidlog = require('./logger').uidlog;
+const uidlogfct = require('./logger').uidlogfct;
 const uiderror = require('./logger').uiderror;
 const hquery = require('./handleQUERY');
 const util = require('util');
@@ -1515,14 +1516,14 @@ function registerClientApi(app) {
   
   app.post('/updateinformid', utils.jwtCheck, async (req, res) => {
     const {sub: uid} = req.user;
-    uidlog(uid, 'update informId: ' + JSON.stringify(req.body));
+    uidlogfct(uid, 'updateinformid: ' + JSON.stringify(req.body));
     const informId = req.body.informId;
     const orig = req.body.value;
     const device = req.body.device;
     
     //reportstate
     await utils.setInformId(uid, informId, device, orig);
-    await utils.reportState(uid, informId, device);
+    //await utils.reportState(uid, informId, device);
     res.send({});
   });
   
