@@ -190,6 +190,7 @@ async function getDeviceReadingValues(uid, device) {
   
   if (readings === {}) {
     //BACKWARD COMPATIBILITY new version not synced yet
+    uidlog(uid, 'OLDFUNCTION getinformids');
     clientstate = await admin.database().ref('/users/' + uid + '/informids').once('value');
     clientstate.forEach(function(child) {
       if (child.key.startsWith(device)) {
@@ -202,10 +203,17 @@ async function getDeviceReadingValues(uid, device) {
 }
 
 async function getReadingValue(uid, device, reading) {
-  var clientstate = await admin.database().ref('/users/' + uid + '/devices/' + device + '/' + reading).once('value');
+  var clientstate = await admin.database().ref('/users/' + uid + '/devices/' + device + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
   if (clientstate.val() && clientstate.val().value) {
     uidlog(uid, 'Reading read from db: ' + device + ':' + reading + ' = ' + clientstate.val().value);
     return clientstate.val().value;
+  } else {
+    //BACKWARD COMPATIBILITY get informid from old values
+    clientstate = await admin.database().ref('/users/' + uid + '/informids/' + device + '-' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+    if (clientstate.val() && clientstate.val().value) {
+      uidlog(uid, 'OLDFUNCTION from db: ' + informId + ' = ' + clientstate.val().value);
+      return clientstate.val().value;
+    }
   }
 
   return undefined;
