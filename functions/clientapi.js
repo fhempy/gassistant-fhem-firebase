@@ -574,6 +574,11 @@ async function generateTraits(uid, batch, device) {
               mappings.TargetTemperature.minStep = parseFloat(values[1] - values[0]);
       }
 
+      mappings.ThermostatModes = {
+        reading: ['desiredTemperature', 'ecoMode'],
+        cmds: ['off:desiredTemperature 4.5','heat:comfort','eco:eco'],
+        values: ['desiredTemperature=/^4.5/:off', 'ecoMode=/^1$/:eco', 'desiredTemperature=/.*/:heat']
+      };
   } else if (match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/)) {
       //PID20
       mappings.TargetTemperature = {reading: 'desired', cmd: 'desired', delay: true};
@@ -708,6 +713,15 @@ async function generateTraits(uid, batch, device) {
       if (!service_name) service_name = 'washer';
       mappings.On = {reading: 'BSH.Common.Root.ActiveProgram', valueOff: '-', cmdOn: 'startProgram', cmdOff: 'stopProgram'};
     }
+  } else if (s.Internals.TYPE === 'ZWave') {
+    if (s.Attributes['classes'].match(/(^| )THERMOSTAT_MODE\b/) && mappings.TargetTemperature) {
+      //TODO checks for QUERY to identify current state
+      mappings.ThermostatModes = {
+        reading: 'state',
+        cmds: ['off:off','heat:heating','cool:cooling','auto:auto','fan-only:fanOnly','eco:energySaveHeating'],
+        values: ['/off/:off', '/Heat/:heat', '/Cool/:cool', '/Auto/:auto', '/Fan/:fan-only', '/EnergySave/:eco']
+      };
+    }
   }
 
   fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
@@ -744,9 +758,6 @@ async function generateTraits(uid, batch, device) {
               uidlog(uid, '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ']');
       }
   }*/
-
-  if (mappings.reachable)
-      uidlog(uid, s.Internals.NAME + ' has reachability [' + mappings.reachable.reading + ']');
 
 //log( util.inspect(s) );
 
@@ -812,50 +823,30 @@ async function generateTraits(uid, batch, device) {
       				
       				if (mapping.format === undefined)
                 delete mapping.format;
-      				
-      				mapping.informId = devicetmp + '-' + mapping.reading;
-      				mapping.informId = mapping.informId.replace(/\.|\#|\[|\]|\$/g, '_');
-      				mapping.characteristic_type = characteristic_type;
 
-      				//FIXME: better integrate eventMap
-      				//FIXME GOOGLE didn't work
-      				// if (s.Attributes.eventMap) {
-    						// mapping.event_map = {};
-      				// 	for (var part of s.Attributes.eventMap.split(' ')) {
-      				// 		var map = part.split(':');
-      				// 		if (map[1] == 'on'
-      				// 			|| map[1] == 'off') {
-      				// 			mapping.event_map[map[0]] = map[1];
-      				// 		}
-      				// 	}
-      				// 	if (mapping.event_map && Object.keys(mapping.event_map).length) console.debug('event_map: ' + mapping.event_map);
-      				// }
+              //create reading values in realtime database
+              if (typeof mapping.reading !== 'array') {
+                mapping.reading = [mapping.reading];
+              }
+              for (var r of mapping.reading) {
+                var orig = undefined;
+              	if (s.Readings[r] && s.Readings[r].Value)
+              		orig = s.Readings[r].Value;
+              
+              	if (orig === undefined && devicetmp == device && mappings.default !== undefined)
+              		continue;
+              
+              	await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+              }
+              mapping.characteristic_type = characteristic_type;
 
       				prepare(mapping);
       
-      				var orig = undefined;
-      				if (devicetmp != device) {
-      				  //FIXME GOOGLE orig = this.query(mapping);
-      				} else if (s.Readings[mapping.reading] && s.Readings[mapping.reading].Value)
-      					orig = s.Readings[mapping.reading].Value;
-      
-      				if (orig === undefined && devicetmp == device && mappings.default !== undefined) {
-      					delete mapping.informId;
-      
-      				} else {
-      					if (!mapping.nocache && mapping.reading) {
-      						await utils.setInformId(uid, mapping.informId, mapping.device, orig, {init: 1, reading: mapping.reading});
-      					}
-      
-              if (typeof mapping.reading2homekit === 'function')
+      				if (typeof mapping.reading2homekit === 'function')
                 mapping.reading2homekit = mapping.reading2homekit.toString();
                 
               if (typeof mapping.homekit2reading === 'function')
                 mapping.homekit2reading = mapping.homekit2reading.toString();
-                
-      					//if (mapping.characteristic || mapping.name)
-      					  //FHEM_reading2homekit(mapping, orig);
-      				}
 		      }
       }
   }
@@ -1045,19 +1036,20 @@ function prepare(mapping) {
         mapping.value2homekit_re = [];
         if (mapping.homekit2name === undefined) mapping.homekit2name = {};
         for (var entry of mapping.values) {
-            var match = entry.match('^([^:]*)(:(.*))?$');
+            var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
             if (!match) {
                 console.error('values: format wrong for ' + entry);
                 continue;
             }
 
-            var from = match[1];
-            var to = match[3] === undefined ? entry : match[3];
+            var reading = match[2];
+            var from = match[3];
+            var to = match[5] === undefined ? entry : match[5];
             to = to.replace(/\+/g, ' ');
 
             var match;
             if (match = from.match('^/(.*)/$'))
-                mapping.value2homekit_re.push({re: match[1], to: to});
+                mapping.value2homekit_re.push({'reading': reading, re: match[1], to: to});
             else {
                 from = from.replace(/\+/g, ' ');
                 mapping.value2homekit[from] = to;
@@ -1191,223 +1183,6 @@ function generateRoomHint(uid, batch) {
   }
 }
 
-function
-FHEM_hsv2rgb(h, s, v) {
-    var r = 0.0;
-    var g = 0.0;
-    var b = 0.0;
-
-    if (s == 0) {
-        r = v;
-        g = v;
-        b = v;
-
-    } else {
-        var i = Math.floor(h * 6.0);
-        var f = ( h * 6.0 ) - i;
-        var p = v * ( 1.0 - s );
-        var q = v * ( 1.0 - s * f );
-        var t = v * ( 1.0 - s * ( 1.0 - f ) );
-        i = i % 6;
-
-        if (i == 0) {
-            r = v;
-            g = t;
-            b = p;
-        } else if (i == 1) {
-            r = q;
-            g = v;
-            b = p;
-        } else if (i == 2) {
-            r = p;
-            g = v;
-            b = t;
-        } else if (i == 3) {
-            r = p;
-            g = q;
-            b = v;
-        } else if (i == 4) {
-            r = t;
-            g = p;
-            b = v;
-        } else if (i == 5) {
-            r = v;
-            g = p;
-            b = q;
-        }
-    }
-
-    return FHEM_rgb2hex(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
-}
-
-function
-FHEM_ct2rgb(ct) {
-    // calculation from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code
-
-    // kelvin -> mired
-    if (ct > 1000)
-        ct = 1000000 / ct;
-
-    // adjusted by 1000K
-    var temp = (1000000 / ct) / 100 + 10;
-
-    var r = 0;
-    var g = 0;
-    var b = 0;
-
-    r = 255;
-    if (temp > 66)
-        r = 329.698727446 * Math.pow(temp - 60, -0.1332047592);
-    if (r < 0)
-        r = 0;
-    if (r > 255)
-        r = 255;
-
-    if (temp <= 66)
-        g = 99.4708025861 * Math.log(temp) - 161.1195681661;
-    else
-        g = 288.1221695283 * Math.pow(temp - 60, -0.0755148492);
-    if (g < 0)
-        g = 0;
-    if (g > 255) ;
-    g = 255;
-
-    b = 255;
-    if (temp <= 19)
-        b = 0;
-    if (temp < 66)
-        b = 138.5177312231 * log(temp - 10) - 305.0447927307;
-    if (b < 0)
-        b = 0;
-    if (b > 255)
-        b = 255;
-
-    return FHEM_rgb2hex(Math.round(r), Math.round(g), Math.round(b));
-}
-
-function
-FHEM_xyY2rgb(x, y, Y) {
-    // calculation from http://www.brucelindbloom.com/index.html
-
-    var r = 0;
-    var g = 0;
-    var b = 0;
-
-    if (y > 0) {
-        var X = x * Y / y;
-        var Z = (1 - x - y) * Y / y;
-
-        if (X > 1
-            || Y > 1
-            || Z > 1) {
-            var f = Math.max(X, Y, Z);
-            X /= f;
-            Y /= f;
-            Z /= f;
-        }
-
-        r = 0.7982 * X + 0.3389 * Y - 0.1371 * Z;
-        g = -0.5918 * X + 1.5512 * Y + 0.0406 * Z;
-        b = 0.0008 * X + 0.0239 * Y + 0.9753 * Z;
-
-        if (r > 1
-            || g > 1
-            || b > 1) {
-            var f = Math.max(r, g, b);
-            r /= f;
-            g /= f;
-            b /= f;
-        }
-
-    }
-
-    return FHEM_rgb2hex(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
-}
-
-function
-FHEM_rgb2hsv(r, g, b) {
-    if (r === undefined)
-        return;
-
-    if (g === undefined) {
-        var str = r;
-        r = parseInt(str.substr(0, 2), 16);
-        g = parseInt(str.substr(2, 2), 16);
-        b = parseInt(str.substr(4, 2), 16);
-
-        r /= 255;
-        g /= 255;
-        b /= 255;
-    }
-
-    var M = Math.max(r, g, b);
-    var m = Math.min(r, g, b);
-    var c = M - m;
-
-    var h, s, v;
-    if (c == 0) {
-        h = 0;
-    } else if (M == r) {
-        h = ( ( 360 + 60 * ( ( g - b ) / c ) ) % 360 ) / 360;
-    } else if (M == g) {
-        h = ( 60 * ( ( b - r ) / c ) + 120 ) / 360;
-    } else if (M == b) {
-        h = ( 60 * ( ( r - g ) / c ) + 240 ) / 360;
-    }
-
-    if (M == 0) {
-        s = 0;
-    } else {
-        s = c / M;
-    }
-
-    v = M;
-
-    return [h, s, v];
-}
-
-function
-FHEM_rgb2hex(r, g, b) {
-    if (g === undefined)
-        return Number(0x1000000 + r[0] * 0x10000 + r[1] * 0x100 + r[2]).toString(16).substring(1);
-
-    return Number(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).substring(1);
-}
-
-const reportstateUpdate = functions.region('europe-west1').database.ref('/users/{uid}/informids/{informid}')
-    .onUpdate(async (snapshot, context) => {
-      // Grab the current value of what was written to the Realtime Database.
-      const original = snapshot.after.val();
-      const uid = context.params.uid;
-      const informid = context.params.informid;
-      const device = original.device;
-      uidlog(uid, 'updateinformid received, report state for ' + informid);
-      
-      //reportstate
-      //await utils.setInformId(uid, informId, orig, {onlycache: 1});
-      // You must return a Promise when performing asynchronous tasks inside a Functions such as
-      // writing to the Firebase Realtime Database.
-      // Setting an "uppercase" sibling in the Realtime Database returns a Promise.
-      return await utils.reportState(uid, informid, device);
-    });
-    
-const reportstateCreate = functions.region('europe-west1').database.ref('/users/{uid}/informids/{informid}')
-    .onCreate(async (snapshot, context) => {
-      // Grab the current value of what was written to the Realtime Database.
-      const original = snapshot.val();
-      const uid = context.params.uid;
-      const informid = context.params.informid;
-      const device = original.device;
-      uidlog(uid, 'createinformid received, report state for ' + informid);
-      
-      //reportstate
-      //await utils.setInformId(uid, informId, orig, {onlycache: 1});
-      // You must return a Promise when performing asynchronous tasks inside a Functions such as
-      // writing to the Firebase Realtime Database.
-      // Setting an "uppercase" sibling in the Realtime Database returns a Promise.
-      return utils.reportState(uid, informid, device);
-    });
-
 function registerClientApi(app) {
   app.get('/syncfinished', utils.jwtCheck, async (req, res) => {
     const {sub: uid} = req.user;
@@ -1465,7 +1240,7 @@ function registerClientApi(app) {
         batch.delete(r.ref);
       }
     } catch (err) {
-      uiderror(uid, 'InformIds deletion failed: ' + err);
+      uiderror(uid, 'Realtime DB deletion failed: ' + err);
     }
     batch.commit();
     
@@ -1515,14 +1290,15 @@ function registerClientApi(app) {
   
   app.post('/updateinformid', utils.jwtCheck, async (req, res) => {
     const {sub: uid} = req.user;
-    uidlog(uid, 'update informId: ' + JSON.stringify(req.body));
+    uidlog(uid, 'update reading: ' + JSON.stringify(req.body));
     const informId = req.body.informId;
     const orig = req.body.value;
     const device = req.body.device;
-    
+    const reading = informId.replace(device + '-', '');
+
     //reportstate
-    await utils.setInformId(uid, informId, device, orig);
-    await utils.reportState(uid, informId, device);
+    await utils.setReadingValue(uid, device, reading.replace(/\.|\#|\[|\]|\$/g, '_'), orig);
+    await utils.reportState(uid, device, reading);
     res.send({});
   });
   

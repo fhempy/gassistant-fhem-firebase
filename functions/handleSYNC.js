@@ -231,15 +231,26 @@ var processSYNC = function (uid, devices) {
             if (device.mappings.TargetTemperature) {
                 d.attributes = {
                     //FIXME: do not define anything in server.js
-                    thermostatTemperatureUnit: 'C',
-                    availableThermostatModes: 'off,heat,on'
+                    thermostatTemperatureUnit: 'C'
                 };
+                if (device.mappings.ThermostatModes) {
+                  //iterate over thermostat modes array
+                  var modes = [];
+                  device.mappings.ThermostatModes.cmds.forEach(function (mode) {
+                    var m = mode.split(':');
+                    modes.push(m[0]);
+                  });
+                  d.attributes.availableThermostatModes = modes.toString();
+                } else {
+                  d.attributes.availableThermostatModes = 'off,heat';
+                }
                 d.traits.push("action.devices.traits.TemperatureSetting");
             } else if (device.mappings.CurrentTemperature) {
                 d.attributes = {
                     //FIXME: do not define anything in server.js
                     thermostatTemperatureUnit: 'C',
-                    availableThermostatModes: 'off'
+                    availableThermostatModes: 'off',
+                    queryOnlyTemperatureSetting: true
                 };
                 d.traits.push("action.devices.traits.TemperatureSetting");
             }

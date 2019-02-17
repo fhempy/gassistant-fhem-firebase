@@ -34,15 +34,15 @@ async function processQUERY(uid, input, reportstate) {
           continue;
         }
         devices[d.id] = {};
+
+        var readings = await utils.getDeviceReadingValues(uid, device);
 		
         // If there is a current or a target temperature, we probably have a thermostat
         if (device.mappings.CurrentTemperature || device.mappings.TargetTemperature) {
             if (device.mappings.TargetTemperature) {
-                const desiredTemp = parseFloat(await cached2Format(uid, device.mappings.TargetTemperature));
-                let thermostatMode = 'heat';
-                if (desiredTemp == device.mappings.TargetTemperature.minValue) {
-                    thermostatMode = 'off';
-                }
+                const desiredTemp = parseFloat(await cached2Format(uid, device.mappings.TargetTemperature, readings));
+                const thermostatMode = await cached2Format(uid, device.mappings.ThermostatModes, readings);
+
                 devices[d.id].thermostatMode = thermostatMode;
                 devices[d.id].thermostatTemperatureSetpoint = desiredTemp;
             } else {
@@ -50,21 +50,21 @@ async function processQUERY(uid, input, reportstate) {
             }
       			
       			if (device.mappings.CurrentTemperature) {
-                const currentTemp = parseFloat(await cached2Format(uid, device.mappings.CurrentTemperature));
+                const currentTemp = parseFloat(await cached2Format(uid, device.mappings.CurrentTemperature, reading));
                 devices[d.id].thermostatTemperatureAmbient = currentTemp;
             }
 
             if (device.mappings.CurrentRelativeHumidity) {
-                devices[d.id].thermostatHumidityAmbient = parseFloat(await cached2Format(uid, device.mappings.CurrentRelativeHumidity));
+                devices[d.id].thermostatHumidityAmbient = parseFloat(await cached2Format(uid, device.mappings.CurrentRelativeHumidity, readings));
             }
         }
 		
 		    //OnOff
 		    if (device.mappings.On) {
 		        var reachable = 1;
-            const turnedOn = await cached2Format(uid, device.mappings.On);
+            const turnedOn = await cached2Format(uid, device.mappings.On, readings);
             if (device.mappings.Reachable) {
-              reachable = await cached2Format(uid, device.mappings.Reachable);
+              reachable = await cached2Format(uid, device.mappings.Reachable, readings);
             }
             if (!reachable)
               devices[d.id].on = false;
@@ -74,14 +74,14 @@ async function processQUERY(uid, input, reportstate) {
         
         //OpenClose
         if (device.mappings.OpenClose) {
-          devices[d.id].openPercent = await cached2Format(uid, device.mappings.OpenClose);
+          devices[d.id].openPercent = await cached2Format(uid, device.mappings.OpenClose, readings);
         }
 		
         //action.devices.traits.Modes: STATES
         if (device.mappings.Modes) {
             devices[d.id].currentModeSettings = {};
             for (mode of device.mappings.Modes) {
-                let currentMode = await cached2Format(uid, mode);
+                let currentMode = await cached2Format(uid, mode, readings);
         		    devices[d.id].currentModeSettings[mode.mode_attributes.name] = currentMode;
             }
         }
@@ -90,44 +90,44 @@ async function processQUERY(uid, input, reportstate) {
         if (device.mappings.Toggles) {
             devices[d.id].currentToggleSettings = {};
             for (toggle of device.mappings.Toggles) {
-                let currentToggle = await cached2Format(uid, toggle);
+                let currentToggle = await cached2Format(uid, toggle, readings);
         		    devices[d.id].currentToggleSettings[toggle.toggle_attributes.name] = currentToggle == toggle.valueOn;
             }
         }
         
         //action.devices.traits.FanSpeed
         if (device.mappings.FanSpeed) {
-            devices[d.id].currentFanSpeedSetting = await cached2Format(uid, device.mappings.FanSpeed);
+            devices[d.id].currentFanSpeedSetting = await cached2Format(uid, device.mappings.FanSpeed, readings);
         }
         
         //action.devices.traits.Dock
         if (device.mappings.Dock) {
-            devices[d.id].isDocked = await cached2Format(uid, device.mappings.Dock);
+            devices[d.id].isDocked = await cached2Format(uid, device.mappings.Dock, readings);
         }
         
         //action.devices.traits.ColorSetting
         if (device.mappings.RGB) {
             devices[d.id].color = {};
-            const rgb = await cached2Format(uid, device.mappings.RGB);
+            const rgb = await cached2Format(uid, device.mappings.RGB, readings);
             if (device.mappings.ColorMode) {
-              const colormode = await cached2Format(uid, device.mappings.ColorMode);
+              const colormode = await cached2Format(uid, device.mappings.ColorMode, readings);
               if (colormode == device.mappings.ColorMode.valueCt) {
                   //color temperature mode
-                  devices[d.id].color.temperatureK = await cached2Format(uid, device.mappings.ColorTemperature);
+                  devices[d.id].color.temperatureK = await cached2Format(uid, device.mappings.ColorTemperature, readings);
               } else {
                   //RGB mode
                   if (reportstate) {
-                    devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB);
+                    devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB, readings);
                   } else {
-                    devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
+                    devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB, readings);
                   }
               }
             } else {
               //RGB mode
               if (reportstate) {
-                devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB);
+                devices[d.id].color.spectrumRGB = await cached2Format(uid, device.mappings.RGB, readings);
               } else {
-                devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB);
+                devices[d.id].color.spectrumRgb = await cached2Format(uid, device.mappings.RGB, readings);
               }
             }
         } else {
@@ -143,13 +143,13 @@ async function processQUERY(uid, input, reportstate) {
         //action.devices.traits.Brightness
         if (device.mappings.Brightness) {
             // Brightness range is 0..100
-            devices[d.id].brightness = await cached2Format(uid, device.mappings.Brightness);
+            devices[d.id].brightness = await cached2Format(uid, device.mappings.Brightness, readings);
         }
         
         //action.devices.traits.StartStop
         if (device.mappings.StartStop) {
-            devices[d.id].isPaused = await cached2Format(uid, device.mappings.StartStop) == 'paused' ? true : false;
-            devices[d.id].isRunning = await cached2Format(uid, device.mappings.StartStop) == 'running' ? true : false;
+            devices[d.id].isPaused = await cached2Format(uid, device.mappings.StartStop, readings) == 'paused' ? true : false;
+            devices[d.id].isRunning = await cached2Format(uid, device.mappings.StartStop, readings) == 'running' ? true : false;
         }
         
         //if a trait was used, set online, otherwise delete (e.g. scene)
@@ -165,11 +165,11 @@ async function processQUERY(uid, input, reportstate) {
 } //processQUERY
 
 
-function FHEM_reading2homekit_(uid, mapping, orig) {
-    var value = orig;
+function FHEM_reading2homekit_(uid, mapping, readings) {
+    var value = readings[mapping.reading[0]];
     if (value === undefined)
         return undefined;
-    var reading = mapping.reading;
+    var reading = mapping.reading.toString();
 
     if (reading == 'temperature'
         || reading == 'measured'
@@ -262,7 +262,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
         if (mapping.event_map !== undefined) {
             var mapped = mapping.event_map[value];
             if (mapped !== undefined) {
-                console.debug(mapping.informId + ' eventMap: value ' + value + ' mapped to: ' + mapped);
+                console.debug(mapping.reading.toString() + ' eventMap: value ' + value + ' mapped to: ' + mapped);
                 value = mapped;
             }
         }
@@ -271,10 +271,10 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = value.split(' ')[mapping.part];
 
             if (mapped === undefined) {
-                uiderror(uid, mapping.informId + ' value ' + value + ' has no part ' + mapping.part);
+                uiderror(uid, mapping.reading.toString() + ' value ' + value + ' has no part ' + mapping.part);
                 return value;
             }
-            console.debug(mapping.informId + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
+            console.debug(mapping.reading.toString() + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
             value = mapped;
         }
 
@@ -285,7 +285,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
                 mapped = 1;
             else
                 mapped = 0;
-            console.debug(mapping.informId + ' threshold: value ' + value + ' mapped to ' + mapped);
+            console.debug(mapping.reading.toString() + ' threshold: value ' + value + ' mapped to ' + mapped);
             value = mapped;
         }
 
@@ -293,6 +293,9 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = undefined;
             if (typeof mapping.value2homekit_re === 'object')
                 for (var entry of mapping.value2homekit_re) {
+                    if (entry.reading) {
+                        value = readings[entry.reading];
+                    }
                     if (value.match(entry.re)) {
                         mapped = entry.to;
                         break;
@@ -310,7 +313,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
                 mapped = mapping.default;
 
             if (mapped === undefined) {
-                uiderror(uid, mapping.informId + ' value ' + value + ' not handled in values');
+                uiderror(uid, mapping.reading.toString() + ' value ' + value + ' not handled in values');
                 return undefined;
             }
             
@@ -318,12 +321,12 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
               mapped = (mapped == 'true');
             }
 
-            console.debug(mapping.informId + ' values: value ' + value + ' mapped to ' + mapped);
+            console.debug(mapping.reading.toString() + ' values: value ' + value + ' mapped to ' + mapped);
             value = mapped;
         }
 
         if (!format) {
-            uidlog(uid, mapping.informId + ' empty format, using ' + value);
+            uidlog(uid, mapping.reading.toString() + ' empty format, using ' + value);
             return value;
         } else if (format.match(/bool/i)) {
             var mapped = undefined;
@@ -355,12 +358,12 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
                     mapped = parseInt(value) ? 1 : 0;
             }
             if (mapped !== undefined) {
-                console.debug(mapping.informId + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
+                console.debug(mapping.reading.toString() + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
                 value = mapped;
             }
 
             if (mapping.factor) {
-                console.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+                console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
                 value *= mapping.factor;
             }
 
@@ -373,13 +376,13 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = parseFloat(value);
 
             if (typeof mapped !== 'number') {
-                uiderror(uid, mapping.informId + ' is not a number: ' + value);
+                uiderror(uid, mapping.reading.toString() + ' is not a number: ' + value);
                 return undefined;
             }
             value = mapped;
 
             if (mapping.factor) {
-                console.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+                console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
                 value *= mapping.factor;
             }
 
@@ -387,13 +390,13 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             var mapped = parseFloat(value);
 
             if (typeof mapped !== 'number') {
-                uiderror(uid, mapping.informId + ' not a number: ' + value);
+                uiderror(uid, mapping.reading.toString() + ' not a number: ' + value);
                 return undefined;
             }
             value = mapped;
 
             if (mapping.factor) {
-                console.debug(mapping.informId + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+                console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
                 value *= mapping.factor;
             }
 
@@ -404,14 +407,14 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
 
         if (mapping.max && mapping.maxValue) {
             value = Math.round((value * mapping.maxValue / mapping.max)*100)/100;
-            console.debug(mapping.informId + ' value ' + orig + ' scaled to: ' + value);
+            console.debug(mapping.reading.toString() + ' value ' + orig + ' scaled to: ' + value);
         }
 
         if (mapping.minValue !== undefined && value < mapping.minValue) {
-            console.debug(mapping.informId + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
+            console.debug(mapping.reading.toString() + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
             value = mapping.minValue;
         } else if (mapping.maxValue !== undefined && value > mapping.maxValue) {
-            console.debug(mapping.informId + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
+            console.debug(mapping.reading.toString() + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
             value = mapping.maxValue;
         }
 
@@ -431,7 +434,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
         if (typeof value === 'number') {
             var mapped = value;
             if (isNaN(value)) {
-                uiderror(uid, mapping.informId + ' not a number: ' + orig);
+                uiderror(uid, mapping.reading.toString() + ' not a number: ' + orig);
                 return undefined;
             } else if (mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined) {
                 mapped = mapping.maxValue - value + mapping.minValue;
@@ -442,7 +445,7 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
             }
 
             if (value !== mapped)
-                console.debug(mapping.informId + ' value: ' + value + ' inverted to ' + mapped);
+                console.debug(mapping.reading.toString() + ' value: ' + value + ' inverted to ' + mapped);
             value = mapped;
         }
         if (format && format.match(/bool/i)) {
@@ -453,23 +456,28 @@ function FHEM_reading2homekit_(uid, mapping, orig) {
     return value;
 }
 
-function FHEM_reading2homekit(uid, mapping, orig) {
+function FHEM_reading2homekit(uid, mapping, readings) {
     var value = undefined;
+    var orig = readings.toString();
     if (mapping.reading2homekit && typeof mapping.reading2homekit == 'function') {
         uidlog(uid, 'function found for reading2homekit');
         try {
-            value = mapping.reading2homekit(mapping, orig);
+            if (mapping.reading.length === 1) {
+              orig = readings[mapping.reading[0]];
+              value = mapping.reading2homekit(mapping, readings[mapping.reading[0]]);
+            } else
+              value = mapping.reading2homekit(mapping, readings);
         } catch (err) {
-            uiderror(uid, mapping.informId + ' reading2homekit: ' + err);
+            uiderror(uid, mapping.reading[0] + ' reading2homekit: ' + err);
             return undefined;
         }
         if (typeof value === 'number' && isNaN(value)) {
-            uiderror(uid, mapping.informId + ' not a number: ' + orig + ' => ' + value);
+            uiderror(uid, mapping.reading[0] + ' not a number: ' + readings[mapping.reading[0]] + ' => ' + value);
             return undefined;
         }
 
     } else {
-        value = FHEM_reading2homekit_(uid, mapping, orig);
+        value = FHEM_reading2homekit_(uid, mapping, readings);
     }
 
     if (value === undefined) {
@@ -495,9 +503,8 @@ function FHEM_reading2homekit(uid, mapping, orig) {
     return value;
 }
 
-async function cached2Format(uid, mapping) {
-    var val = await utils.getInformId(uid, mapping.informId);
-    return FHEM_reading2homekit(uid, mapping, val);
+async function cached2Format(uid, mapping, readings) {
+    return FHEM_reading2homekit(uid, mapping, readings);
 }
 
 module.exports = {

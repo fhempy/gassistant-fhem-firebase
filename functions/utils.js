@@ -162,40 +162,53 @@ async function getSyncFeatureLevel(uid) {
   return 0;
 }
 
-async function getInformId(uid, informId) {
-  //var informIdRef = await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).get();
-  var clientstate = await admin.database().ref('/users/' + uid + '/informids/' + informId).once('value');
-  if (clientstate.val() && clientstate.val().value) {
-    uidlog(uid, 'getInformId from db: ' + informId + ' = ' + clientstate.val().value);
-    return clientstate.val().value;
-  }
-  
-  // //FIXME cache is not used any more
-  // if (allInformIds[uid] && allInformIds[uid][informId]) {
-  //   //console.error('cached informid ' + informId + ' returned ' + allInformIds[uid][informId]);
-  //   uidlog(uid, 'getInformId from cache: ' + informId + ' = ' + allInformIds[uid][informId].value);
-  //   return allInformIds[uid][informId].value;
-  // }
-
-  return undefined;
-};
-
-async function setInformId(uid, informId, device, val, options) {
+async function setReadingValue(uid, device, reading, val, options) {
   if (!val)
     val = '';
 
-  await admin.database().ref('/users/' + uid + '/informids/' + informId).set({value: val, device: device});
-  uidlog(uid, 'informid updated ' + informId + ' = ' + val);
-
+  var format = '';
   if (options && options.init) {
-    if (options.reading) {
-      var format = '';
-      if (options.reading.match(/temp|humidity/))
-        format = 'float0.5';
-      await admin.database().ref('/users/' + uid + '/informiddefs/' + informId).set({'reading': options.reading, 'format': format});
-    }
+    if (reading.match(/temp|humidity/))
+      format = 'float0.5';
   }
-  //await admin.firestore().collection(uid).doc('devices').collection('informids').doc(informId).set({value: val}, {merge: true});
+
+  reading = reading.replace(/\.|\#|\[|\]|\$/g, '_');
+  await admin.database().ref('/users/' + uid + '/devices/' + device + '/' + reading).set({value: val, 'format': format});
+  
+  //BACKWARD COMPATIBILITY
+  await admin.database().ref('/users/' + uid + '/informids/' + device + '-' + reading).set({value: val, device: device});
+
+  uidlog(uid, 'Reading updated ' + device + ':' + reading + ' = ' + val);
+}
+
+async function getDeviceReadingValues(uid, device) {
+  var readings = {};
+  var clientstate = await admin.database().ref('/users/' + uid + '/devices/' + device).once('value');
+  clientstate.forEach(function(child) {
+    readings[child.key] = child.val().value;
+  });
+  
+  if (readings === {}) {
+    //BACKWARD COMPATIBILITY new version not synced yet
+    clientstate = await admin.database().ref('/users/' + uid + '/informids').once('value');
+    clientstate.forEach(function(child) {
+      if (child.key.startsWith(device)) {
+        readings[child.key] = child.val().value;
+      }
+    });
+  }
+
+  return readings;
+}
+
+async function getReadingValue(uid, device, reading) {
+  var clientstate = await admin.database().ref('/users/' + uid + '/devices/' + device + '/' + reading).once('value');
+  if (clientstate.val() && clientstate.val().value) {
+    uidlog(uid, 'Reading read from db: ' + device + ':' + reading + ' = ' + clientstate.val().value);
+    return clientstate.val().value;
+  }
+
+  return undefined;
 }
 
 async function retrieveGoogleToken(uid) {
@@ -232,7 +245,7 @@ async function retrieveGoogleToken(uid) {
 }
 
 
-async function reportState(uid, informid, device) {
+async function reportState(uid, device, reading) {
   const hquery = require('./handleQUERY');
   
   //FIXME device parameter missing, informid doesn't include device name
@@ -301,7 +314,8 @@ module.exports = {
   retrieveGoogleToken,
   getGoogleToken,
   setGoogleToken,
-  getInformId,
-  setInformId,
+  setReadingValue,
+  getReadingValue,
+  getDeviceReadingValues,
   getSyncFeatureLevel
 };

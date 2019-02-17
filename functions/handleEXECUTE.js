@@ -234,14 +234,7 @@ async function processEXECUTESetThermostatMode(uid, reqId, cmd, thermostatMode) 
         if (!device)
             return handleUnsupportedOperation();
 
-        let value = 21;
-        if (thermostatMode == 'off') {
-            if (device.mappings.TargetTemperature.minValue)
-                value = device.mappings.TargetTemperature.minValue;
-            else
-                value = 4.5;
-        }
-        await execFHEMCommand(uid, reqId, device, device.mappings.TargetTemperature, value);
+        await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode);
         deviceIds.push(d.id);
     }
 
