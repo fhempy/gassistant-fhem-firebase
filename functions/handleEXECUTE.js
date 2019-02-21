@@ -545,7 +545,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
             try {
                 value = await mapping.homekit2reading(mapping, value);
             } catch (err) {
-                uiderror(uid, mapping.informId + ' homekit2reading: ' + err);
+                uiderror(uid, mapping.reading.toString() + ' homekit2reading: ' + err);
                 return;
             }
             if (value === undefined) {
