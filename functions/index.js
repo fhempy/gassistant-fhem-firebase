@@ -90,14 +90,6 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
   exports["api"] = api;
 } //api/smarthome
 
-// if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'reportstateUpdate') {
-//   exports.reportstateUpdate = require('./clientapi').reportstateUpdate;
-// }
-
-// if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'reportstateCreate') {
-//   exports.reportstateCreate = require('./clientapi').reportstateCreate;
-// }
-
 if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'codelanding') {
   exports["codelanding"] = require('./codelanding').codelanding;
 } //codelanding/start
@@ -106,5 +98,3 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'firebase') {
   exports["firebase"] = require('./firebase_token').firebase;
 } //firebase/token
 
-//reportstate - onUpdate
-//exports.reportstate = require('./reportstate').reportstate;

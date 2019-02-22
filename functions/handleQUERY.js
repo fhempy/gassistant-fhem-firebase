@@ -35,13 +35,23 @@ async function processQUERY(uid, input, reportstate) {
         }
         devices[d.id] = {};
 
-        var readings = await utils.getDeviceReadingValues(uid, device);
+        var readings = await utils.getDeviceReadingValues(uid, device.name);
 		
         // If there is a current or a target temperature, we probably have a thermostat
         if (device.mappings.CurrentTemperature || device.mappings.TargetTemperature) {
             if (device.mappings.TargetTemperature) {
                 const desiredTemp = parseFloat(await cached2Format(uid, device.mappings.TargetTemperature, readings));
-                const thermostatMode = await cached2Format(uid, device.mappings.ThermostatModes, readings);
+                let thermostatMode = 'heat';
+                if (device.mappings.ThermostatModes) {
+                  thermostatMode = await cached2Format(uid, device.mappings.ThermostatModes, readings);
+                } else {
+                  //BACKWARD COMPATIBILITY
+                  uidlog(uid, 'OLDFUNCTION no thermostat modes - SYNC required');
+                  if (desiredTemp == device.mappings.TargetTemperature.minValue) {
+                      thermostatMode = 'off';
+                  }
+                  devices[d.id].thermostatMode = thermostatMode;
+                }
 
                 devices[d.id].thermostatMode = thermostatMode;
                 devices[d.id].thermostatTemperatureSetpoint = desiredTemp;
@@ -49,8 +59,8 @@ async function processQUERY(uid, input, reportstate) {
                 devices[d.id].thermostatMode = 'off';
             }
       			
-      			if (device.mappings.CurrentTemperature) {
-                const currentTemp = parseFloat(await cached2Format(uid, device.mappings.CurrentTemperature, reading));
+            if (device.mappings.CurrentTemperature) {
+                const currentTemp = parseFloat(await cached2Format(uid, device.mappings.CurrentTemperature, readings));
                 devices[d.id].thermostatTemperatureAmbient = currentTemp;
             }
 
@@ -458,6 +468,11 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
 
 function FHEM_reading2homekit(uid, mapping, readings) {
     var value = undefined;
+    //BACKWARD COMPATIBILITY
+    if (typeof mapping.reading === 'string') {
+      uidlog(uid, 'OLDFUNCTION FHEM_reading2homekit - SYNC needed');
+      mapping.reading = [mapping.reading];
+    }
     var orig = readings.toString();
     if (mapping.reading2homekit && typeof mapping.reading2homekit == 'function') {
         uidlog(uid, 'function found for reading2homekit');

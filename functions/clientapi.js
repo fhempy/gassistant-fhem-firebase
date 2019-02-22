@@ -22,7 +22,7 @@ async function generateAttributes(uid, batch) {
       var d = await generateTraits(uid, batch, device.data());
       uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
     } catch (err) {
-      uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME);
+      uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
     }
   }
 }
@@ -825,7 +825,7 @@ async function generateTraits(uid, batch, device) {
                 delete mapping.format;
 
               //create reading values in realtime database
-              if (typeof mapping.reading !== 'array') {
+              if (!Array.isArray(mapping.reading)) {
                 mapping.reading = [mapping.reading];
               }
               for (var r of mapping.reading) {
@@ -835,8 +835,12 @@ async function generateTraits(uid, batch, device) {
               
               	if (orig === undefined && devicetmp == device && mappings.default !== undefined)
               		continue;
-              
-              	await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+
+                if (orig === undefined) {
+                  continue;
+                }
+
+                await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
               }
               mapping.characteristic_type = characteristic_type;
 
@@ -863,8 +867,8 @@ async function generateTraits(uid, batch, device) {
    'alias': s.Attributes.alias ? s.Attributes.alias : '',
    'device': s.Internals.NAME,
    'type': s.Internals.TYPE,
-   'model': s.Readings.model ? s.Readings.model.Value
-    : (s.Attributes.model ? s.Attributes.model
+   'model': s.Readings.model ? s.Readings.model
+        : (s.Attributes.model ? s.Attributes.model
         : ( s.Internals.model ? s.Internals.model : '<unknown>' ) ),
    'PossibleSets': s.PossibleSets,
    'room': s.Attributes.room ? s.Attributes.room : '',
@@ -1048,11 +1052,16 @@ function prepare(mapping) {
             to = to.replace(/\+/g, ' ');
 
             var match;
-            if (match = from.match('^/(.*)/$'))
-                mapping.value2homekit_re.push({'reading': reading, re: match[1], to: to});
-            else {
+            if (match = from.match('^/(.*)/$')) {
+                if (reading)
+                  mapping.value2homekit_re.push({'reading': reading, re: match[1], to: to});
+                else
+                  mapping.value2homekit_re.push({re: match[1], to: to});
+                delete mapping.value2homekit;
+            } else {
                 from = from.replace(/\+/g, ' ');
                 mapping.value2homekit[from] = to;
+                delete mapping.value2homekit_re;
             }
         }
         if (mapping.value2homekit_re
@@ -1294,10 +1303,10 @@ function registerClientApi(app) {
     const informId = req.body.informId;
     const orig = req.body.value;
     const device = req.body.device;
-    const reading = informId.replace(device + '-', '');
+    const reading = informId.replace(device.replace(/\.|\#|\[|\]|\$/g, '_') + '-', '');
 
     //reportstate
-    await utils.setReadingValue(uid, device, reading.replace(/\.|\#|\[|\]|\$/g, '_'), orig);
+    await utils.setReadingValue(uid, device, reading, orig);
     await utils.reportState(uid, device, reading);
     res.send({});
   });
@@ -1372,7 +1381,5 @@ function registerClientApi(app) {
 }
 
 module.exports = {
-  registerClientApi,
-  reportstateUpdate,
-  reportstateCreate
+  registerClientApi
 }
