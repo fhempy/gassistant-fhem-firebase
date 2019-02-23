@@ -1,20 +1,15 @@
 const functions = require("firebase-functions");
-const admin = require("firebase-admin");
 const utils = require('./utils');
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
 const settings = require('./settings.json');
-
-admin.initializeApp(functions.config().firebase);
-const fssettings = {timestampsInSnapshots: true};
-admin.firestore().settings(fssettings);
 
 var clientConnectionOk = {};
 
 async function checkClientConnection(uid) {
   var connectionOk = 0;
   try {
-    var clientstate = await admin.database().ref('/users/' + uid + '/heartbeat').once('value');
+    var clientstate = await utils.getRealDB().ref('/users/' + uid + '/heartbeat').once('value');
     uidlog(uid, 'check client connection: ' + JSON.stringify(clientstate.val()));
     if (clientstate.val() && clientstate.val().active && (clientstate.val().time+9000) > Date.now()) {
       connectionOk = 1;

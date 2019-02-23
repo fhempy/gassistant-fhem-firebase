@@ -26,17 +26,16 @@ async function processQUERY(uid, input, reportstate) {
 
     for (d of input.payload.devices) {
         let device;
-        try {
-          uidlog(uid, "QUERY: " + d.customData.device);
-          device = await utils.loadDevice(uid, d.customData.device);
-        } catch (err) {
-          uiderror(uid, err);
-          continue;
-        }
+        let readings;
+
         devices[d.id] = {};
 
-        var readings = await utils.getDeviceReadingValues(uid, device.name);
-		
+        uidlog(uid, "QUERY: " + d.customData.device);
+        var dd = await utils.getDeviceAndReadings(uid, d.customData.device);
+        uidlog(uid, "getDeviceReadingValues finished");
+		    device = dd.device;
+        readings = dd.readings;
+        
         // If there is a current or a target temperature, we probably have a thermostat
         if (device.mappings.CurrentTemperature || device.mappings.TargetTemperature) {
             if (device.mappings.TargetTemperature) {
@@ -473,7 +472,7 @@ function FHEM_reading2homekit(uid, mapping, readings) {
       uidlog(uid, 'OLDFUNCTION FHEM_reading2homekit - SYNC needed');
       mapping.reading = [mapping.reading];
     }
-    var orig = readings.toString();
+    var orig = readings[mapping.reading[0]];
     if (mapping.reading2homekit && typeof mapping.reading2homekit == 'function') {
         uidlog(uid, 'function found for reading2homekit');
         try {

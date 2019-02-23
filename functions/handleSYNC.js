@@ -9,25 +9,24 @@ const createDirective = require('./utils.js').createDirective;
 
 var syncactive = {};
 
-
 async function setSyncActive(uid) {
   syncactive[uid] = 1;
-  await admin.firestore().collection(uid).doc('state').set({syncactive: 1}, {merge: true});
+  await utils.getFirestoreDB().collection(uid).doc('state').set({syncactive: 1}, {merge: true});
 };
 
 async function setSyncFinished(uid) {
   syncactive[uid] = 0;
-  await admin.firestore().collection(uid).doc('state').set({syncactive: 0, featurelevel: settings.FEATURELEVEL}, {merge: true});
-  await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
-  await admin.database().ref('/users/' + uid + '/lastSYNC').set({timestamp: Date.now()});
+  await utils.getFirestoreDB().collection(uid).doc('state').set({syncactive: 0, featurelevel: settings.FEATURELEVEL}, {merge: true});
+  await utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
+  await utils.getRealDB().ref('/users/' + uid + '/lastSYNC').set({timestamp: Date.now()});
 };
 
 async function setConnected(uid) {
-  await admin.firestore().collection(uid).doc('state').set({disconnected: 0}, {merge: true});
+  await utils.getFirestoreDB().collection(uid).doc('state').set({disconnected: 0}, {merge: true});
 };
 
 async function isDisconnected(uid) {
-  var ref = await admin.firestore().collection(uid).doc('state').get();
+  var ref = await utils.getFirestoreDB().collection(uid).doc('state').get();
 
   if (ref.data() && ref.data().disconnected)
     return ref.data().disconnected;
@@ -37,7 +36,7 @@ async function isDisconnected(uid) {
 
 async function handleSYNC(uid, reqId, res) {
   setSyncActive(uid);
-  admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'RELOAD_DEVICES', id: reqId});
+  utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'RELOAD_DEVICES', id: reqId});
   //wait for RELOAD_DEVICES_FINISHED
   await createSYNCPayloadResponse(uid, reqId, res);
 }
@@ -48,7 +47,6 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   uidlog(uid, 'createSYNCResponse finished');
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
-  //admin.firestore().collection(uid).doc('msgs').collection('firestore2google').add({msg: response, id: reqId});
   //activate report state after 30s
   await setSyncFinished(uid);
   //set connected

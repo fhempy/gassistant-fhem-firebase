@@ -11,6 +11,22 @@ var allDevices = {};
 //var allInformIds = {};
 var googleToken = '';
 
+admin.initializeApp(functions.config().firebase);
+const fssettings = {timestampsInSnapshots: true};
+admin.firestore().settings(fssettings);
+
+const realdb = admin.database();
+const firestoredb = admin.firestore();
+
+
+function getRealDB() {
+  return realdb;
+}
+
+function getFirestoreDB() {
+  return firestoredb;
+}
+
 const jwtCheck = jwt({
 	secret: jwks.expressJwtSecret({
           cache: true,
@@ -30,15 +46,18 @@ function createDirective(reqId, payload) {
     };
 }// createDirective
 
+//BACKWARD COMPATIBILITY
 async function getLastSyncTimestamp(uid) {
-  var lastSync = await admin.database().ref('/users/' + uid + '/lastSYNC').once('value');
+  var lastSync = await realdb.ref('/users/' + uid + '/lastSYNC').once('value');
   if (lastSync.val() && lastSync.val().value && lastSync.val().value.timestamp) {
     return lastSync.val().value.timestamp;
   }
   return 0;
 }
 
+//BACKWARD COMPATIBILITY
 async function loadDevice(uid, devicename) {
+  uidlog(uid, "OLDFUNCTION loadDevice");
   //TODO cache also just one device
   var lastSync = await getLastSyncTimestamp(uid);
   // if (allDevices[uid] === undefined || allDevices[uid]['.lastSYNC'] === undefined || allDevices[uid]['.lastSYNC'] < lastSync) {
@@ -57,7 +76,7 @@ async function loadDevice(uid, devicename) {
 
   uidlog(uid, 'FIRESTORE READ: loadDevice, devices/attributes/' + devicename);
 
-  var docRef = await admin.firestore().collection(uid).doc('devices').collection('attributes').doc(devicename).get();
+  var docRef = await firestoredb.collection(uid).doc('devices').collection('attributes').doc(devicename).get();
   var device = docRef.data();
   if (!device || !device.mappings) {
     throw new Error('No mappings defined for ' + devicename);
@@ -94,44 +113,61 @@ async function loadDevice(uid, devicename) {
 
 async function loadDevices(uid, nocache) {
   var lastSync = await getLastSyncTimestamp(uid);
-
-  allDevices[uid] = {};
-
   var devices = {};
-  var attributesRef = await admin.firestore().collection(uid).doc('devices').collection('attributes');
-  var attrRef = await attributesRef.get();
-  for (attr of attrRef.docs) {
-    var d = attr.data();
-    uidlog(uid, 'FIRESTORE READ: loadDevices, devices/attributes/' + d.name);
-    for (characteristic_type in d.mappings) {
-      let mappingChar = d.mappings[characteristic_type];
-      //mappingChar = Modes array
+  var found = 0;
 
-      if (!Array.isArray(mappingChar))
-        mappingChar = [mappingChar];
+  var d = await realdb.ref('/users/' + uid + '/devices').once('value');
+  d.forEach(function(child) {
+    child.forEach(function(r) {
+      if (r.key === 'XXXDEVICEDEFXXX') {
+        devices[child.key] = r.val();
+        found = 1;
+      }
+    });
+  });
+  
 
-      let mappingRoot;
-      for (mappingRoot in mappingChar) {
-	      mappingRoot = mappingChar[mappingRoot];
-	      //mappingRoot = first element of Modes array
-	      if (!Array.isArray(mappingRoot))
-		      mappingRoot = [mappingRoot];
-
-	      for (mappingElement in mappingRoot) {
-    			mapping = mappingRoot[mappingElement];
-    			
-          if (mapping.reading2homekit) {
-            eval('mapping.reading2homekit = ' + mapping.reading2homekit);
-          }
-          if (mapping.homekit2reading) {
-            eval('mapping.homekit2reading = ' + mapping.homekit2reading);
+  //BACKWARD COMPATIBILITY
+  if (found === 0) {
+    uidlog(uid, "OLDFUNCTION loadDevices");
+    allDevices[uid] = {};
+  
+    var attributesRef = await firestoredb.collection(uid).doc('devices').collection('attributes');
+    var attrRef = await attributesRef.get();
+    for (attr of attrRef.docs) {
+      var d = attr.data();
+      uidlog(uid, 'FIRESTORE READ: loadDevices, devices/attributes/' + d.name);
+      for (characteristic_type in d.mappings) {
+        let mappingChar = d.mappings[characteristic_type];
+        //mappingChar = Modes array
+  
+        if (!Array.isArray(mappingChar))
+          mappingChar = [mappingChar];
+  
+        let mappingRoot;
+        for (mappingRoot in mappingChar) {
+  	      mappingRoot = mappingChar[mappingRoot];
+  	      //mappingRoot = first element of Modes array
+  	      if (!Array.isArray(mappingRoot))
+  		      mappingRoot = [mappingRoot];
+  
+  	      for (mappingElement in mappingRoot) {
+      			mapping = mappingRoot[mappingElement];
+      			
+            if (mapping.reading2homekit) {
+              eval('mapping.reading2homekit = ' + mapping.reading2homekit);
+            }
+            if (mapping.homekit2reading) {
+              eval('mapping.homekit2reading = ' + mapping.homekit2reading);
+            }
           }
         }
       }
+      devices[d.name] = d;
+      allDevices[uid][d.name] = {'device': d, 'timestamp': lastSync};
     }
-    devices[d.name] = d;
-    allDevices[uid][d.name] = {'device': d, 'timestamp': lastSync};
   }
+  
   return devices;
 }
 
@@ -139,7 +175,7 @@ async function getGoogleToken() {
   if (googleToken != '')
     return googleToken;
 
-  var googleTokenRef = await admin.firestore().collection('settings').doc('googletoken').get();
+  var googleTokenRef = await firestoredb.collection('settings').doc('googletoken').get();
 
   if (googleTokenRef.data() && googleTokenRef.data().token)
     return googleTokenRef.data().token;
@@ -149,12 +185,12 @@ async function getGoogleToken() {
 
 function setGoogleToken(google_token) {
   googleToken = google_token;
-  admin.firestore().collection('settings').doc('googletoken').set({token: google_token})
+  firestoredb.collection('settings').doc('googletoken').set({token: google_token})
     .then(r => {});
 }
 
 async function getSyncFeatureLevel(uid) {
-  var state = await admin.firestore().collection(uid).doc('state').get();
+  var state = await firestoredb.collection(uid).doc('state').get();
 
   if (state.data() && state.data().featurelevel)
     return state.data().featurelevel;
@@ -171,23 +207,58 @@ async function setReadingValue(uid, device, reading, val, options) {
     format = 'float0.5';
 
   reading = reading.replace(/\.|\#|\[|\]|\$/g, '_');
-  await admin.database().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
+  await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
   
   //BACKWARD COMPATIBILITY
-  await admin.database().ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading).set({value: val, device: device});
+  await realdb.ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading).set({value: val, device: device});
 
   uidlog(uid, 'Reading updated ' + device + ':' + reading + ' = ' + val);
 }
 
-async function getDeviceReadingValues(uid, device) {
+async function getDeviceAndReadings(uid, device) {
   var readings = {};
-  var clientstate = await admin.database().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+  var dev = 0;
+  var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
   clientstate.forEach(function(child) {
-    readings[child.key] = child.val().value;
+    if (child.key === 'XXXDEVICEDEFXXX') {
+      dev = child.val();
+      
+      if (!dev || !dev.mappings) {
+        throw new Error('No mappings defined for ' + devicename);
+      }
+      for (characteristic_type in dev.mappings) {
+        let mappingChar = dev.mappings[characteristic_type];
+        //mappingChar = Modes array
+    
+        if (!Array.isArray(mappingChar))
+          mappingChar = [mappingChar];
+    
+        let mappingRoot;
+        for (mappingRoot in mappingChar) {
+          mappingRoot = mappingChar[mappingRoot];
+          //mappingRoot = first element of Modes array
+          if (!Array.isArray(mappingRoot))
+    	      mappingRoot = [mappingRoot];
+
+          for (mappingElement in mappingRoot) {
+      			mapping = mappingRoot[mappingElement];
+      			
+            if (mapping.reading2homekit) {
+              eval('mapping.reading2homekit = ' + mapping.reading2homekit);
+            }
+            if (mapping.homekit2reading) {
+              eval('mapping.homekit2reading = ' + mapping.homekit2reading);
+            }
+          }
+        }
+      }
+    } else {
+      readings[child.key] = child.val().value;
+    }
   });
   
   //BACKWARD COMPATIBILITY new version not synced yet
-  clientstate = await admin.database().ref('/users/' + uid + '/informids').once('value');
+  clientstate = await realdb.ref('/users/' + uid + '/informids').once('value');
   clientstate.forEach(function(child) {
     //remove trailing device name (device-reading)
     if (child.key.startsWith(device.replace(/\.|\#|\[|\]|\$/g, '_') + '-')) {
@@ -198,18 +269,23 @@ async function getDeviceReadingValues(uid, device) {
       }
     }
   });
+  
+  if (dev === 0) {
+    uidlog(uid, 'OLDFUNCTION getinformids - loadDevice - SYNC needed');
+    dev = await loadDevice(uid, device);
+  }
 
-  return readings;
+  return {device: dev, readings: readings};
 }
 
 async function getReadingValue(uid, device, reading) {
-  var clientstate = await admin.database().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+  var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
   if (clientstate.val() && clientstate.val().value) {
     uidlog(uid, 'Reading read from db: ' + device + ':' + reading + ' = ' + clientstate.val().value);
     return clientstate.val().value;
   } else {
     //BACKWARD COMPATIBILITY get informid from old values
-    clientstate = await admin.database().ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+    clientstate = await realdb.ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
     if (clientstate.val() && clientstate.val().value) {
       uidlog(uid, 'OLDFUNCTION from db: ' + informId + ' = ' + clientstate.val().value);
       return clientstate.val().value;
@@ -324,6 +400,8 @@ module.exports = {
   setGoogleToken,
   setReadingValue,
   getReadingValue,
-  getDeviceReadingValues,
-  getSyncFeatureLevel
+  getSyncFeatureLevel,
+  getRealDB,
+  getFirestoreDB,
+  getDeviceAndReadings
 };

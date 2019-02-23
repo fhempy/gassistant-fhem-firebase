@@ -16,6 +16,8 @@ var deviceRooms = {};
 async function generateAttributes(uid, batch) {
   //generate traits in firestore
   var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
+  //delete all realtime database data
+  await admin.database().ref('users/' + uid).remove();
   for (device of devicesRef.docs) {
     uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
     try {
@@ -336,7 +338,7 @@ async function generateTraits(uid, batch, device) {
               ordered: true
           }
       }];
-      mappings.Modes.reading2homekit = function (mapping, orig) {
+      mappings.Modes[0].reading2homekit = function (mapping, orig) {
           if (orig == 'turbo')
               return 'Turbo';
           else if (orig == 'max')
@@ -344,7 +346,7 @@ async function generateTraits(uid, batch, device) {
           return orig;
       };
       
-      mappings.Modes.homekit2reading = function (mapping, orig) {
+      mappings.Modes[0].homekit2reading = function (mapping, orig) {
           if (orig == 'Turbo') {
               return 'turbo';
           } else if (orig == 'maximum') {
@@ -791,6 +793,7 @@ async function generateTraits(uid, batch, device) {
       this.serial = this.type + '.' + s.Internals.DEF;
   }*/
 
+  var readingsAlreadySet = {};
   // prepare mapping internals
   for (characteristic_type in mappings) {
       let mappingChar = mappings[characteristic_type];
@@ -840,15 +843,18 @@ async function generateTraits(uid, batch, device) {
                   continue;
                 }
 
-                await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+                if (!readingsAlreadySet[mapping.device + ':' + r]) {
+                  await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+                  readingsAlreadySet[mapping.device + ':' + r] = 1;
+                }
               }
               mapping.characteristic_type = characteristic_type;
 
       				prepare(mapping);
-      
+
       				if (typeof mapping.reading2homekit === 'function')
                 mapping.reading2homekit = mapping.reading2homekit.toString();
-                
+
               if (typeof mapping.homekit2reading === 'function')
                 mapping.homekit2reading = mapping.homekit2reading.toString();
 		      }
@@ -867,7 +873,7 @@ async function generateTraits(uid, batch, device) {
    'alias': s.Attributes.alias ? s.Attributes.alias : '',
    'device': s.Internals.NAME,
    'type': s.Internals.TYPE,
-   'model': s.Readings.model ? s.Readings.model
+   'model': s.Readings.model ? s.Readings.model.Value
         : (s.Attributes.model ? s.Attributes.model
         : ( s.Internals.model ? s.Internals.model : '<unknown>' ) ),
    'PossibleSets': s.PossibleSets,
@@ -885,16 +891,18 @@ async function generateTraits(uid, batch, device) {
   if (service_name)
     deviceAttributes.service_name = service_name;
 
-  setDeviceAttributeJSON(uid, device, batch, deviceAttributes);
+  await setDeviceAttributeJSON(uid, device, batch, deviceAttributes);
   return deviceAttributes;
 }
 
 function setDeviceRoom(uid, batch, device, room) {
-  batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), {ghomeRoom: room}, {merge: true});
+  //batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), {ghomeRoom: room}, {merge: true});
+  await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').update({ghomeRoom: room});
 };
 
-function setDeviceAttributeJSON(uid, device, batch, json) {
-  batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), json, {merge: true});
+async function setDeviceAttributeJSON(uid, device, batch, json) {
+  //batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), json, {merge: true});
+  await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').set(json);
 };
 
 async function setDeviceAttribute(uid, device, attr, val) {
