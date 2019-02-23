@@ -895,7 +895,7 @@ async function generateTraits(uid, batch, device) {
   return deviceAttributes;
 }
 
-function setDeviceRoom(uid, batch, device, room) {
+async function setDeviceRoom(uid, batch, device, room) {
   //batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), {ghomeRoom: room}, {merge: true});
   await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').update({ghomeRoom: room});
 };
@@ -1157,7 +1157,7 @@ function prepare(mapping) {
 };
 
 
-function generateRoomHint(uid, batch) {
+async function generateRoomHint(uid, batch) {
   //try to get the real room if no realRoom is defined
   let roomCheck = {};
   //deviceRooms
@@ -1195,7 +1195,7 @@ function generateRoomHint(uid, batch) {
       });
 
       if (roomFound) {
-          setDeviceRoom(uid, batch, d, currRoom);
+          await setDeviceRoom(uid, batch, d, currRoom);
       }
   }
 }
@@ -1208,7 +1208,7 @@ function registerClientApi(app) {
     deviceRooms[uid] = {};
     await generateAttributes(uid, batch);
     uidlog(uid, 'generateAttributes finished');
-    generateRoomHint(uid, batch);
+    await generateRoomHint(uid, batch);
     uidlog(uid, 'generateRoomHint finished');
     await batch.commit();
     uidlog(uid, 'BATCH FINISHED');
