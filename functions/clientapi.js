@@ -577,11 +577,19 @@ async function generateTraits(uid, batch, device) {
               mappings.TargetTemperature.minStep = parseFloat(values[1] - values[0]);
       }
 
-      mappings.ThermostatModes = {
-        reading: ['desiredTemperature', 'ecoMode'],
-        cmds: ['off:desiredTemperature 4.5','heat:comfort','eco:eco'],
-        values: ['desiredTemperature=/^4.5/:off', 'ecoMode=/^1$/:eco', 'desiredTemperature=/.*/:heat']
-      };
+      if (s.Readings.ecoMode) {
+        mappings.ThermostatModes = {
+          reading: ['desiredTemperature', 'ecoMode'],
+          cmds: ['off:desiredTemperature 4.5','heat:comfort','eco:eco'],
+          values: ['desiredTemperature=/^4.5/:off', 'ecoMode=/^1$/:eco', 'desiredTemperature=/.*/:heat']
+        };
+      } else if (s.Readings.mode) {
+        mappings.ThermostatModes = {
+          reading: ['desiredTemperature', 'mode'],
+          cmds: ['off:off','heat:comfort','eco:eco'],
+          values: ['mode=/off/:off', 'mode=/eco/:eco', 'mode=/.*/:heat']
+        };
+      }
   } else if (match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/)) {
       //PID20
       mappings.TargetTemperature = {reading: 'desired', cmd: 'desired', delay: true};

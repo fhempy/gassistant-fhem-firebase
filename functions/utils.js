@@ -59,7 +59,6 @@ async function loadDevice(uid, devicename) {
   var dev = 0;
   var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
   ref.forEach(function(child) {
-    uidlog(uid, 'loadDevice ' + devicename + ' ' + child.key);
     if (child.key === 'XXXDEVICEDEFXXX') {
       dev = child.val();
 
