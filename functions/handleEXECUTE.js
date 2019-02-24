@@ -234,14 +234,7 @@ async function processEXECUTESetThermostatMode(uid, reqId, cmd, thermostatMode) 
         if (!device)
             return handleUnsupportedOperation();
 
-        let value = 21;
-        if (thermostatMode == 'off') {
-            if (device.mappings.TargetTemperature.minValue)
-                value = device.mappings.TargetTemperature.minValue;
-            else
-                value = 4.5;
-        }
-        await execFHEMCommand(uid, reqId, device, device.mappings.TargetTemperature, value);
+        await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode);
         deviceIds.push(d.id);
     }
 
@@ -552,7 +545,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
             try {
                 value = await mapping.homekit2reading(mapping, value);
             } catch (err) {
-                uiderror(uid, mapping.informId + ' homekit2reading: ' + err);
+                uiderror(uid, mapping.reading.toString() + ' homekit2reading: ' + err);
                 return;
             }
             if (value === undefined) {
