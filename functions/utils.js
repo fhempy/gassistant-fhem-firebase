@@ -55,8 +55,50 @@ async function getLastSyncTimestamp(uid) {
   return 0;
 }
 
-//BACKWARD COMPATIBILITY
 async function loadDevice(uid, devicename) {
+  var dev = 0;
+  var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
+  ref.forEach(function(child) {
+    uidlog(uid, 'loadDevice ' + devicename + ' ' + child.key);
+    if (child.key === 'XXXDEVICEDEFXXX') {
+      dev = child.val();
+
+      if (!dev || !dev.mappings) {
+        throw new Error('No mappings defined for ' + devicename);
+      }
+      for (characteristic_type in dev.mappings) {
+        let mappingChar = dev.mappings[characteristic_type];
+        //mappingChar = Modes array
+    
+        if (!Array.isArray(mappingChar))
+          mappingChar = [mappingChar];
+
+        let mappingRoot;
+        for (mappingRoot in mappingChar) {
+          mappingRoot = mappingChar[mappingRoot];
+          //mappingRoot = first element of Modes array
+          if (!Array.isArray(mappingRoot))
+    	      mappingRoot = [mappingRoot];
+
+          for (mappingElement in mappingRoot) {
+      			mapping = mappingRoot[mappingElement];
+      			
+            if (mapping.reading2homekit) {
+              eval('mapping.reading2homekit = ' + mapping.reading2homekit);
+            }
+            if (mapping.homekit2reading) {
+              eval('mapping.homekit2reading = ' + mapping.homekit2reading);
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  if (dev)
+    return dev;
+
+  //BACKWARD COMPATIBILITY
   uidlog(uid, "OLDFUNCTION loadDevice");
   //TODO cache also just one device
   var lastSync = await getLastSyncTimestamp(uid);
@@ -112,7 +154,6 @@ async function loadDevice(uid, devicename) {
 }
 
 async function loadDevices(uid, nocache) {
-  var lastSync = await getLastSyncTimestamp(uid);
   var devices = {};
   var found = 0;
 
@@ -129,6 +170,7 @@ async function loadDevices(uid, nocache) {
 
   //BACKWARD COMPATIBILITY
   if (found === 0) {
+    var lastSync = await getLastSyncTimestamp(uid);
     uidlog(uid, "OLDFUNCTION loadDevices");
     allDevices[uid] = {};
   
@@ -224,7 +266,7 @@ async function getDeviceAndReadings(uid, device) {
       dev = child.val();
       
       if (!dev || !dev.mappings) {
-        throw new Error('No mappings defined for ' + devicename);
+        throw new Error('No mappings defined for ' + device);
       }
       for (characteristic_type in dev.mappings) {
         let mappingChar = dev.mappings[characteristic_type];
@@ -345,7 +387,7 @@ async function reportState(uid, device, reading) {
         }]
       }
   }, reportstate);
-  
+
   //prepare response
   var dev = {
     requestId: (Math.floor(Math.random() * Math.floor(1000000000000))).toString(),
@@ -357,7 +399,7 @@ async function reportState(uid, device, reading) {
     }
   };
   dev.payload.devices.states = deviceQueryRes.devices;
-  
+
   //TODO check if token is already older than one hour and renew it if so
   var google_token = await getGoogleToken();
   if (!google_token)

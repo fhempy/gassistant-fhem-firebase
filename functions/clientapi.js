@@ -1304,7 +1304,17 @@ function registerClientApi(app) {
     var featurelevel = await utils.getSyncFeatureLevel(uid);
     res.send({featurelevel: featurelevel});
   });
-  
+
+  app.post('/reportstate', utils.jwtCheck, async (req, res) => {
+    const {sub: uid} = req.user;
+    uidlog(uid, 'reportstate: ' + JSON.stringify(req.body));
+    const device = req.body.device;
+
+    //reportstate
+    await utils.reportState(uid, device, reading);
+    res.send({});
+  });
+
   app.post('/updateinformid', utils.jwtCheck, async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'update reading: ' + JSON.stringify(req.body));
@@ -1315,7 +1325,6 @@ function registerClientApi(app) {
 
     //reportstate
     await utils.setReadingValue(uid, device, reading, orig);
-    await utils.reportState(uid, device, reading);
     res.send({});
   });
   
