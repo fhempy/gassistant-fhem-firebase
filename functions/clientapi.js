@@ -12,25 +12,29 @@ const hquery = require('./handleQUERY');
 const util = require('util');
 const settings = require('./settings.json');
 
+const GOOGLE_DEVICE_TYPES = ['switch','outlet','light','thermostat','aircondition','airfreshener','airpurifier','camera','coffeemaker','dishwasher','dryer','fan','fireplace','heater','kettle','oven','refrigerator','scene','sprinkler','vacuum','washer'];
+
 var deviceRooms = {};
 
-async function generateAttributes(uid, batch) {
+async function generateAttributes(uid) {
   //generate traits in firestore
   var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
   //delete all realtime database data
   await admin.database().ref('users/' + uid).remove();
+  var usedDeviceReadings = {};
   for (device of devicesRef.docs) {
     uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
     try {
-      var d = await generateTraits(uid, batch, device.data());
+      var d = await generateTraits(uid, device.data(), usedDeviceReadings);
       uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
     } catch (err) {
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
     }
   }
+  return usedDeviceReadings;
 }
 
-async function generateTraits(uid, batch, device) {
+async function generateTraits(uid, device, usedDeviceReadings) {
   var s = device.json;
   var connection = device.connection;
   //uidlog(uid, 'generateTraits: ' + JSON.stringify(s));
@@ -730,7 +734,7 @@ async function generateTraits(uid, batch, device) {
       mappings.ThermostatModes = {
         reading: 'state',
         cmds: ['off:off','heat:heating','cool:cooling','auto:auto','fan-only:fanOnly','eco:energySaveHeating'],
-        values: ['/off/:off', '/Heat/:heat', '/Cool/:cool', '/Auto/:auto', '/Fan/:fan-only', '/EnergySave/:eco']
+        values: ['/off/:off', '/Cool/:cool', '/Auto/:auto', '/Fan/:fan-only', '/EnergySave/:eco', '/.*/:heat']
       };
     }
   }
@@ -802,7 +806,6 @@ async function generateTraits(uid, batch, device) {
       this.serial = this.type + '.' + s.Internals.DEF;
   }*/
 
-  var readingsAlreadySet = {};
   // prepare mapping internals
   for (characteristic_type in mappings) {
       let mappingChar = mappings[characteristic_type];
@@ -852,10 +855,17 @@ async function generateTraits(uid, batch, device) {
                   continue;
                 }
 
-                if (!readingsAlreadySet[mapping.device + ':' + r]) {
-                  await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
-                  readingsAlreadySet[mapping.device + ':' + r] = 1;
+                //BACKWARD COMPATIBILITY: 1.1.0
+                await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+
+                if (!usedDeviceReadings[mapping.device]) {
+                  usedDeviceReadings[mapping.device] = {};
                 }
+
+                var format = 'standard';
+                if (r.match(/temp|humidity/))
+                  format = 'float0.5';
+                usedDeviceReadings[mapping.device][r] = {'format': format};
               }
               mapping.characteristic_type = characteristic_type;
 
@@ -900,17 +910,15 @@ async function generateTraits(uid, batch, device) {
   if (service_name)
     deviceAttributes.service_name = service_name;
 
-  await setDeviceAttributeJSON(uid, device, batch, deviceAttributes);
+  await setDeviceAttributeJSON(uid, device, deviceAttributes);
   return deviceAttributes;
 }
 
-async function setDeviceRoom(uid, batch, device, room) {
-  //batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), {ghomeRoom: room}, {merge: true});
+async function setDeviceRoom(uid, device, room) {
   await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').update({ghomeRoom: room});
 };
 
-async function setDeviceAttributeJSON(uid, device, batch, json) {
-  //batch.set(admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device), json, {merge: true});
+async function setDeviceAttributeJSON(uid, device, json) {
   await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').set(json);
 };
 
@@ -1166,7 +1174,7 @@ function prepare(mapping) {
 };
 
 
-async function generateRoomHint(uid, batch) {
+async function generateRoomHint(uid) {
   //try to get the real room if no realRoom is defined
   let roomCheck = {};
   //deviceRooms
@@ -1204,7 +1212,7 @@ async function generateRoomHint(uid, batch) {
       });
 
       if (roomFound) {
-          await setDeviceRoom(uid, batch, d, currRoom);
+          await setDeviceRoom(uid, d, currRoom);
       }
   }
 }
@@ -1212,16 +1220,11 @@ async function generateRoomHint(uid, batch) {
 function registerClientApi(app) {
   app.get('/syncfinished', utils.jwtCheck, async (req, res) => {
     const {sub: uid} = req.user;
-    var batch = admin.firestore().batch();
-    uidlog(uid, 'batch created');
     deviceRooms[uid] = {};
-    await generateAttributes(uid, batch);
-    uidlog(uid, 'generateAttributes finished');
-    await generateRoomHint(uid, batch);
-    uidlog(uid, 'generateRoomHint finished');
-    await batch.commit();
-    uidlog(uid, 'BATCH FINISHED');
-    res.send({});
+    var usedDeviceReadings = await generateAttributes(uid);
+    await generateRoomHint(uid);
+    uidlog(uid, 'MAPPING CREATION FINISHED');
+    res.send(usedDeviceReadings);
   });
   
   app.post('/initsync', utils.jwtCheck, async (req, res) => {
@@ -1335,6 +1338,10 @@ function registerClientApi(app) {
     //reportstate
     await utils.setReadingValue(uid, device, reading, orig);
     res.send({});
+  });
+  
+  app.get('/getconfiguration', utils.jwtCheck, (req, res) => {
+    res.send({devicetypes: GOOGLE_DEVICE_TYPES});
   });
   
   app.get('/reportstateall', utils.jwtCheck, async (req, res) => {

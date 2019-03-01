@@ -119,6 +119,8 @@ var processSYNC = function (uid, devices) {
                     d.type = 'action.devices.types.COFFEE_MAKER';
                 } else if (device.service_name === 'aircondition') {
                     d.type = 'action.devices.types.AC_UNIT';
+                } else if (device.service_name === 'airfreshener') {
+                    d.type = 'action.devices.types.AIRFRESHENER';
                 } else if (device.service_name === 'airpurifier') {
                     d.type = 'action.devices.types.AIRPURIFIER';
                 } else if (device.service_name === 'camera') {
@@ -129,6 +131,10 @@ var processSYNC = function (uid, devices) {
                     d.type = 'action.devices.types.DRYER';
                 } else if (device.service_name === 'fan') {
                     d.type = 'action.devices.types.FAN';
+                } else if (device.service_name === 'fireplace') {
+                    d.type = 'action.devices.types.FIREPLACE';
+                } else if (device.service_name === 'heater') {
+                    d.type = 'action.devices.types.HEATER';
                 } else if (device.service_name === 'kettle') {
                     d.type = 'action.devices.types.KETTLE';
                 } else if (device.service_name === 'oven') {

@@ -31,10 +31,16 @@ async function processQUERY(uid, input, reportstate) {
         devices[d.id] = {};
 
         uidlog(uid, "QUERY: " + d.customData.device);
-        var dd = await utils.getDeviceAndReadings(uid, d.customData.device);
-        uidlog(uid, "getDeviceReadingValues finished");
-		    device = dd.device;
-        readings = dd.readings;
+        var dd;
+        try {
+          dd = await utils.getDeviceAndReadings(uid, d.customData.device);
+          uidlog(uid, "getDeviceReadingValues finished");
+		      device = dd.device;
+          readings = dd.readings;
+        } catch (err) {
+          uiderror(uid, 'getDeviceReadingValues failed with ' + err);
+          continue;
+        }
         
         // If there is a current or a target temperature, we probably have a thermostat
         if (device.mappings.CurrentTemperature || device.mappings.TargetTemperature) {

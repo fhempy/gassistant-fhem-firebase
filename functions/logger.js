@@ -1,6 +1,6 @@
 
 function uidlog(uid, msg) {
-  //console.log(uid + ': ' + msg);
+  console.log(uid + ': ' + msg);
 }
 
 function uidlogfct(uid, msg) {
