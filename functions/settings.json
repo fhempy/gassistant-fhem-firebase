@@ -3,6 +3,8 @@
   "FEATURELEVEL": 1,
   "CHANGELOG": "",
   "HOMEGRAPH_APIKEY": "",
+  "MIN_CLIENT_VERSION": "1.1.0",
+  "CHECK_CLIENT_VERSION": true,
 
   "PRIVATE_KEY": "",
   

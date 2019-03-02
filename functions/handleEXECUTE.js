@@ -2,6 +2,8 @@ const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const utils = require('./utils');
 const createDirective = require('./utils').createDirective;
+const settings = require('./settings.json');
+var compareVersions = require('compare-versions');
 
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
@@ -24,12 +26,16 @@ const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
 
 
 async function handleEXECUTE(uid, reqId, res, input) {
-  //read current value from firestore
   try {
     var payload = await processEXECUTE(uid, reqId, input);
+    if (settings.CHECK_CLIENT_VERSION) {
+      var clientVersion = await utils.getClientVersion(uid);
+      if (compareVersions(clientVersion, settings.MIN_CLIENT_VERSION) < 0) {
+        uiderror(uid, 'CLIENT UPDATE NEEDED');
+        payload = {"errorCode": "needsSoftwareUpdate"};
+      }
+    }
     var response = createDirective(reqId, payload);
-    uidlog(uid, 'final response EXECUTE: ' + JSON.stringify(response));
-  //const ref = await admin.firestore().collection(uid).doc('msgs').collection('firestore2google').add({msg: response, id: reqId});
     res.send(response);
   } catch (err) {
     uiderror(uid, err);

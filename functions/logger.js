@@ -9,7 +9,7 @@ function uidlogfct(uid, msg) {
 }
 
 function uiderror(uid, msg) {
-  admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({'msg': 'LOG_ERROR', log: msg});
+  admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({'msg': 'LOG_ERROR', log: msg.toString()});
   console.error(uid + ': ' + msg);
 }
 

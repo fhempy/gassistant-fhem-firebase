@@ -382,6 +382,15 @@ async function getDeviceAndReadings(uid, device) {
   return {device: dev, readings: readings};
 }
 
+async function getClientVersion(uid) {
+  var docRef = await firestoredb.collection(uid).doc('client').get();
+  var client = docRef.data();
+  var usedVersion = "0.0.1";
+  if (client.packageversion)
+    usedVersion = client.packageversion;
+  return usedVersion;
+}
+
 async function getReadingValue(uid, device, reading) {
   var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
   if (clientstate.val() && clientstate.val().value) {
@@ -509,5 +518,6 @@ module.exports = {
   getFirestoreDB,
   getAllDevicesAndReadings,
   getDeviceAndReadings,
-  rateLimiter
+  rateLimiter,
+  getClientVersion
 };

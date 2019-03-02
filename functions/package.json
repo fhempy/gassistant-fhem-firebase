@@ -12,6 +12,7 @@
   "dependencies": {
     "auth0": "^2.14.0",
     "body-parser": "^1.18.3",
+    "compare-versions": "^3.4.0",
     "cors": "^2.8.5",
     "express-jwt": "^5.3.1",
     "firebase-admin": "~6.0.0",
