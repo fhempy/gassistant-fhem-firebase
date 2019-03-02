@@ -35,16 +35,13 @@ async function isDisconnected(uid) {
 };
 
 async function handleSYNC(uid, reqId, res) {
+  uidlog(uid, 'STARTING SYNC');
   setSyncActive(uid);
-  utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'RELOAD_DEVICES', id: reqId});
-  //wait for RELOAD_DEVICES_FINISHED
   await createSYNCPayloadResponse(uid, reqId, res);
 }
 
 async function createSYNCPayloadResponse(uid, reqId, res) {
-  uidlog(uid, 'STARTING SYNC');
   var payload = await createSYNCResponse(uid);
-  uidlog(uid, 'createSYNCResponse finished');
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
   //activate report state after 30s

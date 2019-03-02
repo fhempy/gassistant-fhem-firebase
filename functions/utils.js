@@ -18,6 +18,34 @@ admin.firestore().settings(fssettings);
 const realdb = admin.database();
 const firestoredb = admin.firestore();
 
+var ratePerUser = {};
+
+function rateLimiter(rate, seconds) {
+  return function(req, res, next) {
+    const {sub: uid} = req.user;
+    if (!ratePerUser[uid]) {
+      ratePerUser[uid] = {
+        counter: 1,
+        time: Date.now()
+      };
+    } else {
+      ratePerUser[uid].counter++;
+    }
+    
+    if (ratePerUser[uid].counter > rate) {
+      if ((ratePerUser[uid].time+seconds*1000) > Date.now()) {
+        //within 5 minutes
+        uiderror(uid, 'Rate limit reached - too many requests');
+        res.status(429).send('Too many requests');
+      } else {
+        //above 5 minutes, reset counter
+        ratePerUser[uid].counter = 0;
+        ratePerUser[uid].time = Date.now();
+      }
+    }
+    next();
+  }
+}
 
 function getRealDB() {
   return realdb;
@@ -160,7 +188,7 @@ async function loadDevices(uid, nocache) {
   d.forEach(function(child) {
     child.forEach(function(r) {
       if (r.key === 'XXXDEVICEDEFXXX') {
-        devices[child.key] = r.val();
+        devices[r.val().name] = r.val();
         found = 1;
       }
     });
@@ -249,11 +277,75 @@ async function setReadingValue(uid, device, reading, val, options) {
 
   reading = reading.replace(/\.|\#|\[|\]|\$/g, '_');
   await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
-  
+
   //BACKWARD COMPATIBILITY
   await realdb.ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading).set({value: val, device: device});
 
   uidlog(uid, 'Reading updated ' + device + ':' + reading + ' = ' + val);
+}
+
+function prepareDevice(uid, dev) {
+  if (!dev || !dev.mappings) {
+    throw new Error('No mappings defined for ' + device);
+  }
+  for (characteristic_type in dev.mappings) {
+    let mappingChar = dev.mappings[characteristic_type];
+    //mappingChar = Modes array
+
+    if (!Array.isArray(mappingChar))
+      mappingChar = [mappingChar];
+
+    let mappingRoot;
+    for (mappingRoot in mappingChar) {
+      mappingRoot = mappingChar[mappingRoot];
+      //mappingRoot = first element of Modes array
+      if (!Array.isArray(mappingRoot))
+	      mappingRoot = [mappingRoot];
+
+      for (mappingElement in mappingRoot) {
+  			mapping = mappingRoot[mappingElement];
+  			
+        if (mapping.reading2homekit) {
+          eval('mapping.reading2homekit = ' + mapping.reading2homekit);
+        }
+        if (mapping.homekit2reading) {
+          eval('mapping.homekit2reading = ' + mapping.homekit2reading);
+        }
+      }
+    }
+  }
+}
+
+async function getAllDevicesAndReadings(uid) {
+  var readings = {};
+  var tmpReadings = {};
+  var devices = {};
+  var tmpDev;
+  var found = 0;
+  var allDevices = await realdb.ref('/users/' + uid + '/devices').once('value');
+  allDevices.forEach(function(device) {
+    tmpReadings = {};
+    
+    device.forEach(function(child) {
+      if (child.key === 'XXXDEVICEDEFXXX') {
+        found = 1;
+        devices[child.val().name] = {
+          'device': child.val()
+        };
+        prepareDevice(uid, devices[child.val().name]['device']);
+        tmpDev = child.val().name;
+      } else {
+        tmpReadings[child.key] = child.val().value;
+      }
+    });
+    devices[tmpDev].readings = tmpReadings;
+  });
+  
+  //BACKWARD COMPATIBILITY: 1.1.0
+  if (found == 0)
+    return undefined;
+
+  return devices;
 }
 
 async function getDeviceAndReadings(uid, device) {
@@ -263,36 +355,7 @@ async function getDeviceAndReadings(uid, device) {
   clientstate.forEach(function(child) {
     if (child.key === 'XXXDEVICEDEFXXX') {
       dev = child.val();
-      
-      if (!dev || !dev.mappings) {
-        throw new Error('No mappings defined for ' + device);
-      }
-      for (characteristic_type in dev.mappings) {
-        let mappingChar = dev.mappings[characteristic_type];
-        //mappingChar = Modes array
-    
-        if (!Array.isArray(mappingChar))
-          mappingChar = [mappingChar];
-    
-        let mappingRoot;
-        for (mappingRoot in mappingChar) {
-          mappingRoot = mappingChar[mappingRoot];
-          //mappingRoot = first element of Modes array
-          if (!Array.isArray(mappingRoot))
-    	      mappingRoot = [mappingRoot];
-
-          for (mappingElement in mappingRoot) {
-      			mapping = mappingRoot[mappingElement];
-      			
-            if (mapping.reading2homekit) {
-              eval('mapping.reading2homekit = ' + mapping.reading2homekit);
-            }
-            if (mapping.homekit2reading) {
-              eval('mapping.homekit2reading = ' + mapping.homekit2reading);
-            }
-          }
-        }
-      }
+      prepareDevice(uid, dev);
     } else {
       readings[child.key] = child.val().value;
     }
@@ -444,5 +507,7 @@ module.exports = {
   getSyncFeatureLevel,
   getRealDB,
   getFirestoreDB,
-  getDeviceAndReadings
+  getAllDevicesAndReadings,
+  getDeviceAndReadings,
+  rateLimiter
 };

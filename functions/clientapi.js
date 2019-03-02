@@ -20,17 +20,28 @@ async function generateAttributes(uid) {
   //generate traits in firestore
   var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
   //delete all realtime database data
-  await admin.database().ref('users/' + uid).remove();
+  await admin.database().ref('users/' + uid + '/devices').remove();
+  await admin.database().ref('users/' + uid + '/informids').remove();
   var usedDeviceReadings = {};
+  var realDBUpdateJSON = {};
+  var informIds = {};
   for (device of devicesRef.docs) {
     uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
     try {
-      var d = await generateTraits(uid, device.data(), usedDeviceReadings);
+      var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
+      var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
+      realDBUpdateJSON[dbDev] = resTraits.device;
+      informIds = {...resTraits.informids, ...informIds};
       uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
     } catch (err) {
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
     }
   }
+  uidlog(uid, 'Write to real DB');
+  await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+  //BACKWARD COMPATIBILITY: 1.1.0
+  await utils.getRealDB().ref('/users/' + uid + '/informids').set(informIds);
+  uidlog(uid, 'Done');
   return usedDeviceReadings;
 }
 
@@ -805,6 +816,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       this.model = s.Internals.SUBTYPE;
       this.serial = this.type + '.' + s.Internals.DEF;
   }*/
+  
+  var realDBUpdateJSON = {};
+  //BACKWARD COMPATIBILITY: 1.1.0
+  var realDBUpdateBackwardCompatibility = {};
 
   // prepare mapping internals
   for (characteristic_type in mappings) {
@@ -856,7 +871,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 }
 
                 //BACKWARD COMPATIBILITY: 1.1.0
-                await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+                //await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
+                realDBUpdateBackwardCompatibility[mapping.device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + r.replace(/\.|\#|\[|\]|\$/g, '_')] = {value: orig, device: mapping.device};
+                //also this is backward, as informids are not needed to be written to db from here. client is doing it
+                realDBUpdateJSON[r] = {
+                  value: orig
+                };
 
                 if (!usedDeviceReadings[mapping.device]) {
                   usedDeviceReadings[mapping.device] = {};
@@ -910,8 +930,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   if (service_name)
     deviceAttributes.service_name = service_name;
 
-  await setDeviceAttributeJSON(uid, device, deviceAttributes);
-  return deviceAttributes;
+  //await setDeviceAttributeJSON(uid, device, deviceAttributes);
+  realDBUpdateJSON['XXXDEVICEDEFXXX'] = deviceAttributes;
+  return {device: realDBUpdateJSON, informids: realDBUpdateBackwardCompatibility};
 }
 
 async function setDeviceRoom(uid, device, room) {
@@ -920,10 +941,6 @@ async function setDeviceRoom(uid, device, room) {
 
 async function setDeviceAttributeJSON(uid, device, json) {
   await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').set(json);
-};
-
-async function setDeviceAttribute(uid, device, attr, val) {
-  await admin.firestore().collection(uid).doc('devices').collection('attributes').doc(device).set({[attr]: val}, {merge: true});
 };
 
 function formatOfName(characteristic_type) {
@@ -1218,7 +1235,7 @@ async function generateRoomHint(uid) {
 }
 
 function registerClientApi(app) {
-  app.get('/syncfinished', utils.jwtCheck, async (req, res) => {
+  app.get('/syncfinished', utils.rateLimiter(3, 300), async (req, res) => {
     const {sub: uid} = req.user;
     deviceRooms[uid] = {};
     var usedDeviceReadings = await generateAttributes(uid);
@@ -1227,7 +1244,7 @@ function registerClientApi(app) {
     res.send(usedDeviceReadings);
   });
   
-  app.post('/initsync', utils.jwtCheck, async (req, res) => {
+  app.post('/initsync', async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'initiate sync');
     var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync?key=' + settings.HOMEGRAPH_APIKEY, {
@@ -1241,7 +1258,7 @@ function registerClientApi(app) {
     res.send({});
   });
   
-  app.get('/deleteuseraccount', utils.jwtCheck, async (req, res) => {
+  app.get('/deleteuseraccount', async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'deleteuseraccount');
     
@@ -1307,17 +1324,17 @@ function registerClientApi(app) {
     res.send({});
   });
   
-  app.get('/getfeaturelevel', utils.jwtCheck, (req, res) => {
+  app.get('/getfeaturelevel', (req, res) => {
     res.send({featurelevel: settings.FEATURELEVEL, changelog: settings.CHANGELOG});
   });
   
-  app.get('/getsyncfeaturelevel', utils.jwtCheck, async (req, res) => {
+  app.get('/getsyncfeaturelevel', async (req, res) => {
     const {sub: uid} = req.user;
     var featurelevel = await utils.getSyncFeatureLevel(uid);
     res.send({featurelevel: featurelevel});
   });
 
-  app.post('/reportstate', utils.jwtCheck, async (req, res) => {
+  app.post('/reportstate', async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'reportstate: ' + JSON.stringify(req.body));
     const device = req.body.device;
@@ -1327,7 +1344,7 @@ function registerClientApi(app) {
     res.send({});
   });
 
-  app.post('/updateinformid', utils.jwtCheck, async (req, res) => {
+  app.post('/updateinformid', async (req, res) => {
     const {sub: uid} = req.user;
     uidlogfct(uid, 'updateinformid: ' + JSON.stringify(req.body));
     const informId = req.body.informId;
@@ -1339,12 +1356,12 @@ function registerClientApi(app) {
     await utils.setReadingValue(uid, device, reading, orig);
     res.send({});
   });
-  
-  app.get('/getconfiguration', utils.jwtCheck, (req, res) => {
+
+  app.get('/getconfiguration', (req, res) => {
     res.send({devicetypes: GOOGLE_DEVICE_TYPES});
   });
-  
-  app.get('/reportstateall', utils.jwtCheck, async (req, res) => {
+
+  app.get('/reportstateall', async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'REPORT STATE ALL');
     

@@ -23,6 +23,17 @@ async function processQUERY(uid, input, reportstate) {
     let response = null;
 
     let devices = {};
+    var allDevices;
+
+    if (input.payload.devices.length > 1) {
+      //preload all devices
+      try {
+        allDevices = await utils.getAllDevicesAndReadings(uid);
+        uidlog(uid, "getAllDevicesAndReadings finished");
+      } catch (err) {
+        uiderror(uid, 'getAllDevicesAndReadings failed with ' + err);
+      }
+    }
 
     for (d of input.payload.devices) {
         let device;
@@ -33,8 +44,12 @@ async function processQUERY(uid, input, reportstate) {
         uidlog(uid, "QUERY: " + d.customData.device);
         var dd;
         try {
-          dd = await utils.getDeviceAndReadings(uid, d.customData.device);
-          uidlog(uid, "getDeviceReadingValues finished");
+          if (allDevices) {
+            dd = allDevices[d.customData.device];
+          } else {
+            dd = await utils.getDeviceAndReadings(uid, d.customData.device);
+            uidlog(uid, "getDeviceReadingValues finished");
+          }
 		      device = dd.device;
           readings = dd.readings;
         } catch (err) {

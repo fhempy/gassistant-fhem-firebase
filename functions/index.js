@@ -34,8 +34,14 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
   app.use(cors());
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({extended: true}));
+  app.use(utils.jwtCheck);
+  app.use(function(req, res, next) {
+    const {sub: uid} = req.user;
+    uidlog(uid, 'Function called: ' + req.originalUrl);
+    next();
+  });
 
-  app.post('/smarthome', utils.jwtCheck, async (req, res) => {
+  app.post('/smarthome', async (req, res) => {
     const {sub: uid} = req.user;
     checkClientConnection(uid);
     uidlog(uid, 'received ' + JSON.stringify(req.body));

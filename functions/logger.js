@@ -1,3 +1,4 @@
+const admin = require("firebase-admin");
 
 function uidlog(uid, msg) {
   console.log(uid + ': ' + msg);
@@ -8,8 +9,8 @@ function uidlogfct(uid, msg) {
 }
 
 function uiderror(uid, msg) {
-  console.error(new Error(uid + ': ' + msg));
-  //admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({'msg': 'LOG_ERROR', log: msg});
+  admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({'msg': 'LOG_ERROR', log: msg});
+  console.error(uid + ': ' + msg);
 }
 
 module.exports = {
