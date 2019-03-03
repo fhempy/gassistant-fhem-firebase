@@ -286,7 +286,7 @@ async function setReadingValue(uid, device, reading, val, options) {
 
 function prepareDevice(uid, dev) {
   if (!dev || !dev.mappings) {
-    throw new Error('No mappings defined for ' + device);
+    throw new Error('No mappings identified for ' + dev.name);
   }
   for (characteristic_type in dev.mappings) {
     let mappingChar = dev.mappings[characteristic_type];

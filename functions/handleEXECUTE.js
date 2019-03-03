@@ -32,7 +32,7 @@ async function handleEXECUTE(uid, reqId, res, input) {
       var clientVersion = await utils.getClientVersion(uid);
       if (compareVersions(clientVersion, settings.MIN_CLIENT_VERSION) < 0) {
         uiderror(uid, 'CLIENT UPDATE NEEDED');
-        payload = {"errorCode": "needsSoftwareUpdate"};
+        //payload = {"errorCode": "needsSoftwareUpdate"};
       }
     }
     var response = createDirective(reqId, payload);
