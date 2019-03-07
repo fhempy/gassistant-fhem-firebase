@@ -90,35 +90,7 @@ async function loadDevice(uid, devicename) {
     if (child.key === 'XXXDEVICEDEFXXX') {
       dev = child.val();
 
-      if (!dev || !dev.mappings) {
-        throw new Error('No mappings defined for ' + devicename);
-      }
-      for (characteristic_type in dev.mappings) {
-        let mappingChar = dev.mappings[characteristic_type];
-        //mappingChar = Modes array
-    
-        if (!Array.isArray(mappingChar))
-          mappingChar = [mappingChar];
-
-        let mappingRoot;
-        for (mappingRoot in mappingChar) {
-          mappingRoot = mappingChar[mappingRoot];
-          //mappingRoot = first element of Modes array
-          if (!Array.isArray(mappingRoot))
-    	      mappingRoot = [mappingRoot];
-
-          for (mappingElement in mappingRoot) {
-      			mapping = mappingRoot[mappingElement];
-      			
-            if (mapping.reading2homekit) {
-              eval('mapping.reading2homekit = ' + mapping.reading2homekit);
-            }
-            if (mapping.homekit2reading) {
-              eval('mapping.homekit2reading = ' + mapping.homekit2reading);
-            }
-          }
-        }
-      }
+      prepareDevice(uid, dev);
     }
   });
   
@@ -458,7 +430,7 @@ async function reportState(uid, device) {
         }]
       }
   }, reportstate);
-
+  
   //prepare response
   var dev = {
     requestId: (Math.floor(Math.random() * Math.floor(1000000000000))).toString(),
@@ -475,7 +447,7 @@ async function reportState(uid, device) {
   var google_token = await getGoogleToken();
   if (!google_token)
     google_token = await retrieveGoogleToken(uid);
-
+  
   //report state
   const fetch = require('node-fetch');
   for (var i=0; i<2; i++) {
@@ -487,8 +459,9 @@ async function reportState(uid, device) {
       },
       body: JSON.stringify(dev)
     };
+    uidlog(uid, 'reportState fetch');
     const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', options);
-    uidlog(uid, 'reportstateres: ' + await reportStateRes.status);
+    uidlog(uid, 'reportState response: ' + await reportStateRes.status);
     
     if (reportStateRes.status == 401) {
       google_token = await retrieveGoogleToken(uid);

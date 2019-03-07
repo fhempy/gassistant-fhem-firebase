@@ -429,7 +429,6 @@ async function processEXECUTESetToggles(uid, reqId, cmd, toggleSettings) {
         if (!device)
             return handleUnsupportedOperation();
 
-    		log.info(toggleSettings);
     		for (toggle of Object.keys(toggleSettings)) {
     			let value = toggleSettings[toggle];
     			for (mappingToggle of device.mappings.Toggles) {
@@ -642,4 +641,3 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
 module.exports = {
   handleEXECUTE
 };
-

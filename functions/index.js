@@ -91,6 +91,14 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
   exports["api"] = api;
 } //api/smarthome
 
+if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'reportstate') {
+  exports["reportstate"] = require('./reportstate').reportstate;
+}
+
+if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'clientfunctions') {
+  exports["clientfunctions"] = require('./clientfunctions').clientfunctions;
+}
+
 if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'codelanding') {
   exports["codelanding"] = require('./codelanding').codelanding;
 } //codelanding/start

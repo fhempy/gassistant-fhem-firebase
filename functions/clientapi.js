@@ -283,12 +283,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
             name: 'Turbo',
             name_values: [
               {
-                name_synonym: ['turbo', 'turbo-funktion', 'turbofunktion', 'turbo-modus', 'turbomodus'],
-                lang: 'de'
-              },
-              {
                 name_synonym: ['turbo'],
                 lang: 'en'
+              },
+              {
+                name_synonym: ['turbo', 'turbo-funktion', 'turbofunktion', 'turbo-modus', 'turbomodus'],
+                lang: 'de'
               }
             ]
         }
@@ -299,23 +299,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 		      cmd: 'cleaning_mode',
 		      mode_attributes: {
               name: 'suction',
-              name_values: [{
-                  name_synonym: ['saugkraft', 'saugstärke'],
-                  lang: 'de'
-              },
+              name_values: [
               {
                   name_synonym: ['suction'],
                   lang: 'en'
-              }],
+              },
+              {
+                  name_synonym: ['saugkraft', 'saugstärke'],
+                  lang: 'de'
+              }
+              ],
               settings: [{
                 setting_name: 'quiet',
                 setting_values: [{
                   setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
                   lang: 'de'
-                },
-                {
-                  setting_synonym: ['quiet'],
-                  lang: 'en'
                 }]
               },
               {
@@ -323,10 +321,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 setting_values: [{
                   setting_synonym: ['balanced', 'normal'],
                   lang: 'de'
-                },
-                {
-                  setting_synonym: ['balanced', 'normal'],
-                  lang: 'en'
                 }]
               },
               {
@@ -334,10 +328,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 setting_values: [{
                   setting_synonym: ['turbo'],
                   lang: 'de'
-                },
-                {
-                  setting_synonym: ['turbo'],
-                  lang: 'en'
                 }]
               },
               {
@@ -345,10 +335,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 setting_values: [{
                   setting_synonym: ['maximum', 'max'],
                   lang: 'de'
-                },
-                {
-                  setting_synonym: ['maximum'],
-                  lang: 'en'
                 }]
               }],
               ordered: true
@@ -882,10 +868,68 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                   usedDeviceReadings[mapping.device] = {};
                 }
 
-                var format = 'standard';
-                if (r.match(/temp|humidity/))
-                  format = 'float0.5';
-                usedDeviceReadings[mapping.device][r] = {'format': format};
+                //define compare functions which are used for report state
+                var compareFunction;
+                if (characteristic_type === 'RGB' ||
+                    characteristic_type === 'Hue' ||
+                    characteristic_type === 'Saturation' ||
+                    characteristic_type === 'Brightness') {
+                  compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+                    //check if old != new
+                    if (oldValue !== newValue) {
+                      if ((oldDevTimestamp + 2000) > Date.now()) {
+                        if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+                      }
+                      //check how old old is
+                      if ((oldTimestamp + 10000) > Date.now()) {
+                        //oldTimestamp is younger then 10s
+                        if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+                        return setTimeout(reportStateFunction.bind(null, device), 10000);
+                      } else {
+                        //oldTimestamp is older then 10s
+                        return setTimeout(reportStateFunction.bind(null, device), 10000);
+                      }
+                    }
+                    return undefined;
+                  };
+                } else if (characteristic_type === 'CurrentTemperature') {
+                  compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+                    //check if old != new
+                    if (Math.round(oldValue) !== Math.round(newValue)) {
+                      if ((oldDevTimestamp + 2000) > Date.now()) {
+                        if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+                      }
+                      //check how old old is
+                      if ((oldTimestamp + 60000) > Date.now()) {
+                        //oldTimestamp is younger then 60s
+                        if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+                        return setTimeout(reportStateFunction.bind(null, device), 60000);
+                      } else {
+                        //oldTimestamp is older then 60s
+                        return setTimeout(reportStateFunction.bind(null, device), 60000);
+                      }
+                    }
+                    return undefined;
+                  };
+                } else if (characteristic_type === 'CurrentRelativeHumidity') {
+                  compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+                    //DISABLE REPORTSTATE FOR HUMIDITY
+                    return undefined;
+                  };
+                } else {
+                  compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+                    if (oldValue !== newValue) {
+                      if ((oldDevTimestamp + 2000) > Date.now()) {
+                        if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+                      }
+                      if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+                      return setTimeout(reportStateFunction.bind(null, device), 5000);
+                    }
+                    return undefined;
+                  };
+                }
+                //BACKWARD COMPATIBILITY: delete format
+                usedDeviceReadings[mapping.device][r] = {'format': 'standard', 'compareFunction': compareFunction.toString()};
               }
               mapping.characteristic_type = characteristic_type;
 
@@ -1334,16 +1378,7 @@ function registerClientApi(app) {
     res.send({featurelevel: featurelevel});
   });
 
-  app.post('/reportstate', async (req, res) => {
-    const {sub: uid} = req.user;
-    uidlog(uid, 'reportstate: ' + JSON.stringify(req.body));
-    const device = req.body.device;
-
-    //reportstate
-    await utils.reportState(uid, device);
-    res.send({});
-  });
-
+  //BACKWARD COMPATIBILITY
   app.post('/updateinformid', async (req, res) => {
     const {sub: uid} = req.user;
     uidlogfct(uid, 'updateinformid: ' + JSON.stringify(req.body));
@@ -1353,80 +1388,12 @@ function registerClientApi(app) {
     const reading = informId.replace(device.replace(/\.|\#|\[|\]|\$/g, '_') + '-', '');
 
     //reportstate
-    await utils.setReadingValue(uid, device, reading, orig);
+    //await utils.setReadingValue(uid, device, reading, orig);
     res.send({});
   });
 
   app.get('/getconfiguration', (req, res) => {
     res.send({devicetypes: GOOGLE_DEVICE_TYPES});
-  });
-
-  app.get('/reportstateall', async (req, res) => {
-    const {sub: uid} = req.user;
-    uidlog(uid, 'REPORT STATE ALL');
-    
-    var query = {
-        intent: 'action.devices.QUERY',
-        payload: {
-          devices: []
-        }
-    };
-    var devices = await utils.loadDevices(uid);
-    for (var de in devices) {
-      const d = devices[de];
-      query.payload.devices.push({
-        id: d.uuid_base,
-        customData: {
-          device: d.uuid_base
-        }
-      });
-    }
-    const reportstate = 1;
-    var deviceQueryRes = await hquery.processQUERY(uid, query, reportstate);
-    
-    //prepare response
-    var dev = {
-      requestId: (Math.floor(Math.random() * Math.floor(1000000000000))).toString(),
-      agentUserId: uid,
-      payload: {
-        devices: {
-          states: {}
-        }
-      }
-    };
-    dev.payload.devices.states = deviceQueryRes.devices;
-    
-    uidlog(uid, 'device query res: ' + JSON.stringify(dev));
-  
-    //TODO check if token is already older than one hour and renew it if so
-    var google_token = await utils.getGoogleToken();
-    if (!google_token)
-      google_token = await utils.retrieveGoogleToken(uid);
-      
-    uidlog(uid, 'google token: ' + await google_token);
-    
-    //report state
-    for (var i=0; i<2; i++) {
-      var options = { method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + google_token,
-          'X-GFE-SSL': 'yes',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dev)
-      };
-      const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', options);
-      uidlog(uid, 'reportstateres: ' + await reportStateRes.status);
-      
-      if (reportStateRes.status == 401) {
-        google_token = await utils.retrieveGoogleToken(uid);
-      } else {
-        //save the token to database
-        utils.setGoogleToken(google_token);
-        break;
-      }
-    }
-    res.send({});
   });
 }
 
