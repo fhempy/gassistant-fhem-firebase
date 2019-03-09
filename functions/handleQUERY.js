@@ -189,7 +189,7 @@ async function processQUERY(uid, input, reportstate) {
           delete devices[d.id];
         }
     }
-    uidlog(uid, 'processQUERY: ' + JSON.stringify(devices));
+    uidlog(uid, 'processQUERY result: ' + JSON.stringify(devices));
 
     return {devices: devices};
 } //processQUERY

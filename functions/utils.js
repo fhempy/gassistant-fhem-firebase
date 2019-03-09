@@ -74,17 +74,8 @@ function createDirective(reqId, payload) {
     };
 }// createDirective
 
-//BACKWARD COMPATIBILITY
-async function getLastSyncTimestamp(uid) {
-  var lastSync = await realdb.ref('/users/' + uid + '/lastSYNC').once('value');
-  if (lastSync.val() && lastSync.val().value && lastSync.val().value.timestamp) {
-    return lastSync.val().value.timestamp;
-  }
-  return 0;
-}
-
 async function loadDevice(uid, devicename) {
-  var dev = 0;
+  var dev = undefined;
   var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
   ref.forEach(function(child) {
     if (child.key === 'XXXDEVICEDEFXXX') {
@@ -94,121 +85,21 @@ async function loadDevice(uid, devicename) {
     }
   });
   
-  if (dev)
-    return dev;
-
-  //BACKWARD COMPATIBILITY
-  uidlog(uid, "OLDFUNCTION loadDevice");
-  //TODO cache also just one device
-  var lastSync = await getLastSyncTimestamp(uid);
-  // if (allDevices[uid] === undefined || allDevices[uid]['.lastSYNC'] === undefined || allDevices[uid]['.lastSYNC'] < lastSync) {
-  //   const NO_CACHE = 1;
-  //   await loadDevices(uid, NO_CACHE);
-  //   allDevices[uid]['.lastSYNC'] = lastSync;
-  // }
-
-  if (allDevices[uid] && allDevices[uid][devicename] && allDevices[uid][devicename].timestamp >= lastSync) {
-    uidlog(uid, 'CACHE READ: loadDevice, devices/attributes/' + devicename);
-    return allDevices[uid][devicename].device;
-  }
-  if (!allDevices[uid]) {
-    allDevices[uid] = {};
-  }
-
-  uidlog(uid, 'FIRESTORE READ: loadDevice, devices/attributes/' + devicename);
-
-  var docRef = await firestoredb.collection(uid).doc('devices').collection('attributes').doc(devicename).get();
-  var device = docRef.data();
-  if (!device || !device.mappings) {
-    throw new Error('No mappings defined for ' + devicename);
-  }
-  for (characteristic_type in device.mappings) {
-    let mappingChar = device.mappings[characteristic_type];
-    //mappingChar = Modes array
-
-    if (!Array.isArray(mappingChar))
-      mappingChar = [mappingChar];
-
-    let mappingRoot;
-    for (mappingRoot in mappingChar) {
-      mappingRoot = mappingChar[mappingRoot];
-      //mappingRoot = first element of Modes array
-      if (!Array.isArray(mappingRoot))
-	      mappingRoot = [mappingRoot];
-
-      for (mappingElement in mappingRoot) {
-  			mapping = mappingRoot[mappingElement];
-  			
-        if (mapping.reading2homekit) {
-          eval('mapping.reading2homekit = ' + mapping.reading2homekit);
-        }
-        if (mapping.homekit2reading) {
-          eval('mapping.homekit2reading = ' + mapping.homekit2reading);
-        }
-      }
-    }
-  }
-  allDevices[uid][devicename] = {'device': device, 'timestamp': lastSync};
-  return device;
+  return dev;
 }
 
-async function loadDevices(uid, nocache) {
+async function loadDevices(uid) {
   var devices = {};
-  var found = 0;
 
   var d = await realdb.ref('/users/' + uid + '/devices').once('value');
   d.forEach(function(child) {
     child.forEach(function(r) {
       if (r.key === 'XXXDEVICEDEFXXX') {
         devices[r.val().name] = r.val();
-        found = 1;
       }
     });
   });
-  
 
-  //BACKWARD COMPATIBILITY
-  if (found === 0) {
-    var lastSync = await getLastSyncTimestamp(uid);
-    uidlog(uid, "OLDFUNCTION loadDevices");
-    allDevices[uid] = {};
-  
-    var attributesRef = await firestoredb.collection(uid).doc('devices').collection('attributes');
-    var attrRef = await attributesRef.get();
-    for (attr of attrRef.docs) {
-      var d = attr.data();
-      uidlog(uid, 'FIRESTORE READ: loadDevices, devices/attributes/' + d.name);
-      for (characteristic_type in d.mappings) {
-        let mappingChar = d.mappings[characteristic_type];
-        //mappingChar = Modes array
-  
-        if (!Array.isArray(mappingChar))
-          mappingChar = [mappingChar];
-  
-        let mappingRoot;
-        for (mappingRoot in mappingChar) {
-  	      mappingRoot = mappingChar[mappingRoot];
-  	      //mappingRoot = first element of Modes array
-  	      if (!Array.isArray(mappingRoot))
-  		      mappingRoot = [mappingRoot];
-  
-  	      for (mappingElement in mappingRoot) {
-      			mapping = mappingRoot[mappingElement];
-      			
-            if (mapping.reading2homekit) {
-              eval('mapping.reading2homekit = ' + mapping.reading2homekit);
-            }
-            if (mapping.homekit2reading) {
-              eval('mapping.homekit2reading = ' + mapping.homekit2reading);
-            }
-          }
-        }
-      }
-      devices[d.name] = d;
-      allDevices[uid][d.name] = {'device': d, 'timestamp': lastSync};
-    }
-  }
-  
   return devices;
 }
 
@@ -239,22 +130,19 @@ async function getSyncFeatureLevel(uid) {
   return 0;
 }
 
-async function setReadingValue(uid, device, reading, val, options) {
-  if (!val)
-    val = '';
+// async function setReadingValue(uid, device, reading, val, options) {
+//   if (!val)
+//     val = '';
 
-  var format = '';
-  if (reading.match(/temp|humidity/))
-    format = 'float0.5';
+//   var format = '';
+//   if (reading.match(/temp|humidity/))
+//     format = 'float0.5';
 
-  reading = reading.replace(/\.|\#|\[|\]|\$/g, '_');
-  await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
+//   reading = reading.replace(/\.|\#|\[|\]|\$/g, '_');
+//   await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
 
-  //BACKWARD COMPATIBILITY
-  await realdb.ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading).set({value: val, device: device});
-
-  uidlog(uid, 'Reading updated ' + device + ':' + reading + ' = ' + val);
-}
+//   uidlog(uid, 'Reading updated ' + device + ':' + reading + ' = ' + val);
+// }
 
 function prepareDevice(uid, dev) {
   if (!dev || !dev.mappings) {
@@ -312,10 +200,6 @@ async function getAllDevicesAndReadings(uid) {
     });
     devices[tmpDev].readings = tmpReadings;
   });
-  
-  //BACKWARD COMPATIBILITY: 1.1.0
-  if (found == 0)
-    return undefined;
 
   return devices;
 }
@@ -332,24 +216,6 @@ async function getDeviceAndReadings(uid, device) {
       readings[child.key] = child.val().value;
     }
   });
-  
-  //BACKWARD COMPATIBILITY new version not synced yet
-  clientstate = await realdb.ref('/users/' + uid + '/informids').once('value');
-  clientstate.forEach(function(child) {
-    //remove trailing device name (device-reading)
-    if (child.key.startsWith(device.replace(/\.|\#|\[|\]|\$/g, '_') + '-')) {
-      var reading = child.key.replace(device.replace(/\.|\#|\[|\]|\$/g, '_') + '-', '');
-      if (!readings[reading]) {
-        uidlog(uid, 'OLDFUNCTION getinformids - SYNC needed');
-        readings[reading] = child.val().value;
-      }
-    }
-  });
-  
-  if (dev === 0) {
-    uidlog(uid, 'OLDFUNCTION getinformids - loadDevice - SYNC needed');
-    dev = await loadDevice(uid, device);
-  }
 
   return {device: dev, readings: readings};
 }
@@ -363,22 +229,15 @@ async function getClientVersion(uid) {
   return usedVersion;
 }
 
-async function getReadingValue(uid, device, reading) {
-  var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
-  if (clientstate.val() && clientstate.val().value) {
-    uidlog(uid, 'Reading read from db: ' + device + ':' + reading + ' = ' + clientstate.val().value);
-    return clientstate.val().value;
-  } else {
-    //BACKWARD COMPATIBILITY get informid from old values
-    clientstate = await realdb.ref('/users/' + uid + '/informids/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
-    if (clientstate.val() && clientstate.val().value) {
-      uidlog(uid, 'OLDFUNCTION from db: ' + informId + ' = ' + clientstate.val().value);
-      return clientstate.val().value;
-    }
-  }
+// async function getReadingValue(uid, device, reading) {
+//   var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+//   if (clientstate.val() && clientstate.val().value) {
+//     uidlog(uid, 'Reading read from db: ' + device + ':' + reading + ' = ' + clientstate.val().value);
+//     return clientstate.val().value;
+//   }
 
-  return undefined;
-}
+//   return undefined;
+// }
 
 async function retrieveGoogleToken(uid) {
   var token = jsonwt.sign({
@@ -416,21 +275,36 @@ async function retrieveGoogleToken(uid) {
 
 async function reportState(uid, device) {
   const hquery = require('./handleQUERY');
-  
-  //FIXME device parameter missing, informid doesn't include device name
-  const reportstate = 1;
-  var deviceQueryRes = await hquery.processQUERY(uid, {
-      intent: 'action.devices.QUERY',
-      payload: {
-        devices: [{
-          id: device,
-          customData: {
-            device: device
-          }
-        }]
+  var query = {
+    intent: 'action.devices.QUERY',
+    payload: {
+      devices: []
+    }
+  };
+
+  if(!device) {
+    //report all devices
+    var devices = await loadDevices(uid);
+    for (var de in devices) {
+      const d = devices[de];
+      query.payload.devices.push({
+        id: d.uuid_base,
+        customData: {
+          device: d.uuid_base
+        }
+      });
+    }
+  } else {
+    query.payload.devices.push({
+      id: device,
+      customData: {
+        device: device
       }
-  }, reportstate);
-  
+    });
+  }
+  const reportstate = 1;
+  var deviceQueryRes = await hquery.processQUERY(uid, query, reportstate);
+
   //prepare response
   var dev = {
     requestId: (Math.floor(Math.random() * Math.floor(1000000000000))).toString(),
@@ -484,8 +358,6 @@ module.exports = {
   retrieveGoogleToken,
   getGoogleToken,
   setGoogleToken,
-  setReadingValue,
-  getReadingValue,
   getSyncFeatureLevel,
   getRealDB,
   getFirestoreDB,

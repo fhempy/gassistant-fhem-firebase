@@ -31,7 +31,6 @@ async function generateAttributes(uid) {
       var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
       var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
       realDBUpdateJSON[dbDev] = resTraits.device;
-      informIds = {...resTraits.informids, ...informIds};
       uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
     } catch (err) {
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
@@ -39,8 +38,6 @@ async function generateAttributes(uid) {
   }
   uidlog(uid, 'Write to real DB');
   await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
-  //BACKWARD COMPATIBILITY: 1.1.0
-  await utils.getRealDB().ref('/users/' + uid + '/informids').set(informIds);
   uidlog(uid, 'Done');
   return usedDeviceReadings;
 }
@@ -803,10 +800,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       this.serial = this.type + '.' + s.Internals.DEF;
   }*/
   
-  var realDBUpdateJSON = {};
-  //BACKWARD COMPATIBILITY: 1.1.0
-  var realDBUpdateBackwardCompatibility = {};
-
   // prepare mapping internals
   for (characteristic_type in mappings) {
       let mappingChar = mappings[characteristic_type];
@@ -855,14 +848,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 if (orig === undefined) {
                   continue;
                 }
-
-                //BACKWARD COMPATIBILITY: 1.1.0
-                //await utils.setReadingValue(uid, mapping.device, r, orig, {init: 1});
-                realDBUpdateBackwardCompatibility[mapping.device.replace(/\.|\#|\[|\]|\$/g, '_') + '-' + r.replace(/\.|\#|\[|\]|\$/g, '_')] = {value: orig, device: mapping.device};
-                //also this is backward, as informids are not needed to be written to db from here. client is doing it
-                realDBUpdateJSON[r] = {
-                  value: orig
-                };
 
                 if (!usedDeviceReadings[mapping.device]) {
                   usedDeviceReadings[mapping.device] = {};
@@ -975,8 +960,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     deviceAttributes.service_name = service_name;
 
   //await setDeviceAttributeJSON(uid, device, deviceAttributes);
+  var realDBUpdateJSON = {};
   realDBUpdateJSON['XXXDEVICEDEFXXX'] = deviceAttributes;
-  return {device: realDBUpdateJSON, informids: realDBUpdateBackwardCompatibility};
+  return {device: realDBUpdateJSON};
 }
 
 async function setDeviceRoom(uid, device, room) {
@@ -1381,14 +1367,7 @@ function registerClientApi(app) {
   //BACKWARD COMPATIBILITY
   app.post('/updateinformid', async (req, res) => {
     const {sub: uid} = req.user;
-    uidlogfct(uid, 'updateinformid: ' + JSON.stringify(req.body));
-    const informId = req.body.informId;
-    const orig = req.body.value;
-    const device = req.body.device;
-    const reading = informId.replace(device.replace(/\.|\#|\[|\]|\$/g, '_') + '-', '');
-
-    //reportstate
-    //await utils.setReadingValue(uid, device, reading, orig);
+    uidlog(uid, 'PLEASE UPDATE, deprecated function /updateinformid called');
     res.send({});
   });
 

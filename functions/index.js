@@ -95,8 +95,8 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'reportstate') {
   exports["reportstate"] = require('./reportstate').reportstate;
 }
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'clientfunctions') {
-  exports["clientfunctions"] = require('./clientfunctions').clientfunctions;
+if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'dynamicfunctionsv1') {
+  exports["dynamicfunctionsv1"] = require('./clientfunctions').clientfunctions;
 }
 
 if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'codelanding') {

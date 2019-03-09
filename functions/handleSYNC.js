@@ -7,36 +7,8 @@ const uidlog = require('./logger.js').uidlog;
 const uiderror = require('./logger.js').uiderror;
 const createDirective = require('./utils.js').createDirective;
 
-var syncactive = {};
-
-async function setSyncActive(uid) {
-  syncactive[uid] = 1;
-  await utils.getFirestoreDB().collection(uid).doc('state').set({syncactive: 1}, {merge: true});
-};
-
-async function setSyncFinished(uid) {
-  syncactive[uid] = 0;
-  await utils.getFirestoreDB().collection(uid).doc('state').set({syncactive: 0, featurelevel: settings.FEATURELEVEL}, {merge: true});
-  await utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
-  await utils.getRealDB().ref('/users/' + uid + '/lastSYNC').set({timestamp: Date.now()});
-};
-
-async function setConnected(uid) {
-  await utils.getFirestoreDB().collection(uid).doc('state').set({disconnected: 0}, {merge: true});
-};
-
-async function isDisconnected(uid) {
-  var ref = await utils.getFirestoreDB().collection(uid).doc('state').get();
-
-  if (ref.data() && ref.data().disconnected)
-    return ref.data().disconnected;
-
-  return 0;
-};
-
 async function handleSYNC(uid, reqId, res) {
   uidlog(uid, 'STARTING SYNC');
-  setSyncActive(uid);
   await createSYNCPayloadResponse(uid, reqId, res);
 }
 
@@ -44,10 +16,7 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   var payload = await createSYNCResponse(uid);
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
-  //activate report state after 30s
-  await setSyncFinished(uid);
-  //set connected
-  setConnected(uid);
+  await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'REPORTSTATEALL', id: reqId, delay: 40});
   uidlog(uid, 'final response: ' + JSON.stringify(response));
   res.send(response);
 }
