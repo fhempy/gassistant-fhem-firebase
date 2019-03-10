@@ -16,14 +16,13 @@ const GOOGLE_DEVICE_TYPES = ['switch','outlet','light','thermostat','airconditio
 
 var deviceRooms = {};
 
-async function generateAttributes(uid) {
+async function generateAttributes(uid, realDBUpdateJSON) {
   //generate traits in firestore
   var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
   //delete all realtime database data
   await admin.database().ref('users/' + uid + '/devices').remove();
   await admin.database().ref('users/' + uid + '/informids').remove();
   var usedDeviceReadings = {};
-  var realDBUpdateJSON = {};
   var informIds = {};
   for (device of devicesRef.docs) {
     uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
@@ -36,9 +35,6 @@ async function generateAttributes(uid) {
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
     }
   }
-  uidlog(uid, 'Write to real DB');
-  await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
-  uidlog(uid, 'Done');
   return usedDeviceReadings;
 }
 
@@ -965,13 +961,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   return {device: realDBUpdateJSON};
 }
 
-async function setDeviceRoom(uid, device, room) {
-  await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').update({ghomeRoom: room});
-};
+// async function setDeviceRoom(uid, device, room) {
+//   await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').update({ghomeRoom: room});
+// };
 
-async function setDeviceAttributeJSON(uid, device, json) {
-  await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').set(json);
-};
+// async function setDeviceAttributeJSON(uid, device, json) {
+//   await utils.getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/XXXDEVICEDEFXXX').set(json);
+// };
 
 function formatOfName(characteristic_type) {
     if (characteristic_type == 'On')
@@ -1221,7 +1217,7 @@ function prepare(mapping) {
 };
 
 
-async function generateRoomHint(uid) {
+async function generateRoomHint(uid, realDBUpdateJSON) {
   //try to get the real room if no realRoom is defined
   let roomCheck = {};
   //deviceRooms
@@ -1259,7 +1255,7 @@ async function generateRoomHint(uid) {
       });
 
       if (roomFound) {
-          await setDeviceRoom(uid, d, currRoom);
+          realDBUpdateJSON[d.replace(/\.|\#|\[|\]|\$/g, '_')]['XXXDEVICEDEFXXX'].ghomeRoom = currRoom;
       }
   }
 }
@@ -1268,9 +1264,15 @@ function registerClientApi(app) {
   app.get('/syncfinished', utils.rateLimiter(3, 300), async (req, res) => {
     const {sub: uid} = req.user;
     deviceRooms[uid] = {};
-    var usedDeviceReadings = await generateAttributes(uid);
-    await generateRoomHint(uid);
+    var realDBUpdateJSON = {};
+    var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON);
+    await generateRoomHint(uid, realDBUpdateJSON);
+    uidlog(uid, 'Write to real DB');
+    await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+    uidlog(uid, 'Done');
+
     uidlog(uid, 'MAPPING CREATION FINISHED');
+    uidlog(uid, 'syncfinished response: ' + JSON.stringify(usedDeviceReadings));
     res.send(usedDeviceReadings);
   });
   
