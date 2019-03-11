@@ -57,6 +57,11 @@ async function processQUERY(uid, input, reportstate) {
           continue;
         }
         
+        if (!device.mappings) {
+          uiderror(uid, "No mappings defined for device " + device.name);
+          continue;
+        }
+        
         // If there is a current or a target temperature, we probably have a thermostat
         if (device.mappings.CurrentTemperature || device.mappings.TargetTemperature) {
             if (device.mappings.TargetTemperature) {
@@ -325,6 +330,8 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
                 for (var entry of mapping.value2homekit_re) {
                     if (entry.reading) {
                         value = readings[entry.reading];
+                        if (!value)
+                          uiderror(uid, 'reading ' + entry.reading + ' not found in reading array: ' + JSON.stringify(readings));
                     }
                     if (value.match(entry.re)) {
                         mapped = entry.to;

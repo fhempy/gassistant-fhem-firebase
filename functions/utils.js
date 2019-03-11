@@ -37,6 +37,7 @@ function rateLimiter(rate, seconds) {
         //within 5 minutes
         uiderror(uid, 'Rate limit reached - too many requests');
         res.status(429).send('Too many requests');
+        return undefined;
       } else {
         //above 5 minutes, reset counter
         ratePerUser[uid].counter = 0;

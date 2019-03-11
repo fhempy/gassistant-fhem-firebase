@@ -33,6 +33,7 @@ async function generateAttributes(uid, realDBUpdateJSON) {
       uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
     } catch (err) {
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
+      console.error(err);
     }
   }
   return usedDeviceReadings;
@@ -729,7 +730,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
-  fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
+  try {
+    fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
+  } catch(e) {
+    uiderror(uid, 'homebridgeMapping error for ' + s.Internals.NAME + ', please delete homebridgeMapping and try again');
+  }
   console.debug('mappings for ' + s.Internals.NAME + ': ' + util.inspect(mappings));
 
   if (service_name !== undefined) {
@@ -858,7 +863,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                   compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
                     //check if old != new
                     if (oldValue !== newValue) {
-                      if ((oldDevTimestamp + 2000) > Date.now()) {
+                      if ((oldDevTimestamp + 5000) > Date.now()) {
                         if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
                       }
                       //check how old old is
@@ -877,7 +882,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                   compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
                     //check if old != new
                     if (Math.round(oldValue) !== Math.round(newValue)) {
-                      if ((oldDevTimestamp + 2000) > Date.now()) {
+                      if ((oldDevTimestamp + 5000) > Date.now()) {
                         if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
                       }
                       //check how old old is
@@ -900,11 +905,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 } else {
                   compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
                     if (oldValue !== newValue) {
-                      if ((oldDevTimestamp + 2000) > Date.now()) {
+                      if ((oldDevTimestamp + 5000) > Date.now()) {
                         if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
                       }
                       if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-                      return setTimeout(reportStateFunction.bind(null, device), 5000);
+                      return setTimeout(reportStateFunction.bind(null, device), 10000);
                     }
                     return undefined;
                   };
@@ -1381,3 +1386,4 @@ function registerClientApi(app) {
 module.exports = {
   registerClientApi
 }
+
