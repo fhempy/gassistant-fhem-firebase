@@ -31,7 +31,7 @@ async function processQUERY(uid, input, reportstate) {
         allDevices = await utils.getAllDevicesAndReadings(uid);
         uidlog(uid, "getAllDevicesAndReadings finished");
       } catch (err) {
-        uiderror(uid, 'getAllDevicesAndReadings failed with ' + err);
+        uiderror(uid, 'getAllDevicesAndReadings failed with ' + err.stack, err);
       }
     }
 
@@ -53,7 +53,7 @@ async function processQUERY(uid, input, reportstate) {
 		      device = dd.device;
           readings = dd.readings;
         } catch (err) {
-          uiderror(uid, 'getDeviceReadingValues failed with ' + err);
+          uiderror(uid, 'getDeviceReadingValues failed with ' + err.stack, err);
           continue;
         }
         
@@ -510,7 +510,7 @@ function FHEM_reading2homekit(uid, mapping, readings) {
             } else
               value = mapping.reading2homekit(mapping, readings);
         } catch (err) {
-            uiderror(uid, mapping.reading[0] + ' reading2homekit: ' + err);
+            uiderror(uid, mapping.reading[0] + ' reading2homekit: ' + err.stack, err);
             return undefined;
         }
         if (typeof value === 'number' && isNaN(value)) {

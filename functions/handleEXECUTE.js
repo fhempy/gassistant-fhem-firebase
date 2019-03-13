@@ -46,6 +46,7 @@ async function handleEXECUTE(uid, reqId, res, input) {
 async function processEXECUTE(uid, reqId, input) {
 
     let responses = [];
+    let fhemExecCmd = [];
 
     for (cmd of input.payload.commands) {
         for (exec of cmd.execution) {
@@ -55,51 +56,51 @@ async function processEXECUTE(uid, reqId, input) {
             switch (requestedName) {
 
                 case REQUEST_ON_OFF :
-                    responses.push(...await processEXECUTEOnOff(uid, reqId, cmd, exec.params.on ? 1 : 0));
+                    responses.push(...await processEXECUTEOnOff(uid, reqId, cmd, exec.params.on ? 1 : 0, fhemExecCmd));
                     break;
 
                 case REQUEST_SET_BRIGHTNESSABSOLUTE :
-                    responses.push(...await processEXECUTEBrightnessAbsolute(uid, reqId, cmd, exec.params.brightness));
+                    responses.push(...await processEXECUTEBrightnessAbsolute(uid, reqId, cmd, exec.params.brightness, fhemExecCmd));
                     break;
 
                 case REQUEST_SET_TARGET_TEMPERATURE:
-                    responses.push(...await processEXECUTESetTargetTemperature(uid, reqId, cmd, exec.params.thermostatTemperatureSetpoint));
+                    responses.push(...await processEXECUTESetTargetTemperature(uid, reqId, cmd, exec.params.thermostatTemperatureSetpoint, fhemExecCmd));
                     break;
 
                 case REQUEST_SET_THERMOSTAT_MODE:
-                    responses.push(...await processEXECUTESetThermostatMode(uid, reqId, cmd, exec.params.thermostatMode));
+                    responses.push(...await processEXECUTESetThermostatMode(uid, reqId, cmd, exec.params.thermostatMode, fhemExecCmd));
                     break;
 
                 case REQUEST_DOCK:
-                    responses.push(...await processEXECUTEDock(uid, reqId, cmd));
+                    responses.push(...await processEXECUTEDock(uid, reqId, cmd, fhemExecCmd));
                     break;
                     
                 case REQUEST_LOCATE:
-                    responses.push(...await processEXECUTELocate(uid, reqId, cmd));
+                    responses.push(...await processEXECUTELocate(uid, reqId, cmd, fhemExecCmd));
                     break;
                     
                 case REQUEST_STARTSTOP:
-                    responses.push(...await processEXECUTEStartStop(uid, reqId, cmd, exec.params.start ? 1 : 0));
+                    responses.push(...await processEXECUTEStartStop(uid, reqId, cmd, exec.params.start ? 1 : 0, fhemExecCmd));
                     break;
 
                 case REQUEST_PAUSEUNPAUSE:
-                    responses.push(...await processEXECUTEPauseUnpause(uid, reqId, cmd, exec.params.pause ? 1 : 0));
+                    responses.push(...await processEXECUTEPauseUnpause(uid, reqId, cmd, exec.params.pause ? 1 : 0, fhemExecCmd));
                     break;
 
                 case REQUEST_FANSPEED:
-                    responses.push(...await processEXECUTESetFanSpeed(uid, reqId, cmd, exec.params.fanSpeed));
+                    responses.push(...await processEXECUTESetFanSpeed(uid, reqId, cmd, exec.params.fanSpeed, fhemExecCmd));
                     break;
 
                 case REQUEST_COLORABSOLUTE:
-                    responses.push(...await processEXECUTESetColorAbsolute(uid, reqId, cmd, exec.params.color));
+                    responses.push(...await processEXECUTESetColorAbsolute(uid, reqId, cmd, exec.params.color, fhemExecCmd));
                     break;
 
                 case REQUEST_SET_TOGGLES:
-                    responses.push(...await processEXECUTESetToggles(uid, reqId, cmd, exec.params.updateToggleSettings));
+                    responses.push(...await processEXECUTESetToggles(uid, reqId, cmd, exec.params.updateToggleSettings, fhemExecCmd));
                     break;
 
                 case REQUEST_ACTIVATE_SCENE:
-                    responses.push(...await processEXECUTEActivateScene(uid, reqId, cmd, exec.params.deactivate));
+                    responses.push(...await processEXECUTEActivateScene(uid, reqId, cmd, exec.params.deactivate, fhemExecCmd));
                     break;
 
                 case REQUEST_FANSPEEDREVERSE:
@@ -108,7 +109,7 @@ async function processEXECUTE(uid, reqId, input) {
 
                 //action.devices.traits.Modes: COMMANDS
                 case REQUEST_SET_MODES:
-                    responses.push(...await processEXECUTESetModes(uid, reqId, cmd, exec));
+                    responses.push(...await processEXECUTESetModes(uid, reqId, cmd, exec, fhemExecCmd));
                     break;
                     
                 default:
@@ -119,11 +120,20 @@ async function processEXECUTE(uid, reqId, input) {
         }
     }
 
+    //send to FHEM
+    var fcmds = {};
+    for (var c of fhemExecCmd) {
+      fcmds[c.connection] = fcmds[c.connection] ? fcmds[c.connection] + ';' + c.cmd : c.cmd;
+    }
+    for (var c in fcmds) {
+      await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'EXECUTE', id: 0, cmd: fcmds[c], connection: c});
+    }
+
     //create response payload
     return {commands: responses};
 }; // processEXECUTE
 
-async function processEXECUTEOnOff(uid, reqId, cmd, state) {
+async function processEXECUTEOnOff(uid, reqId, cmd, state, fhemExecCmd) {
     let successIds = [];
     let failedIds = [];
 
@@ -133,7 +143,7 @@ async function processEXECUTEOnOff(uid, reqId, cmd, state) {
             failedIds.push(d.id)
         } else {
             successIds.push(d.id)
-            await execFHEMCommand(uid, reqId, device, device.mappings.On, state);
+            fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.On, state));
         }
     }
 
@@ -161,7 +171,7 @@ async function processEXECUTEOnOff(uid, reqId, cmd, state) {
     return res;
 }// processEXECUTETurnOff
 
-async function processEXECUTEBrightnessAbsolute(uid, reqId, cmd, brightness) {
+async function processEXECUTEBrightnessAbsolute(uid, reqId, cmd, brightness, fhemExecCmd) {
     let deviceIds = [];
 
     for (d of cmd.devices) {
@@ -183,7 +193,7 @@ async function processEXECUTEBrightnessAbsolute(uid, reqId, cmd, brightness) {
         else if (mapping.maxValue && target > mapping.maxValue)
             target = mapping.maxValue;
 
-        await execFHEMCommand(uid, reqId, device, mapping, parseInt(target));
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, mapping, parseInt(target)));
         deviceIds.push(d.id);
     }
 
@@ -197,7 +207,7 @@ async function processEXECUTEBrightnessAbsolute(uid, reqId, cmd, brightness) {
 
 }; // processEXECUTEBrightnessAbsolute
 
-async function processEXECUTESetTargetTemperature(uid, reqId, cmd, targetTemperature) {
+async function processEXECUTESetTargetTemperature(uid, reqId, cmd, targetTemperature, fhemExecCmd) {
 
     let deviceIds = [];
     
@@ -218,7 +228,7 @@ async function processEXECUTESetTargetTemperature(uid, reqId, cmd, targetTempera
               errorCode: 'valueOutOfRange'
             }];
 
-        await execFHEMCommand(uid, reqId, device, device.mappings.TargetTemperature, targetTemperature);
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetTemperature, targetTemperature));
         deviceIds.push(d.id);
     }
 
@@ -232,7 +242,7 @@ async function processEXECUTESetTargetTemperature(uid, reqId, cmd, targetTempera
 
 }; // processEXECUTESetTargetTemperature
 
-async function processEXECUTESetThermostatMode(uid, reqId, cmd, thermostatMode) {
+async function processEXECUTESetThermostatMode(uid, reqId, cmd, thermostatMode, fhemExecCmd) {
     let deviceIds = [];
 
     for (d of cmd.devices) {
@@ -240,7 +250,7 @@ async function processEXECUTESetThermostatMode(uid, reqId, cmd, thermostatMode) 
         if (!device)
             return handleUnsupportedOperation();
 
-        await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode);
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode));
         deviceIds.push(d.id);
     }
 
@@ -253,7 +263,7 @@ async function processEXECUTESetThermostatMode(uid, reqId, cmd, thermostatMode) 
     }];
 };
 
-async function processEXECUTEDock(uid, reqId, cmd) {
+async function processEXECUTEDock(uid, reqId, cmd, fhemExecCmd) {
     let deviceIds = [];
     
     for (d of cmd.devices) {
@@ -261,7 +271,7 @@ async function processEXECUTEDock(uid, reqId, cmd) {
         if (!device)
           return handleUnsupportedOperation();
 
-        await execFHEMCommand(uid, reqId, device, device.mappings.Dock, '');
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Dock, ''));
         deviceIds.push(d.id);
     }
 
@@ -274,7 +284,7 @@ async function processEXECUTEDock(uid, reqId, cmd) {
     }];
 }; //processEXECUTEDock
 
-async function processEXECUTELocate(uid, reqId, cmd) {
+async function processEXECUTELocate(uid, reqId, cmd, fhemExecCmd) {
     let deviceIds = [];
     
     for (d of cmd.devices) {
@@ -282,7 +292,7 @@ async function processEXECUTELocate(uid, reqId, cmd) {
         if (!device)
           return handleUnsupportedOperation();
 
-        await execFHEMCommand(uid, reqId, device, device.mappings.Locate, '');
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Locate, ''));
         deviceIds.push(d.id);
     }
 
@@ -295,7 +305,7 @@ async function processEXECUTELocate(uid, reqId, cmd) {
     }];
 }; //processEXECUTELocate
 
-async function processEXECUTEStartStop(uid, reqId, cmd, start) {
+async function processEXECUTEStartStop(uid, reqId, cmd, start, fhemExecCmd) {
     let deviceIds = [];
     uidlog(uid, 'cmd: ' + cmd);
     uidlog(uid, JSON.stringify(cmd));
@@ -317,7 +327,7 @@ async function processEXECUTEStartStop(uid, reqId, cmd, start) {
     }];
 }; //processEXECUTEStartStop
 
-async function processEXECUTEPauseUnpause(uid, reqId, cmd, pause) {
+async function processEXECUTEPauseUnpause(uid, reqId, cmd, pause, fhemExecCmd) {
     let deviceIds = [];
     
     for (d of cmd.devices) {
@@ -325,7 +335,7 @@ async function processEXECUTEPauseUnpause(uid, reqId, cmd, pause) {
         if (!device)
           return handleUnsupportedOperation();
 
-        await execFHEMCommand(uid, reqId, device, device.mappings.SartStop, pause, 'PauseUnpause');
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.SartStop, pause, 'PauseUnpause'));
         deviceIds.push(d.id);
     }
 
@@ -338,7 +348,7 @@ async function processEXECUTEPauseUnpause(uid, reqId, cmd, pause) {
     }];
 }; //processEXECUTEPauseUnpause
 
-async function processEXECUTESetFanSpeed(uid, reqId, cmd, speedname) {
+async function processEXECUTESetFanSpeed(uid, reqId, cmd, speedname, fhemExecCmd) {
     let deviceIds = [];
     
     for (d of cmd.devices) {
@@ -346,7 +356,7 @@ async function processEXECUTESetFanSpeed(uid, reqId, cmd, speedname) {
         if (!device)
           return handleUnsupportedOperation();
 
-        await execFHEMCommand(uid, reqId, device, device.mappings.FanSpeed, speedname);
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.FanSpeed, speedname));
         deviceIds.push(d.id);
     }
 
@@ -359,7 +369,7 @@ async function processEXECUTESetFanSpeed(uid, reqId, cmd, speedname) {
     }];
 }; //processEXECUTEPauseUnpause
 
-async function processEXECUTESetColorAbsolute(uid, reqId, cmd, color) {
+async function processEXECUTESetColorAbsolute(uid, reqId, cmd, color, fhemExecCmd) {
     let deviceIds = [];
     let ret = [];
     
@@ -369,7 +379,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, cmd, color) {
           return handleUnsupportedOperation();
 
         if (color.spectrumRGB) {
-            await execFHEMCommand(uid, reqId, device, device.mappings.RGB, color.spectrumRGB);
+            fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.RGB, color.spectrumRGB));
             ret.push({
                 states: {
                     color: {
@@ -382,11 +392,11 @@ async function processEXECUTESetColorAbsolute(uid, reqId, cmd, color) {
             });
         } else if (color.spectrumHSV) {
             //Hue
-            await execFHEMCommand(uid, reqId, device, device.mappings.Hue, color.spectrumHSV.hue);
+            fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Hue, color.spectrumHSV.hue));
             //Brightness
-            await execFHEMCommand(uid, reqId, device, device.mappings.HSVBrightness, color.spectrumHSV.value);
+            fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.HSVBrightness, color.spectrumHSV.value));
             //Saturation
-            await execFHEMCommand(uid, reqId, device, device.mappings.Saturation, color.spectrumHSV.saturation);
+            fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Saturation, color.spectrumHSV.saturation));
             ret.push({
                 states: {
                     color: {
@@ -402,7 +412,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, cmd, color) {
                 online: "true"
             });
         } else if (color.temperature) {
-            await execFHEMCommand(uid, reqId, device, device.mappings.ColorTemperature, color.temperature);
+            fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ColorTemperature, color.temperature));
             ret.push({
                 states: {
                     color: {
@@ -419,7 +429,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, cmd, color) {
     return ret;
 }; // processEXECUTESetColorAbsolute
 
-async function processEXECUTESetToggles(uid, reqId, cmd, toggleSettings) {
+async function processEXECUTESetToggles(uid, reqId, cmd, toggleSettings, fhemExecCmd) {
 
     let deviceIds = [];
     let retArr = [];
@@ -433,7 +443,7 @@ async function processEXECUTESetToggles(uid, reqId, cmd, toggleSettings) {
     			let value = toggleSettings[toggle];
     			for (mappingToggle of device.mappings.Toggles) {
     				if (mappingToggle.toggle_attributes.name == toggle) {
-    				  await execFHEMCommand(uid, reqId, device, mappingToggle, value);
+    				  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, mappingToggle, value));
 
     					let ret = {
     						states: {
@@ -453,7 +463,7 @@ async function processEXECUTESetToggles(uid, reqId, cmd, toggleSettings) {
     return retArr;
 }//processEXECUTESetToggles
 
-async function processEXECUTEActivateScene(uid, reqId, cmd, deactivate) {
+async function processEXECUTEActivateScene(uid, reqId, cmd, deactivate, fhemExecCmd) {
     let deviceIds = [];
     
    for (d of cmd.devices) {
@@ -464,7 +474,7 @@ async function processEXECUTEActivateScene(uid, reqId, cmd, deactivate) {
         let scenename = d.customData.scenename;
         for (s of device.mappings.Scene) {
             if (s.scenename == scenename) {
-                await execFHEMCommand(uid, reqId, device, s, deactivate ? 0 : 1);
+                fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, s, deactivate ? 0 : 1));
                 deviceIds.push(d.id);
             }
         }
@@ -478,7 +488,7 @@ async function processEXECUTEActivateScene(uid, reqId, cmd, deactivate) {
     }];
 }; //processEXECUTEActivateScene
 
-async function processEXECUTESetModes(uid, reqId, cmd, event) {
+async function processEXECUTESetModes(uid, reqId, cmd, event, fhemExecCmd) {
 
     let deviceIds = [];
     let retArr = [];
@@ -493,7 +503,7 @@ async function processEXECUTESetModes(uid, reqId, cmd, event) {
     			let value = event.params.updateModeSettings[mode];
     			for (mappingMode of device.mappings.Modes) {
     				if (mappingMode.mode_attributes.name === mode) {
-    					await execFHEMCommand(uid, reqId, device, mappingMode, value);
+    					fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, mappingMode, value));
 
     					let ret = {
     						states: {
@@ -635,7 +645,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
         command += ' ' + mapping.cmdSuffix;
 
     uidlog(uid, 'EXECUTE: ' + JSON.stringify(command) + ',' + JSON.stringify(device.connection));
-    await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'EXECUTE', id: reqId, cmd: command, connection: device.connection});
+    return {id: reqId, cmd: command, connection: device.connection};
 }
 
 module.exports = {

@@ -915,6 +915,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                   };
                 }
                 //BACKWARD COMPATIBILITY: delete format
+                uidlog(uid, ' use reading: ' + r);
                 usedDeviceReadings[mapping.device][r] = {'format': 'standard', 'compareFunction': compareFunction.toString()};
               }
               mapping.characteristic_type = characteristic_type;
@@ -1277,7 +1278,6 @@ function registerClientApi(app) {
     uidlog(uid, 'Done');
 
     uidlog(uid, 'MAPPING CREATION FINISHED');
-    uidlog(uid, 'syncfinished response: ' + JSON.stringify(usedDeviceReadings));
     res.send(usedDeviceReadings);
   });
   

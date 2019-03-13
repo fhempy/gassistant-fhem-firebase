@@ -8,9 +8,15 @@ function uidlogfct(uid, msg) {
   console.log(uid + ': ' + msg);
 }
 
-function uiderror(uid, msg) {
+function uiderror(uid, msg, err) {
   admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({'msg': 'LOG_ERROR', log: msg.toString()});
+  
+  if (!(msg instanceof Error) && !err)
+    msg = new Error(msg);
   console.error(uid + ': ' + msg);
+
+  if(err)
+    console.error(err);
 }
 
 module.exports = {
