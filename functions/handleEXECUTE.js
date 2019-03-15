@@ -365,7 +365,6 @@ async function processEXECUTEActivateScene(uid, reqId, device, scenename, deacti
     for (s of device.mappings.Scene) {
         if (s.scenename == scenename) {
             fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, s, deactivate ? 0 : 1));
-            deviceIds.push(d.id);
         }
     }
 
