@@ -75,35 +75,6 @@ function createDirective(reqId, payload) {
     };
 }// createDirective
 
-async function loadDevice(uid, devicename) {
-  var dev = undefined;
-  var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
-  ref.forEach(function(child) {
-    if (child.key === 'XXXDEVICEDEFXXX') {
-      dev = child.val();
-
-      prepareDevice(uid, dev);
-    }
-  });
-  
-  return dev;
-}
-
-async function loadDevices(uid) {
-  var devices = {};
-
-  var d = await realdb.ref('/users/' + uid + '/devices').once('value');
-  d.forEach(function(child) {
-    child.forEach(function(r) {
-      if (r.key === 'XXXDEVICEDEFXXX') {
-        devices[r.val().name] = r.val();
-      }
-    });
-  });
-
-  return devices;
-}
-
 async function getGoogleToken() {
   if (googleToken != '')
     return googleToken;
@@ -175,6 +146,35 @@ function prepareDevice(uid, dev) {
       }
     }
   }
+}
+
+async function loadDevice(uid, devicename) {
+  var dev = undefined;
+  var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
+  ref.forEach(function(child) {
+    if (child.key === 'XXXDEVICEDEFXXX') {
+      dev = child.val();
+
+      prepareDevice(uid, dev);
+    }
+  });
+  
+  return dev;
+}
+
+async function loadDevices(uid) {
+  var devices = {};
+
+  var d = await realdb.ref('/users/' + uid + '/devices').once('value');
+  d.forEach(function(child) {
+    child.forEach(function(r) {
+      if (r.key === 'XXXDEVICEDEFXXX') {
+        devices[r.val().name] = r.val();
+      }
+    });
+  });
+
+  return devices;
 }
 
 async function getAllDevicesAndReadings(uid) {

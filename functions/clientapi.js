@@ -29,8 +29,12 @@ async function generateAttributes(uid, realDBUpdateJSON) {
     try {
       var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
       var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
-      realDBUpdateJSON[dbDev] = resTraits.device;
-      uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
+      if (resTraits) {
+        realDBUpdateJSON[dbDev] = resTraits.device;
+        uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
+      } else {
+        uidlog(uid, 'no mappings for device ' + device.data().json.Internals.NAME);
+      }
     } catch (err) {
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
       console.error(err);
@@ -45,11 +49,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   //uidlog(uid, 'generateTraits: ' + JSON.stringify(s));
   if (!s.Readings) {
       uiderror(uid, 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without readings');
-      return;
+      return undefined;
   }
   if (!s.Attributes) {
       uiderror(uid, 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without attributes');
-      return;
+      return undefined;
   }
 
   if (s.Attributes.disable == 1) {
@@ -62,20 +66,24 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
   if (genericType === 'ignore') {
       uidlog(uid, 'ignoring ' + s.Internals.NAME + ', genericDeviceType = ignore used');
-      return;
+      return undefined;
   }
 
   if (s.Internals.TYPE === 'structure' && genericType === undefined) {
       uidlog(uid, 'ignoring structure ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType');
-      return;
+      return undefined;
   }
   if (s.Internals.TYPE === 'SVG' && genericType === undefined) {
       uidlog(uid, 'ignoring SVG ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType');
-      return;
+      return undefined;
   }
   if (s.Internals.TYPE === 'THRESHOLD' && genericType === undefined) {
       uidlog(uid, 'ignoring THRESHOLD ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType');
-      return;
+      return undefined;
+  }
+  if (s.Internals.TYPE === 'notify' && genericType === undefined) {
+      uidlog(uid, 'ignoring notify ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without genericDeviceType');
+      return undefined;
   }
   
   //CREATE MAPPINGS
@@ -747,6 +755,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   if (service_name === 'lock' || service_name === 'garage' || service_name === 'window')
       delete mappings.On;
 
+  if (Objects.keys(mappings).length === 0) {
+    uiderror(uid, 'No mappings (e.g. on/off) found for ' + s.Internals.NAME);
+    return undefined;
+  }
+
   /* Disabled log messages...
   uidlog(uid, s.Internals.NAME + ' has');
   for (characteristic_type in mappings) {
@@ -929,10 +942,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 mapping.homekit2reading = mapping.homekit2reading.toString();
 		      }
       }
-  }
-  
-  if (mappings === {}) {
-    throw new Error('No mappings found for ' + s.Iternals.NAME);
   }
 
   var deviceAttributes =
