@@ -109,7 +109,12 @@ async function processQUERY(uid, input, reportstate) {
         
         //OpenClose
         if (device.mappings.OpenClose) {
-          devices[d.id].openPercent = await cached2Format(uid, device.mappings.OpenClose, readings);
+          if (device.mappings.CurrentPosition) {
+            devices[d.id].openPercent = await cached2Format(uid, device.mappings.CurrentPosition, readings);
+          } else {
+            //queryonly
+            devices[d.id].openPercent = await cached2Format(uid, device.mappings.OpenClose, readings);
+          }
         }
 		
         //action.devices.traits.Modes: STATES
@@ -247,6 +252,9 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         
     } else if (mapping.characteristic_type == 'OpenClose') {
         value = mapping.valueClosed == value ? 0 : 100;
+
+    } else if (mapping.characteristic_type === 'CurrentPosition') {
+        value = parseInt(value);
 
     } else if (reading === 'state' && ( mapping.On
             && typeof mapping.values !== 'object'

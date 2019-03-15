@@ -12,7 +12,7 @@ const hquery = require('./handleQUERY');
 const util = require('util');
 const settings = require('./settings.json');
 
-const GOOGLE_DEVICE_TYPES = ['switch','outlet','light','thermostat','aircondition','airfreshener','airpurifier','camera','coffeemaker','dishwasher','dryer','fan','fireplace','heater','kettle','oven','refrigerator','scene','sprinkler','vacuum','washer'];
+const GOOGLE_DEVICE_TYPES = ['switch','outlet','light','thermostat','aircondition','airfreshener','airpurifier','blinds','camera','coffeemaker','dishwasher','dryer','fan','fireplace','heater','kettle','oven','refrigerator','scene','sprinkler','vacuum','washer'];
 
 var deviceRooms = {};
 
@@ -259,7 +259,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   
   if (s.Internals.TYPE == 'XiaomiSmartHome_Device' && s.Internals.MODEL == 'sensor_magnet.aq2') {
     if (!service_name) service_name = 'door';
-    mappings.OpenClose = {reading: 'state', valueClosed: 'close'};
+    mappings.OpenClose = {reading: 'state', valueClosed: 'close', queryonly: true};
   }
   
   if (s.Internals.TYPE == 'LightScene') {
@@ -375,18 +375,18 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (genericType == 'blind'
       || s.Attributes.subType == 'blindActuator'
       || (s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/))) {
-      mappings.On = {reading: 'state', valueOff: 'closed', cmdOn: 'opens', cmdOff: 'closes'};
+      mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: 'opens', cmdClose: 'closes'};
       delete mappings.Brightness;
       if (s.PossibleSets.match(/(^| )position\b/)) {
           mappings.CurrentPosition = {reading: 'position'};
-          mappings.TargetPosition = {reading: 'position', cmd: 'position', delay: true};
+          mappings.TargetPosition = {reading: 'position', cmd: 'position'};
           if (s.Internals.TYPE == 'SOMFY') {
               mappings.CurrentPosition.invert = true;
               mappings.TargetPosition.invert = true;
               mappings.TargetPosition.cmd = 'pos';
           }
       } else if (s.Internals.TYPE == 'ZWave' ) {
-          mappings.On = {reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off', max: 99};
+          mappings.OpenClose = {reading: 'state', valueClosed: 'off', cmdOpen: 'on', cmdClose: 'off', max: 99};
           if(s.Readings.position !== undefined) {
               // FIBARO System FGRM222 Roller Shutter Controller 2
               // If the device is configured to use Fibaro command class instead of ZWave command class,
@@ -720,7 +720,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (!service_name) service_name = servicetmp;
   } else if (s.Internals.TYPE === 'tahoma') {
     if (s.Internals.SUBTYPE === 'DEVICE' && s.Internals.inControllable === 'rts:BlindRTSComponent') {
-      mappings.On = {reading: 'state', valueOff: '0', cmdOn: 'up', cmdOff: 'down' };
+      mappings.OpenClose = {reading: 'state', valueClosed: '0', cmdOpen: 'up', cmdClose: 'down' };
     }
   } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
@@ -755,7 +755,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   if (service_name === 'lock' || service_name === 'garage' || service_name === 'window')
       delete mappings.On;
 
-  if (Objects.keys(mappings).length === 0) {
+  if (Object.keys(mappings).length === 0) {
     uiderror(uid, 'No mappings (e.g. on/off) found for ' + s.Internals.NAME);
     return undefined;
   }

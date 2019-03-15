@@ -230,16 +230,6 @@ async function getClientVersion(uid) {
   return usedVersion;
 }
 
-// async function getReadingValue(uid, device, reading) {
-//   var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
-//   if (clientstate.val() && clientstate.val().value) {
-//     uidlog(uid, 'Reading read from db: ' + device + ':' + reading + ' = ' + clientstate.val().value);
-//     return clientstate.val().value;
-//   }
-
-//   return undefined;
-// }
-
 async function retrieveGoogleToken(uid) {
   var token = jsonwt.sign({
     "iss": settings.SERVICEACCOUNT,

@@ -74,7 +74,7 @@ var processSYNC = function (uid, devices) {
               if (device.service_name) {
                   if (device.service_name === 'vacuum') {
                       d.type = 'action.devices.types.VACUUM';
-                  } else if (device.service_name === 'light' || device.service_name === 'blind') {
+                  } else if (device.service_name === 'light') {
                       d.type = 'action.devices.types.LIGHT';
                   } else if (device.service_name === 'switch' || device.service_name === 'contact') {
                       d.type = 'action.devices.types.SWITCH';
@@ -90,6 +90,8 @@ var processSYNC = function (uid, devices) {
                       d.type = 'action.devices.types.AIRFRESHENER';
                   } else if (device.service_name === 'airpurifier') {
                       d.type = 'action.devices.types.AIRPURIFIER';
+                  } else if (device.service_name === 'blinds' || device.service_name === 'blind') {
+                      d.type = 'action.devices.types.BLINDS';
                   } else if (device.service_name === 'camera') {
                       d.type = 'action.devices.types.CAMERA';
                   } else if (device.service_name === 'dishwasher') {
@@ -127,6 +129,8 @@ var processSYNC = function (uid, devices) {
                              device.mappings.RGB || device.mappings.TargetPosition ||
                              device.mappings.HSVBrightness) {
                       d.type = 'action.devices.types.LIGHT';
+                  } else if (device.mappings.OpenClose) {
+                      d.type = 'action.devices.types.BLINDS';
                   } else if (device.mappings.Scene) {
                       d.type = 'action.devices.types.SCENE';
                   } else {
@@ -179,6 +183,8 @@ var processSYNC = function (uid, devices) {
               //OpenClose
               if (device.mappings.OpenClose) {
                   d.traits.push("action.devices.traits.OpenClose");
+                  //Attributes
+                  d.attributes.queryOnlyOpenClose = device.mappings.OpenClose.queryonly ? true : false;
               }
               
               //Locate

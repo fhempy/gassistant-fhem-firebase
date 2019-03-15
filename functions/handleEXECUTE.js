@@ -23,6 +23,7 @@ const REQUEST_FANSPEEDREVERSE = "action.devices.commands.Reverse";
 const REQUEST_COLORABSOLUTE = "action.devices.commands.ColorAbsolute";
 const REQUEST_SET_TOGGLES = "action.devices.commands.SetToggles";
 const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
+const REQUEST_OPENCLOSE = "action.devices.commands.OpenClose";
 
 
 async function handleEXECUTE(uid, reqId, res, input) {
@@ -120,6 +121,10 @@ async function processEXECUTE(uid, reqId, input) {
                 case REQUEST_SET_MODES:
                     responses.push(...await processEXECUTESetModes(uid, reqId, device, exec, fhemExecCmd));
                     break;
+
+                case REQUEST_OPENCLOSE:
+                    responses.push(...await processEXECUTESetOpenClose(uid, reqId, device, exec.params, fhemExecCmd));
+                    break;
                     
                 default:
                     //return unsupported operation
@@ -159,6 +164,29 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
 
     return res;
 }// processEXECUTETurnOff
+
+async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCmd) {
+    if (device.mappings.TargetPosition) {
+      //TargetPosition supported
+      fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetPosition, params.openPercent));
+    } else {
+      //only up/down supported
+      fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.OpenClose, params.openPercent));
+    }
+
+    let res = [];
+
+    res.push({
+        ids: [device.id],
+        status: 'SUCCESS',
+        states: {
+            openPercent: params.openPercent,
+            online: true
+        }
+    });
+
+    return res;
+}// processEXECUTESetOpenClose
 
 async function processEXECUTEBrightnessAbsolute(uid, reqId, device, brightness, fhemExecCmd) {
     let mapping;
@@ -485,12 +513,17 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
                 cmd = mapping.cmdPause;
             else if (mapping.cmdUnpause !== undefined && value == 0)
                 cmd = mapping.cmdUnpause;
+        } else if (mapping.characteristic_type === 'TargetPosition') {
+            if (mapping.cmdOpen !== undefined && value != 0)
+              cmd = mapping.cmdOpen;
+            else if (mapping.cmdClose !== undefined && value == 0)
+              cmd = mapping.cmdClose;
         } else {
             if (mapping.cmdOn !== undefined && value == 1)
-                cmd = mapping.cmdOn
+                cmd = mapping.cmdOn;
     
             else if (mapping.cmdOff !== undefined && value == 0)
-                cmd = mapping.cmdOff
+                cmd = mapping.cmdOff;
         
             else if (typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined)
                 cmd = mapping.homekit2cmd[value];
