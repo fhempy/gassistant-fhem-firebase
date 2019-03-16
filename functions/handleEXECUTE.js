@@ -32,8 +32,11 @@ async function handleEXECUTE(uid, reqId, res, input) {
     if (settings.CHECK_CLIENT_VERSION) {
       var clientVersion = await utils.getClientVersion(uid);
       if (compareVersions(clientVersion, settings.MIN_CLIENT_VERSION) < 0) {
-        uiderror(uid, 'CLIENT UPDATE NEEDED');
-        payload = {"errorCode": "needsSoftwareUpdate"};
+        uiderror(uid, 'CLIENT UPDATE NEEDED (sudo npm install -g gassistant-fhem --unsafe-perm)');
+        if (input.context && input.context.locale_language === 'de') {
+          uidlog(uid, 'CLIENT UPDATE NEEDED - VOICE');
+          payload = {"errorCode": "needsSoftwareUpdate"};
+        }
       }
     }
     var response = createDirective(reqId, payload);
