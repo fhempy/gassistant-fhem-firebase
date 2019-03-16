@@ -499,7 +499,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   
   if (match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/)) {
       //HM & Comet DECT
-      mappings.TargetTemperature = {reading: 'desired-temp', cmd: 'desired-temp', delay: true};
+      mappings.TargetTemperature = {reading: 'desired-temp', cmd: 'desired-temp'};
       if (s.Readings['desired-temp'] === undefined) //Comet DECT
           mappings.TargetTemperature.reading = 'temperature';
 
@@ -712,6 +712,16 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE === 'tahoma') {
     if (s.Internals.SUBTYPE === 'DEVICE' && s.Internals.inControllable === 'rts:BlindRTSComponent') {
       mappings.OpenClose = {reading: 'state', valueClosed: '0', cmdOpen: 'up', cmdClose: 'down' };
+    } else if (s.Internals.inControllable === 'io:RollerShutterVeluxIOComponent') {
+      if (!service_name) service_name = 'blinds';
+      mappings.OpenClose = {reading: 'OpenClosedState', valueClosed: 'closed', cmdOpen: 'open', cmdClose: 'close'};
+      mappings.CurrentPosition = {reading: 'ClosureState'};
+      mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim'};
+    } else if (s.Internals.inControllable === 'io:WindowOpenerVeluxIOComponent') {
+      if (!service_name) service_name = 'window';
+      mappings.OpenClose = {reading: 'OpenClosedState', valueClosed: 'closed', cmdOpen: 'open', cmdClose: 'close'};
+      mappings.CurrentPosition = {reading: 'ClosureState'};
+      mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim'};
     }
   } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
@@ -719,13 +729,16 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.On = {reading: 'BSH.Common.Root.ActiveProgram', valueOff: '-', cmdOn: 'startProgram', cmdOff: 'stopProgram'};
     }
   } else if (s.Internals.TYPE === 'ZWave') {
+    if (s.Attributes['classes'].match(/(^| )THERMOSTAT_SETPOINT\b/)) {
+      mappings.TargetTemperature = { reading: 'setpointTemp', cmd: 'desired-temp', part: 0 };
+    }
     if (s.Attributes['classes'].match(/(^| )THERMOSTAT_MODE\b/) && mappings.TargetTemperature) {
-      //TODO checks for QUERY to identify current state
       mappings.ThermostatModes = {
         reading: 'state',
-        cmds: ['off:off','heat:heating','cool:cooling','auto:auto','fan-only:fanOnly','eco:energySaveHeating'],
+        cmds: ['off:tmOff','heat:tmHeating','cool:tmCooling','auto:tmAuto','fan-only:tmFan','eco:tmEnergySaveHeating'],
         values: ['/off/:off', '/Cool/:cool', '/Auto/:auto', '/Fan/:fan-only', '/EnergySave/:eco', '/.*/:heat']
       };
+      mappings.CurrentTemperature = { reading: 'temperature', part: 0 };
     }
   }
 
