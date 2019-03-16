@@ -378,11 +378,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: 'opens', cmdClose: 'closes'};
       delete mappings.Brightness;
       if (s.PossibleSets.match(/(^| )position\b/)) {
-          mappings.CurrentPosition = {reading: 'position'};
-          mappings.TargetPosition = {reading: 'position', cmd: 'position'};
+          mappings.CurrentPosition = {reading: 'position', invert: true};
+          mappings.TargetPosition = {reading: 'position', cmd: 'position', invert: true};
           if (s.Internals.TYPE == 'SOMFY') {
-              mappings.CurrentPosition.invert = true;
-              mappings.TargetPosition.invert = true;
+              mappings.CurrentPosition.invert = false;
+              mappings.TargetPosition.invert = false;
               mappings.TargetPosition.cmd = 'pos';
           }
       } else if (s.Internals.TYPE == 'ZWave' ) {
@@ -391,25 +391,25 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               // FIBARO System FGRM222 Roller Shutter Controller 2
               // If the device is configured to use Fibaro command class instead of ZWave command class,
               // then there's a reading "position" present which must be used instead.
-              mappings.CurrentPosition = {reading: 'position'};
-              mappings.TargetPosition = {reading: 'position', cmd: 'dim', delay: true};
+              mappings.CurrentPosition = {reading: 'position', invert: true};
+              mappings.TargetPosition = {reading: 'position', cmd: 'dim', invert: true};
           } else {
-              mappings.CurrentPosition = {reading: 'state'};
-              mappings.TargetPosition = {reading: 'state', cmd: 'dim', delay: true};
+              mappings.CurrentPosition = {reading: 'state', invert: true};
+              mappings.TargetPosition = {reading: 'state', cmd: 'dim', invert: true};
           }
       } else {
-          mappings.CurrentPosition = {reading: 'pct'};
-          mappings.TargetPosition = {reading: 'pct', cmd: 'pct', delay: true};
+          mappings.CurrentPosition = {reading: 'pct', invert: true};
+          mappings.TargetPosition = {reading: 'pct', cmd: 'pct', invert: true};
           if (s.Attributes.param && s.Attributes.param.match(/levelInverse/i)) {
-              mappings.CurrentPosition.invert = true;
-              mappings.TargetPosition.invert = true;
+              mappings.CurrentPosition.invert = false;
+              mappings.TargetPosition.invert = false;
           }
       }
 
   } else if (s.Attributes.model === 'HM-SEC-WIN') {
       if (!service_name) service_name = 'window';
-      mappings.CurrentPosition = {reading: 'state'};
-      mappings.TargetPosition = {reading: 'state', cmd: ' ', delay: true};
+      mappings.CurrentPosition = {reading: 'state', invert: true};
+      mappings.TargetPosition = {reading: 'state', cmd: ' ', invert: true};
 
       var reading2homekit = function (mapping, orig) {
           var match;
@@ -715,13 +715,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     } else if (s.Internals.inControllable === 'io:RollerShutterVeluxIOComponent') {
       if (!service_name) service_name = 'blinds';
       mappings.OpenClose = {reading: 'OpenClosedState', valueClosed: 'closed', cmdOpen: 'open', cmdClose: 'close'};
-      mappings.CurrentPosition = {reading: 'ClosureState'};
-      mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim'};
+      mappings.CurrentPosition = {reading: 'ClosureState', invert: true};
+      mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim', invert: true};
     } else if (s.Internals.inControllable === 'io:WindowOpenerVeluxIOComponent') {
       if (!service_name) service_name = 'window';
       mappings.OpenClose = {reading: 'OpenClosedState', valueClosed: 'closed', cmdOpen: 'open', cmdClose: 'close'};
-      mappings.CurrentPosition = {reading: 'ClosureState'};
-      mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim'};
+      mappings.CurrentPosition = {reading: 'ClosureState', invert: true};
+      mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim', invert: true};
     }
   } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
