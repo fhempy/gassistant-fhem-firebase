@@ -259,7 +259,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   
   if (s.Internals.TYPE == 'XiaomiSmartHome_Device' && s.Internals.MODEL == 'sensor_magnet.aq2') {
     if (!service_name) service_name = 'door';
-    mappings.OpenClose = {reading: 'state', valueClosed: 'close', queryonly: true};
+    mappings.OpenClose = {reading: 'state', valueClosed: 'close'};
   }
   
   if (s.Internals.TYPE == 'LightScene') {
@@ -455,28 +455,25 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
   } else if (s.Internals.TYPE === 'CUL_FHTTK') {
       service_name = 'ContactSensor';
-      mappings.ContactSensorState = {
+      mappings.OpenClose = {
           reading: 'Window',
-          values: ['/^Closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED']
+          valueClosed: 'Closed'
       };
-      mappings.CurrentDoorState = {reading: 'Window', values: ['/^Closed/:CLOSED', '/.*/:OPEN']};
 
   } else if (s.Internals.TYPE == 'MAX'
       && s.Internals.type == 'ShutterContact') {
       service_name = 'ContactSensor';
-      mappings.ContactSensorState = {
+      mappings.OpenClose = {
           reading: 'state',
-          values: ['closed:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED']
+          valueClosed: 'closed'
       };
-      mappings.CurrentDoorState = {reading: 'state', values: ['closed:CLOSED', '/.*/:OPEN']};
 
   } else if (s.Attributes.subType == 'threeStateSensor') {
       service_name = 'ContactSensor';
-      mappings.ContactSensorState = {
+      mappings.OpenClose = {
           reading: 'contact',
-          values: ['/^closed/:CONTACT_DETECTED', '/.*/:CONTACT_NOT_DETECTED']
+          valueClosed: 'closed'
       };
-      mappings.CurrentDoorState = {reading: 'contact', values: ['/^closed/:CLOSED', '/.*/:OPEN']};
 
   } else if (s.Internals.TYPE == 'PRESENCE') {
       service_name = 'OccupancySensor';

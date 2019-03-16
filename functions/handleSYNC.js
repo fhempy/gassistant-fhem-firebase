@@ -39,7 +39,6 @@ var processSYNC = function (uid, devices) {
               || device.mappings.Hue
               || device.mappings.RGB
               || device.mappings.Scene
-              || device.mappings.TargetPosition
               || device.mappings.CurrentTemperature
               || device.mappings.TargetTemperature
               || device.mappings.StartStop
@@ -126,7 +125,7 @@ var processSYNC = function (uid, devices) {
                   if (device.mappings.TargetTemperature || device.mappings.CurrentTemperature) {
                       d.type = 'action.devices.types.THERMOSTAT';
                   } else if (device.mappings.Brightness || device.mappings.Hue ||
-                             device.mappings.RGB || device.mappings.TargetPosition ||
+                             device.mappings.RGB ||
                              device.mappings.HSVBrightness) {
                       d.type = 'action.devices.types.LIGHT';
                   } else if (device.mappings.OpenClose) {
@@ -156,7 +155,7 @@ var processSYNC = function (uid, devices) {
               }
   
               //Brightness
-              if (device.mappings.Brightness || device.mappings.TargetPosition || device.mappings.Volume) {
+              if (device.mappings.Brightness || device.mappings.Volume) {
                   d.traits.push("action.devices.traits.Brightness");
               }
   
@@ -184,7 +183,7 @@ var processSYNC = function (uid, devices) {
               if (device.mappings.OpenClose) {
                   d.traits.push("action.devices.traits.OpenClose");
                   //Attributes
-                  d.attributes.queryOnlyOpenClose = device.mappings.OpenClose.queryonly ? true : false;
+                  d.attributes.queryOnlyOpenClose = device.mappings.TargetPosition ? false : true;
               }
               
               //Locate
