@@ -479,27 +479,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       service_name = 'OccupancySensor';
       mappings.OccupancyDetected = {
           reading: 'state',
-          values: ['present:OCCUPANCY_DETECTED', 'absent:OCCUPANCY_NOT_DETECTED']
+          values: ['present:true', 'absent:false']
       };
 
   } else if (s.Internals.TYPE == 'ROOMMATE' || s.Internals.TYPE == 'GUEST') {
       service_name = 'OccupancySensor';
       mappings.OccupancyDetected = {
           reading: 'presence',
-          values: ['present:OCCUPANCY_DETECTED', '/.*/:OCCUPANCY_NOT_DETECTED']
+          values: ['/present/:true', '/.*/:false']
       };
 
   } else if (s.Internals.TYPE == 'RESIDENTS') {
       service_name = 'security';
-      mappings.SecuritySystemCurrentState = {
+      mappings.OccupancyDetected = {
           reading: 'state',
-          values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM']
-      }
-      mappings.SecuritySystemTargetState = {
-          reading: 'state',
-          values: ['/^home/:DISARMED', '/^gotosleep/:NIGHT_ARM', '/^absent/:STAY_ARM', '/^gone/:AWAY_ARM'],
-          cmds: ['STAY_ARM:home', 'AWAY_ARM:absent', 'NIGHT_ARM:gotosleep', 'DISARM:home'],
-          delay: true
+          values: ['/^home/:true', '/^gotosleep/:true', '/^absent/:false', '/^gone/:false']
       }
   }
   
@@ -1132,7 +1126,7 @@ function prepare(mapping) {
             to = to.replace(/\+/g, ' ');
 
             var match;
-            if (match = from.match('^/(.*)/$')) {
+            if (match = from.match('^\/(.*)\/$')) {
                 if (reading)
                   mapping.value2homekit_re.push({'reading': reading, re: match[1], to: to});
                 else

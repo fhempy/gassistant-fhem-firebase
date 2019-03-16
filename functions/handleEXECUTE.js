@@ -149,6 +149,12 @@ async function processEXECUTE(uid, reqId, input) {
 }; // processEXECUTE
 
 async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
+    if (!device.mappings.On) {
+      return [{
+          errorCode: 'notSupported'
+      }];
+    }
+
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.On, state));
 
     let res = [];

@@ -17,7 +17,6 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
   await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'REPORTSTATEALL', id: reqId, delay: 40});
-  uidlog(uid, 'final response: ' + JSON.stringify(response));
   res.send(response);
 }
 
@@ -41,6 +40,7 @@ var processSYNC = function (uid, devices) {
               || device.mappings.Scene
               || device.mappings.CurrentTemperature
               || device.mappings.TargetTemperature
+              || device.mappings.OccupancyDetected
               || device.mappings.StartStop
               || device.mappings.Dock
               || device.mappings.OpenClose
@@ -73,7 +73,7 @@ var processSYNC = function (uid, devices) {
               if (device.service_name) {
                   if (device.service_name === 'vacuum') {
                       d.type = 'action.devices.types.VACUUM';
-                  } else if (device.service_name === 'light') {
+                  } else if (device.service_name === 'light' || device.service_name === 'OccupancySensor') {
                       d.type = 'action.devices.types.LIGHT';
                   } else if (device.service_name === 'switch' || device.service_name === 'contact') {
                       d.type = 'action.devices.types.SWITCH';
@@ -125,7 +125,7 @@ var processSYNC = function (uid, devices) {
                   if (device.mappings.TargetTemperature || device.mappings.CurrentTemperature) {
                       d.type = 'action.devices.types.THERMOSTAT';
                   } else if (device.mappings.Brightness || device.mappings.Hue ||
-                             device.mappings.RGB ||
+                             device.mappings.RGB || device.mappings.OccupancyDetected ||
                              device.mappings.HSVBrightness) {
                       d.type = 'action.devices.types.LIGHT';
                   } else if (device.mappings.OpenClose) {
@@ -138,7 +138,7 @@ var processSYNC = function (uid, devices) {
               }
   
               //TRAITS
-              if (device.mappings.On) {
+              if (device.mappings.On || device.mappings.OccupancyDetected) {
                   d.traits.push("action.devices.traits.OnOff");
               }
   
@@ -295,6 +295,7 @@ var processSYNC = function (uid, devices) {
                   }
               } else {
                   payload.devices.push(d);
+                  uidlog(uid, device.device + ': '+ JSON.stringify(d));
               }
           }
         } catch (err) {

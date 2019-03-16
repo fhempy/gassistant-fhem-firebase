@@ -106,6 +106,11 @@ async function processQUERY(uid, input, reportstate) {
             else
               devices[d.id].on = turnedOn;
         }
+
+        //OccupancySensor
+        if (device.mappings.OccupancyDetected) {
+          devices[d.id].on = await cached2Format(uid, device.mappings.OccupancyDetected, readings);
+        }
         
         //OpenClose
         if (device.mappings.OpenClose) {

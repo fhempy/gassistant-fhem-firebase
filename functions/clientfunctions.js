@@ -179,7 +179,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
       if (!FHEM_devReadingVal[device][reading])
         FHEM_devReadingVal[device][reading] = '';
   
-      if (orig !== FHEM_devReadingVal[device][reading]) {
+      if (orig !== FHEM_devReadingVal[device][reading] || reportState === 0) {
         FHEM_devReadingVal[device][reading] = orig;
         await database.updateDeviceReading(device, reading, orig);
         console.log('update reading: ' + device + ':' + reading + ' = ' + orig);
