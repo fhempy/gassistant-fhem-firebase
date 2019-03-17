@@ -230,11 +230,16 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
       if (reading && cmd) {
           mappings.RGB = {reading: reading, cmd: cmd};
-          // mappings.Hue = {reading: reading, cmd: cmd, max: 359, maxValue: 359};
-          // mappings.Saturation = {reading: reading, cmd: cmd, max: 100, maxValue: 1};
-          // mappings.HSVBrightness = {reading: reading, cmd: cmd, max: 100, maxValue: 1, delay: true};
+          mappings.RGB.reading2homekit = function (mapping, orig) {
+              return parseInt('0x' + orig);
+          };
+          mappings.RGB.homekit2reading = function (mapping, orig) {
+              return ("000000" + orig.toString(16)).substr(-6);
+          };
           if (s.PossibleSets.match(/(^| )pct\b/)) {
-            mappings.Brightness = {reading: reading, cmd: 'pct', max: 100, maxValue: 100, delay: true};
+            mappings.Brightness = {reading: 'pct', cmd: 'pct', max: 100, maxValue: 100};
+          } else if (s.PossibleSets.match(/(^| )bright\b/)) {
+            mappings.Brightness = {reading: 'bright', cmd: 'bright', max: 100, maxValue: 100};
           }
       }
   }
