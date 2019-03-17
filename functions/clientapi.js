@@ -365,11 +365,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (s.PossibleAttrs.match(/(^| )setList\b/) && !s.Attributes.setList) s.Attributes.setList = 'on off';
       var parts = s.Attributes.setList.split(' ');
       if (parts.length == 2) {
-          mappings.CurrentDoorState = {reading: 'state', values: [parts[0] + ':OPEN', parts[1] + ':CLOSED']};
-          mappings.TargetDoorState = {
-              reading: 'state', values: [parts[0] + ':OPEN', parts[1] + ':CLOSED'],
-              cmds: ['OPEN:' + parts[0], 'CLOSED:' + parts[1]]
-          };
+          mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
       }
 
   } else if (genericType == 'blind'
@@ -1148,7 +1144,6 @@ function prepare(mapping) {
             } else {
                 from = from.replace(/\+/g, ' ');
                 mapping.value2homekit[from] = to;
-                delete mapping.value2homekit_re;
             }
         }
         if (mapping.value2homekit_re
