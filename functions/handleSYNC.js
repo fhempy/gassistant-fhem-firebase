@@ -7,8 +7,14 @@ const uidlog = require('./logger.js').uidlog;
 const uiderror = require('./logger.js').uiderror;
 const createDirective = require('./utils.js').createDirective;
 
+async function setSyncFeatureLevel(uid) {
+  await utils.getFirestoreDB().collection(uid).doc('state').set({featurelevel: settings.FEATURELEVEL}, {merge: true});
+  await utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
+}
+
 async function handleSYNC(uid, reqId, res) {
   uidlog(uid, 'STARTING SYNC');
+  setSyncFeatureLevel(uid);
   await createSYNCPayloadResponse(uid, reqId, res);
 }
 

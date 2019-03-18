@@ -373,7 +373,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
       }
 
-  } else if (genericType == 'blind'
+  } else if (genericType == 'blind' || genericType === 'blinds'
       || s.Attributes.subType == 'blindActuator'
       || (s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/))) {
       mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: 'opens', cmdClose: 'closes'};
@@ -406,6 +406,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               mappings.TargetPosition.invert = false;
           }
       }
+  } else if (s.Internals.TZPE === 'jarolift') {
+    if (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/)) {
+      mappings.OpenClose = {reading:'state', valueClosed:'', cmdOpen:'up', cmdClose:'down'};
+    }
+  } else if ((genericType === 'blind' || genericType == 'blinds') && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
+    mappings.OpenClose = {reading:'state', valueClosed:'close', cmdOpen:'open', cmdClose:'close'};
 
   } else if (s.Attributes.model === 'HM-SEC-WIN') {
       if (!service_name) service_name = 'window';
@@ -1280,7 +1286,7 @@ async function generateRoomHint(uid, realDBUpdateJSON) {
 }
 
 function registerClientApi(app) {
-  app.get('/syncfinished', utils.rateLimiter(3, 300), async (req, res) => {
+  app.get('/syncfinished', utils.rateLimiter(10, 300), async (req, res) => {
     const {sub: uid} = req.user;
     deviceRooms[uid] = {};
     var realDBUpdateJSON = {};

@@ -175,7 +175,7 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
 }// processEXECUTETurnOff
 
 async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCmd) {
-    if (device.mappings.TargetPosition) {
+    if (device.mappings.TargetPosition && params.openPercent !== 0 && params.openPercent !== 100) {
       //TargetPosition supported
       fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetPosition, params.openPercent));
     } else {
@@ -522,17 +522,18 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
                 cmd = mapping.cmdPause;
             else if (mapping.cmdUnpause !== undefined && value == 0)
                 cmd = mapping.cmdUnpause;
-        } else if (mapping.characteristic_type === 'TargetPosition') {
-            if (mapping.cmdOpen !== undefined && value != 0)
-              cmd = mapping.cmdOpen;
-            else if (mapping.cmdClose !== undefined && value == 0)
-              cmd = mapping.cmdClose;
         } else {
             if (mapping.cmdOn !== undefined && value == 1)
                 cmd = mapping.cmdOn;
     
             else if (mapping.cmdOff !== undefined && value == 0)
                 cmd = mapping.cmdOff;
+
+            else if (mapping.cmdOpen !== undefined && value >= 50)
+                cmd = mapping.cmdOpen;
+
+            else if (mapping.cmdClose !== undefined && value < 50)
+                cmd = mapping.cmdClose;
         
             else if (typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined)
                 cmd = mapping.homekit2cmd[value];
