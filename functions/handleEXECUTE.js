@@ -224,9 +224,9 @@ async function processEXECUTEBrightnessAbsolute(uid, reqId, device, brightness, 
 }; // processEXECUTEBrightnessAbsolute
 
 async function processEXECUTESetTargetTemperature(uid, reqId, device, targetTemperature, fhemExecCmd) {
-    let min = device.mappings.TargetTemperature.minValue;
+    let min = parseFloat(device.mappings.TargetTemperature.minValue);
     if (min === undefined) min = 15.0;
-    let max = device.mappings.TargetTemperature.maxValue;
+    let max = parseFloat(device.mappings.TargetTemperature.maxValue);
     if (max === undefined) max = 30.0;
 
     if (targetTemperature < min || targetTemperature > max)

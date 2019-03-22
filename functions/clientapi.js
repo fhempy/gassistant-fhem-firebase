@@ -373,15 +373,19 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
       }
 
-  } else if (genericType == 'blind' || genericType === 'blinds'
-      || s.Attributes.subType == 'blindActuator'
-      || (s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/))) {
-      mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: 'opens', cmdClose: 'closes'};
-      delete mappings.Brightness;
+  } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
+            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/))) {
+      let open = 'opens';
+      let close = 'closes';
+      if (s.PossibleSets.match(/(^| )up\b/))
+        open = 'up';
+      if (s.PossibleSets.match(/(^| )down\b/))
+        close = 'down';
+      mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
           mappings.CurrentPosition = {reading: 'position', invert: true};
           mappings.TargetPosition = {reading: 'position', cmd: 'position', invert: true};
-          if (s.Internals.TYPE == 'SOMFY') {
+          if (s.Internals.TYPE == 'SOMFY' || s.Internals.TYPE === 'EnOcean') {
               mappings.CurrentPosition.invert = false;
               mappings.TargetPosition.invert = false;
               mappings.TargetPosition.cmd = 'pos';
@@ -398,7 +402,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               mappings.CurrentPosition = {reading: 'state', invert: true};
               mappings.TargetPosition = {reading: 'state', cmd: 'dim', invert: true};
           }
-      } else {
+      } else if (s.PossibleSets.match(/(^| )pct\b/)) {
           mappings.CurrentPosition = {reading: 'pct', invert: true};
           mappings.TargetPosition = {reading: 'pct', cmd: 'pct', invert: true};
           if (s.Attributes.param && s.Attributes.param.match(/levelInverse/i)) {
@@ -406,10 +410,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               mappings.TargetPosition.invert = false;
           }
       }
-  } else if (s.Internals.TZPE === 'jarolift') {
-    if (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/)) {
-      mappings.OpenClose = {reading:'state', valueClosed:'', cmdOpen:'up', cmdClose:'down'};
-    }
+
   } else if ((genericType === 'blind' || genericType == 'blinds') && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
     mappings.OpenClose = {reading:'state', valueClosed:'close', cmdOpen:'open', cmdClose:'close'};
 
@@ -581,8 +582,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (s.Readings.ecoMode) {
         mappings.ThermostatModes = {
           reading: ['desiredTemperature', 'ecoMode'],
-          cmds: ['off:desiredTemperature 4.5','heat:comfort','eco:eco'],
-          values: ['desiredTemperature=/^4.5/:off', 'ecoMode=/^1$/:eco', 'desiredTemperature=/.*/:heat']
+          cmds: ['off:desiredTemperature 4.5','heat:desiredTemperature 21'],
+          values: ['desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
         };
       } else if (s.Readings.mode) {
         mappings.ThermostatModes = {
