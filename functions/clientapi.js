@@ -388,7 +388,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           if (s.Internals.TYPE == 'SOMFY' || s.Internals.TYPE === 'EnOcean') {
               mappings.CurrentPosition.invert = false;
               mappings.TargetPosition.invert = false;
-              mappings.TargetPosition.cmd = 'pos';
           }
       } else if (s.Internals.TYPE == 'ZWave' ) {
           mappings.OpenClose = {reading: 'state', valueClosed: 'off', cmdOpen: 'on', cmdClose: 'off', max: 99};
