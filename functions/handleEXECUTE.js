@@ -529,10 +529,10 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
             else if (mapping.cmdOff !== undefined && value == 0)
                 cmd = mapping.cmdOff;
 
-            else if (mapping.cmdOpen !== undefined && value >= 50)
+            else if (mapping.cmdOpen !== undefined && ((value >= 50 && !mapping.invert) || (value < 50 && mapping.invert === true)))
                 cmd = mapping.cmdOpen;
 
-            else if (mapping.cmdClose !== undefined && value < 50)
+            else if (mapping.cmdOpen !== undefined && ((value < 50 && !mapping.invert) || (value >= 50 && mapping.invert === true)))
                 cmd = mapping.cmdClose;
         
             else if (typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined)
@@ -572,3 +572,4 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
 module.exports = {
   handleEXECUTE
 };
+

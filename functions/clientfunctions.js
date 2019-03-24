@@ -57,21 +57,21 @@ app.get('/getdynamicfunctions', async (req, res) => {
   
   async function checkFeatureLevel() {
     await database.getClientFunctions();
-    console.log('DynamicFunctions updated');
+    log.info('DynamicFunctions updated');
 
     var server = await database.getServerFeatureLevel();
     var sync = await database.getSyncFeatureLevel();
-    console.log('SERVER FeatureLevel:' + JSON.stringify(server));
-    console.log('SYNC   FeatureLevel:' + JSON.stringify(sync));
+    log.info('SERVER FeatureLevel:' + JSON.stringify(server));
+    log.info('SYNC   FeatureLevel:' + JSON.stringify(sync));
 
     if (server.featurelevel > sync.featurelevel) {
       //set changelog
-      console.log('>>> VERSION UPGRADE STARTED');
+      log.info('>>> VERSION UPGRADE STARTED');
       for (var fhem of this.connections) {
         await fhem.reload();
       }
       await database.initiateSync();
-      console.log('>>> VERSION UPGRADE FINISHED - SYNC INITIATED');
+      log.info('>>> VERSION UPGRADE FINISHED - SYNC INITIATED');
     }
 
     //update every 1-4 days
@@ -83,7 +83,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
     try {
       database.db.collection(database.getUid()).doc('msgs').collection('firestore2fhem').onSnapshot((events) => {
         events.forEach((event) => {
-          console.log('GOOGLE MSG RECEIVED: ' + JSON.stringify(event.data()));
+          log.info('GOOGLE MSG RECEIVED: ' + JSON.stringify(event.data()));
           if (event.data()) {
             handler.bind(this)(event.data());
           }
@@ -91,7 +91,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
         });
       });
     } catch(err) {
-      console.error('onSnapshot failed: ' + err);
+      log.error('onSnapshot failed: ' + err);
     }
   }
   
@@ -102,7 +102,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
           return;
       }
       
-      console.log("Received firestore2fhem: " + JSON.stringify(event));
+      log.info("Received firestore2fhem: " + JSON.stringify(event));
   
       try {
   
@@ -135,15 +135,15 @@ app.get('/getdynamicfunctions', async (req, res) => {
                   break;
   
               case 'UPDATE_CLIENT':
-                  console.log("#################################################");
-                  console.log("#################################################");
-                  console.log("#################################################");
-                  console.log("#################################################");
-                  console.log("!!!!!!!!PLEASE UPDATE YOUR CLIENT ASAP!!!!!!!!!!!");
-                  console.log("#################################################");
-                  console.log("#################################################");
-                  console.log("#################################################");
-                  console.log("#################################################");
+                  log.info("#################################################");
+                  log.info("#################################################");
+                  log.info("#################################################");
+                  log.info("#################################################");
+                  log.info("!!!!!!!!PLEASE UPDATE YOUR CLIENT ASAP!!!!!!!!!!!");
+                  log.info("#################################################");
+                  log.info("#################################################");
+                  log.info("#################################################");
+                  log.info("#################################################");
                   break;
                   
               case 'STOP_CLIENT':
@@ -151,7 +151,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
                   break;
   
               default:
-                  console.log("Error: Unsupported event", event);
+                  log.info("Error: Unsupported event", event);
   
                   //TODO response = handleUnexpectedInfo(requestedNamespace);
   
@@ -161,7 +161,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
   
       } catch (error) {
   
-          console.error(error);
+          log.error(error);
   
       }// try-catch
   
@@ -182,7 +182,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
       if (orig !== FHEM_devReadingVal[device][reading] || reportState === 0) {
         FHEM_devReadingVal[device][reading] = orig;
         await database.updateDeviceReading(device, reading, orig);
-        console.log('update reading: ' + device + ':' + reading + ' = ' + orig);
+        log.info('update reading: ' + device + ':' + reading + ' = ' + orig);
       }
 
       if(!FHEM_reportStateStore[device])
@@ -217,6 +217,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
   }
   
   res.send({
+    'global.log': 'require("./logger")._system;',
     'exports.FHEM_update': FHEM_update.toString(),
     'exports.getInitSyncURL': getInitSyncURL.toString(),
     'exports.getSyncFinishedURL': getSyncFinishedURL.toString(),

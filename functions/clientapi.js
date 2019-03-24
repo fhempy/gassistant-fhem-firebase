@@ -372,9 +372,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (parts.length == 2) {
           mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
       }
-
   } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
             (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/))) {
+      if (!service_name) service_name = 'blinds';
+      delete mappings.On;
+      delete mappings.Brightness;
       let open = 'opens';
       let close = 'closes';
       if (s.PossibleSets.match(/(^| )up\b/))
@@ -385,9 +387,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (s.PossibleSets.match(/(^| )position\b/)) {
           mappings.CurrentPosition = {reading: 'position', invert: true};
           mappings.TargetPosition = {reading: 'position', cmd: 'position', invert: true};
-          if (s.Internals.TYPE == 'SOMFY' || s.Internals.TYPE === 'EnOcean') {
+          if (s.Internals.TYPE == 'SOMFY') {
               mappings.CurrentPosition.invert = false;
               mappings.TargetPosition.invert = false;
+              if (s.Internals.TYPE === 'SOMFY')
+                mappings.TargetPosition.cmd = 'pos';
           }
       } else if (s.Internals.TYPE == 'ZWave' ) {
           mappings.OpenClose = {reading: 'state', valueClosed: 'off', cmdOpen: 'on', cmdClose: 'off', max: 99};
@@ -408,6 +412,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               mappings.CurrentPosition.invert = false;
               mappings.TargetPosition.invert = false;
           }
+      } else if (s.PossibleSets.match(/(^| )level\b/)) {
+        mappings.CurrentPosition = {reading: 'level', invert: true};
+        mappings.TargetPosition = {reading: 'level', cmd: 'level', invert: true};
+        if (s.Internals.TYPE === 'HM485') {
+          mappings.OpenClose.valueClosed = 'level_100';
+        }
       }
 
   } else if ((genericType === 'blind' || genericType == 'blinds') && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
