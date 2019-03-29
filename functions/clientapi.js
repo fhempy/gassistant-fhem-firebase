@@ -87,6 +87,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
   
   //CREATE MAPPINGS
+  if (genericType === 'blind')
+    genericType = 'blinds';
+
   var service_name = genericType
   var mappings = {};
   var max;
@@ -373,16 +376,25 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
       }
   } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
-            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/))) {
+            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/)) ||
+            (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
+            genericType === 'blinds') {
       if (!service_name) service_name = 'blinds';
       delete mappings.On;
       delete mappings.Brightness;
       let open = 'opens';
       let close = 'closes';
-      if (s.PossibleSets.match(/(^| )up\b/))
-        open = 'up';
-      if (s.PossibleSets.match(/(^| )down\b/))
-        close = 'down';
+      if (s.Internals.TYPE !== 'EnOcean') {
+        if (s.PossibleSets.match(/(^| )up\b/))
+          open = 'up';
+        else if (s.PossibleSets.match(/(^| )on\b/))
+          open = 'on';
+
+        if (s.PossibleSets.match(/(^| )down\b/))
+          close = 'down';
+        else if (s.PossibleSets.match(/(^| )off\b/))
+          close = 'off';
+      }
       mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
           mappings.CurrentPosition = {reading: 'position', invert: true};
@@ -420,7 +432,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         }
       }
 
-  } else if ((genericType === 'blind' || genericType == 'blinds') && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
+  } else if (genericType == 'blinds' && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
     mappings.OpenClose = {reading:'state', valueClosed:'close', cmdOpen:'open', cmdClose:'close'};
 
   } else if (s.Attributes.model === 'HM-SEC-WIN') {
@@ -756,6 +768,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         values: ['/off/:off', '/Cool/:cool', '/Auto/:auto', '/Fan/:fan-only', '/EnergySave/:eco', '/.*/:heat']
       };
       mappings.CurrentTemperature = { reading: 'temperature', part: 0 };
+    }
+  } else if (s.Internals.TYPE === 'MQTT2_DEVICE') {
+    if (s.Attributes.model === 'L_02e_zigbee2mqtt_light_rgbcct_rgb') {
+      if (!service_name) service_name = 'light';
+      mappings.On = {reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off'};
+      mappings.Brightness = {reading: 'brightness', cmd: 'brightness', max: 255, maxValue: 100};
+      //mappings.ColorMode = {reading: 'colormode', valueCt: 'ct'};
+      mappings.ColorTemperature = {reading: 'color_temp', cmd: 'color_temp'};
+      mappings.RGB = {reading: 'color', cmd: 'color'};
+      mappings.RGB.reading2homekit = function (mapping, orig) {
+          return parseInt('0x' + orig);
+      };
+      mappings.RGB.homekit2reading = function (mapping, orig) {
+          return ("000000" + orig.toString(16)).substr(-6);
+      };
     }
   }
 

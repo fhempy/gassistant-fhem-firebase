@@ -170,6 +170,7 @@ async function loadDevices(uid) {
     child.forEach(function(r) {
       if (r.key === 'XXXDEVICEDEFXXX') {
         devices[r.val().name] = r.val();
+        prepareDevice(uid, devices[r.val().name]);
       }
     });
   });

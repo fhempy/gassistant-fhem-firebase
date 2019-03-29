@@ -188,7 +188,7 @@ async function processQUERY(uid, input, reportstate) {
         //action.devices.traits.Brightness
         if (device.mappings.Brightness) {
             // Brightness range is 0..100
-            devices[d.id].brightness = await cached2Format(uid, device.mappings.Brightness, readings);
+            devices[d.id].brightness = parseFloat(await cached2Format(uid, device.mappings.Brightness, readings));
         }
         
         //action.devices.traits.StartStop
@@ -211,7 +211,7 @@ async function processQUERY(uid, input, reportstate) {
 
 
 function FHEM_reading2homekit_(uid, mapping, readings) {
-    var value = readings[mapping.reading[0]];
+    var value = readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')];
     if (value === undefined)
         return undefined;
     var reading = mapping.reading.toString();
@@ -513,13 +513,13 @@ function FHEM_reading2homekit(uid, mapping, readings) {
       uidlog(uid, 'OLDFUNCTION FHEM_reading2homekit - SYNC needed');
       mapping.reading = [mapping.reading];
     }
-    var orig = readings[mapping.reading[0]];
+    var orig = readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')];
     if (mapping.reading2homekit && typeof mapping.reading2homekit == 'function') {
         uidlog(uid, 'function found for reading2homekit');
         try {
             if (mapping.reading.length === 1) {
-              orig = readings[mapping.reading[0]];
-              value = mapping.reading2homekit(mapping, readings[mapping.reading[0]]);
+              orig = readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')];
+              value = mapping.reading2homekit(mapping, readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')]);
             } else
               value = mapping.reading2homekit(mapping, readings);
         } catch (err) {
@@ -527,7 +527,7 @@ function FHEM_reading2homekit(uid, mapping, readings) {
             return undefined;
         }
         if (typeof value === 'number' && isNaN(value)) {
-            uiderror(uid, mapping.reading[0] + ' not a number: ' + readings[mapping.reading[0]] + ' => ' + value);
+            uiderror(uid, mapping.reading[0] + ' not a number: ' + readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')] + ' => ' + value);
             return undefined;
         }
 
