@@ -385,11 +385,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       let open = 'opens';
       let close = 'closes';
       if (s.Internals.TYPE !== 'EnOcean') {
-        if (s.PossibleSets.match(/(^| )on\b/))
-          open = 'on';
-
         if (s.PossibleSets.match(/(^| )off\b/))
-          close = 'off';
+          open = 'off';
+
+        if (s.PossibleSets.match(/(^| )on\b/))
+          close = 'on';
       }
       mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
