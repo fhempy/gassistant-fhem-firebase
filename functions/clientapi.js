@@ -385,14 +385,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       let open = 'opens';
       let close = 'closes';
       if (s.Internals.TYPE !== 'EnOcean') {
-        if (s.PossibleSets.match(/(^| )up\b/))
-          open = 'up';
-        else if (s.PossibleSets.match(/(^| )on\b/))
+        if (s.PossibleSets.match(/(^| )on\b/))
           open = 'on';
 
-        if (s.PossibleSets.match(/(^| )down\b/))
-          close = 'down';
-        else if (s.PossibleSets.match(/(^| )off\b/))
+        if (s.PossibleSets.match(/(^| )off\b/))
           close = 'off';
       }
       mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: open, cmdClose: close};
@@ -770,19 +766,24 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.CurrentTemperature = { reading: 'temperature', part: 0 };
     }
   } else if (s.Internals.TYPE === 'MQTT2_DEVICE') {
-    if (s.Attributes.model === 'L_02e_zigbee2mqtt_light_rgbcct_rgb') {
+    if (s.PossibleSets.match(/(^| )color\b/)) {
+      //RGB light device
       if (!service_name) service_name = 'light';
       mappings.On = {reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off'};
-      mappings.Brightness = {reading: 'brightness', cmd: 'brightness', max: 255, maxValue: 100};
+      if (s.PossibleSets.match(/(^| )brightness\b/))
+        mappings.Brightness = {reading: 'brightness', cmd: 'brightness', max: 255, maxValue: 100};
       //mappings.ColorMode = {reading: 'colormode', valueCt: 'ct'};
-      mappings.ColorTemperature = {reading: 'color_temp', cmd: 'color_temp'};
-      mappings.RGB = {reading: 'color', cmd: 'color'};
-      mappings.RGB.reading2homekit = function (mapping, orig) {
-          return parseInt('0x' + orig);
-      };
-      mappings.RGB.homekit2reading = function (mapping, orig) {
-          return ("000000" + orig.toString(16)).substr(-6);
-      };
+      if (s.PossibleSets.match(/(^| )color_temp\b/))
+        mappings.ColorTemperature = {reading: 'color_temp', cmd: 'color_temp'};
+      if (s.PossibleSets.match(/(^| )color\b/)) {
+        mappings.RGB = {reading: 'color', cmd: 'color'};
+        mappings.RGB.reading2homekit = function (mapping, orig) {
+            return parseInt('0x' + orig);
+        };
+        mappings.RGB.homekit2reading = function (mapping, orig) {
+            return ("000000" + orig.toString(16)).substr(-6);
+        };
+      }
     }
   }
 
