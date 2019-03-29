@@ -284,7 +284,7 @@ async function processEXECUTELocate(uid, reqId, device, fhemExecCmd) {
 }; //processEXECUTELocate
 
 async function processEXECUTEStartStop(uid, reqId, device, start, fhemExecCmd) {
-    await execFHEMCommand(uid, reqId, device, device.mappings.SartStop, start);
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.SartStop, start));
 
     return [{
         states: {
@@ -462,7 +462,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
         command = 'set ' + device.mappings.Saturation.device + ' sat ' + value;
 
     } else {
-        if (mapping.characteristic_type == 'On' && value) {
+        if (mapping.characteristic_type === 'On' && value) {
             if (device.delayed_timers && device.delayed_timers.length) {
                 uidlog(uid, device.name + ': skipping set cmd for ' + mapping.characteristic_type + ' with value ' + value);
                 return;
