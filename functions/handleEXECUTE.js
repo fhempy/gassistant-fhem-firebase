@@ -64,6 +64,11 @@ async function processEXECUTE(uid, reqId, input) {
             else
               device = await utils.loadDevice(uid, d.customData.device);
 
+            if (!device) {
+              uiderror(uid, "Device " + d.customData.device + " not found, try reload.");
+              return {errorCode: 'deviceNotFound'};
+            }
+
             const requestedName = exec.command;
 
             switch (requestedName) {

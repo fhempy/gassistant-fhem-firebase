@@ -81,7 +81,7 @@ var processSYNC = function (uid, devices) {
                       d.type = 'action.devices.types.VACUUM';
                   } else if (device.service_name === 'light' || device.service_name === 'OccupancySensor') {
                       d.type = 'action.devices.types.LIGHT';
-                  } else if (device.service_name === 'switch' || device.service_name === 'contact' || device.service_name === 'window' || device.service_name === 'ContactSensor' || device.service_name === 'OccupancySensor' || device.service_name === 'security') {
+                  } else if (device.service_name === 'switch') {
                       d.type = 'action.devices.types.SWITCH';
                   } else if (device.service_name === 'outlet') {
                       d.type = 'action.devices.types.OUTLET';
@@ -121,7 +121,7 @@ var processSYNC = function (uid, devices) {
                       d.type = 'action.devices.types.SPRINKLER';
                   } else if (device.service_name === 'washer') {
                       d.type = 'action.devices.types.WASHER';
-                  } else if (device.service_name === 'door') {
+                  } else if (device.service_name === 'door' || device.service_name === 'contact' || device.service_name === 'window' || device.service_name === 'ContactSensor' || device.service_name === 'security') {
                       d.type = 'action.devices.types.DOOR';
                   } else {
                       uiderror(uid, "genericDeviceType " + device.service_name + " not supported in gassistant-fhem");

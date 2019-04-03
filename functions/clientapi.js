@@ -376,7 +376,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
       }
   } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
-            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/)) ||
+            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && genericType === 'blind') ||
             (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
             genericType === 'blinds') {
       if (!service_name) service_name = 'blinds';
