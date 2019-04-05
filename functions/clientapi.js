@@ -378,6 +378,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
             (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && genericType === 'blinds') ||
             (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
+            (s.Internals.SUBTYPE === 'RolloTron Standard') ||
+            (s.Internals.subType === 'blindActuator') ||
             genericType === 'blinds') {
       if (!service_name) service_name = 'blinds';
       delete mappings.On;
@@ -390,6 +392,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
         if (s.PossibleSets.match(/(^| )off\b/))
           close = 'off';
+      }
+      if (s.Internals.TYPE === 'DUOFERN') {
+        open = 'up';
+        close = 'down';
       }
       mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
@@ -766,24 +772,24 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.CurrentTemperature = { reading: 'temperature', part: 0 };
     }
   } else if (s.Internals.TYPE === 'MQTT2_DEVICE') {
-    if (s.PossibleSets.match(/(^| )color\b/)) {
-      //RGB light device
-      if (!service_name) service_name = 'light';
+    if (s.PossibleSets.match(/(^| )on\b/))
       mappings.On = {reading: 'state', valueOff: 'off', cmdOn: 'on', cmdOff: 'off'};
-      if (s.PossibleSets.match(/(^| )brightness\b/))
-        mappings.Brightness = {reading: 'brightness', cmd: 'brightness', max: 255, maxValue: 100};
-      //mappings.ColorMode = {reading: 'colormode', valueCt: 'ct'};
-      if (s.PossibleSets.match(/(^| )color_temp\b/))
-        mappings.ColorTemperature = {reading: 'color_temp', cmd: 'color_temp'};
-      if (s.PossibleSets.match(/(^| )color\b/)) {
-        mappings.RGB = {reading: 'color', cmd: 'color'};
-        mappings.RGB.reading2homekit = function (mapping, orig) {
-            return parseInt('0x' + orig);
-        };
-        mappings.RGB.homekit2reading = function (mapping, orig) {
-            return ("000000" + orig.toString(16)).substr(-6);
-        };
-      }
+    if (s.PossibleSets.match(/(^| )brightness\b/))
+      mappings.Brightness = {reading: 'brightness', cmd: 'brightness', max: 255, maxValue: 100};
+    //mappings.ColorMode = {reading: 'colormode', valueCt: 'ct'};
+    if (s.PossibleSets.match(/(^| )color_temp\b/))
+      mappings.ColorTemperature = {reading: 'color_temp', cmd: 'color_temp'};
+    if (s.PossibleSets.match(/(^| )color\b/)) {
+      mappings.RGB = {reading: 'color', cmd: 'color'};
+      mappings.RGB.reading2homekit = function (mapping, orig) {
+          return parseInt('0x' + orig);
+      };
+      mappings.RGB.homekit2reading = function (mapping, orig) {
+          return ("000000" + orig.toString(16)).substr(-6);
+      };
+    }
+    if (mappings.Brightness) {
+      if (!service_name) service_name = 'light';
     }
   }
 
@@ -967,11 +973,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 } else {
                   compareFunction = function(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
                     if (oldValue !== newValue) {
-                      if ((oldDevTimestamp + 5000) > Date.now()) {
+                      if ((oldDevTimestamp + 900) > Date.now()) {
                         if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
                       }
                       if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-                      return setTimeout(reportStateFunction.bind(null, device), 10000);
+                      return setTimeout(reportStateFunction.bind(null, device), 1000);
                     }
                     return undefined;
                   };

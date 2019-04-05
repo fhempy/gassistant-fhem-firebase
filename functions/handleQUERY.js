@@ -214,6 +214,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     var value = readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')];
     if (value === undefined)
         return undefined;
+
     var reading = mapping.reading.toString();
 
     if (reading == 'temperature'
@@ -249,17 +250,11 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     } else if (reading == 'onoff') {
         value = parseInt(value) ? true : false;
 
-    } else if (reading == 'pct') {
-        value = parseInt(value);
-
     } else if (reading == 'reachable') {
         value = parseInt(value);
         
     } else if (mapping.characteristic_type == 'OpenClose') {
         value = mapping.valueClosed == value ? 0 : 100;
-
-    } else if (mapping.characteristic_type === 'CurrentPosition') {
-        value = parseInt(value);
 
     } else if (reading === 'state' && ( mapping.On
             && typeof mapping.values !== 'object'
@@ -290,6 +285,10 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
             return undefined;
         else if (value.match(/^set_/))
             return undefined;
+
+        if (isNaN(value) === false) {
+          value = parseFloat(value);
+        }
 
         var orig = value;
 
@@ -376,8 +375,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         }
 
         if (!format) {
-            uidlog(uid, mapping.reading.toString() + ' empty format, using ' + value);
-            return value;
+            uidlog(uid, mapping.reading.toString() + ' empty format, value: ' + value);
         } else if (format.match(/bool/i)) {
             var mapped = undefined;
             ;
