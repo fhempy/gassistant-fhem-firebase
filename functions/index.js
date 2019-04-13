@@ -11,7 +11,7 @@ async function checkClientConnection(uid) {
   try {
     var clientstate = await utils.getRealDB().ref('/users/' + uid + '/heartbeat').once('value');
     uidlog(uid, 'check client connection: ' + JSON.stringify(clientstate.val()));
-    if (clientstate.val() && clientstate.val().active && (clientstate.val().time+9000) > Date.now()) {
+    if ((clientstate.val() && clientstate.val().active && (clientstate.val().time+9000) > Date.now()) || clientstate.val() === null) {
       connectionOk = 1;
       clientConnectionOk[uid] = 1;
     } else {
