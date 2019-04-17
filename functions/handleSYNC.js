@@ -10,6 +10,7 @@ const createDirective = require('./utils.js').createDirective;
 async function setSyncFeatureLevel(uid) {
   await utils.getFirestoreDB().collection(uid).doc('state').set({featurelevel: settings.FEATURELEVEL}, {merge: true});
   await utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
+  await utils.getRealDB().ref('users/' + uid + '/lastSync').set({ts: Date.now()});
 }
 
 async function handleSYNC(uid, reqId, res) {
@@ -189,7 +190,7 @@ var processSYNC = function (uid, devices) {
               if (device.mappings.OpenClose) {
                   d.traits.push("action.devices.traits.OpenClose");
                   //Attributes
-                  d.attributes.queryOnlyOpenClose = device.mappings.TargetPosition ? false : true;
+                  d.attributes.queryOnlyOpenClose = device.mappings.OpenClose.cmdOpen ? false : true;
               }
               
               //Locate
@@ -313,7 +314,8 @@ var processSYNC = function (uid, devices) {
 }// processSYNC
 
 async function createSYNCResponse(uid) {
-  var devices = await utils.loadDevices(uid);
+  var NO_CACHE = 1;
+  var devices = await utils.loadDevices(uid, NO_CACHE);
   //generate sync response
   var response = processSYNC(uid, devices);
   //await uidlog(uid, 'sync response: ' + JSON.stringify(response));

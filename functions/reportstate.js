@@ -40,7 +40,7 @@ app3.get('/alldevices', async (req, res) => {
 });
 
 
-const reportstate = functions.region('europe-west1').https.onRequest(app3);
+const reportstate = functions.region('us-central1').https.onRequest(app3);
 
 module.exports = {
   reportstate

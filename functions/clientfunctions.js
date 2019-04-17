@@ -32,11 +32,11 @@ app.get('/getdynamicfunctions', async (req, res) => {
   }
   
   function getReportStateAllURL() {
-    return CLOUD_FUNCTIONS_BASE + "/reportstate/alldevices";
+    return CLOUD_FUNCTIONS_BASE.replace('europe-west1','us-central1') + "/reportstate/alldevices";
   }
   
   function getReportStateURL() {
-    return CLOUD_FUNCTIONS_BASE + "/reportstate/singledevice";
+    return CLOUD_FUNCTIONS_BASE.replace('europe-west1','us-central1') + "/reportstate/singledevice";
   }
   
   function getDeleteUserAccountURL() {
@@ -56,9 +56,6 @@ app.get('/getdynamicfunctions', async (req, res) => {
   }
   
   async function checkFeatureLevel() {
-    await database.getClientFunctions();
-    log.info('DynamicFunctions updated');
-
     var server = await database.getServerFeatureLevel();
     var sync = await database.getSyncFeatureLevel();
     log.info('SERVER FeatureLevel:' + JSON.stringify(server));
@@ -74,10 +71,19 @@ app.get('/getdynamicfunctions', async (req, res) => {
       log.info('>>> VERSION UPGRADE FINISHED - SYNC INITIATED');
     }
 
-    //update every 1-4 days
-    setTimeout(checkFeatureLevel.bind(this), 86400000 + Math.floor(Math.random() * Math.floor(259200000)));
+    global.syncFeatureLevel = sync.featurelevel;
+    await require('./dynamicfunctions').checkFeatureLevelTimer(this);
   }
-  
+
+  async function checkFeatureLevelTimer(thisObj) {
+    await require('./dynamicfunctions').FHEM_getClientFunctions();
+    log.info('DynamicFunctions updated');
+
+    //update every 1-4 days
+    setTimeout(require('./dynamicfunctions').checkFeatureLevel.bind(thisObj), 86400000 + Math.floor(Math.random() * Math.floor(259200000)));
+    //setTimeout(require('./dynamicfunctions').checkFeatureLevel.bind(thisObj), 5000 + Math.floor(Math.random() * Math.floor(20000)));
+  }
+
   function registerFirestoreListener() {
     //TODO delete all docs in the collection to prevent using old data
     try {
@@ -168,6 +174,21 @@ app.get('/getdynamicfunctions', async (req, res) => {
       //return response;
   
   }// exports.handler
+  
+  
+  async function updateDeviceReading(device, reading, val) {
+    if (1 || require('./version').split('.')[0] < 2) {
+      await database.realdb.ref('users/' + database.getUid() + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val});
+      await database.realdb.ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val, devname: device});
+    } else {
+      if (typeof syncFeatureLevel === 'undefined' || syncFeatureLevel < 3) {
+        //OLD
+        await database.realdb.ref('users/' + database.getUid() + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val});
+      } else {
+        await database.realdb.ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val, devname: device});
+      }
+    }
+  }
 
   async function
   FHEM_update(device, reading, readingSetting, orig, reportState) {
@@ -181,7 +202,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
   
       if (orig !== FHEM_devReadingVal[device][reading] || reportState === 0) {
         FHEM_devReadingVal[device][reading] = orig;
-        await database.updateDeviceReading(device, reading, orig);
+        await require('./dynamicfunctions').updateDeviceReading(device, reading, orig);
         log.info('update reading: ' + device + ':' + reading + ' = ' + orig);
       }
 
@@ -228,7 +249,9 @@ app.get('/getdynamicfunctions', async (req, res) => {
     'exports.getSyncFeatureLevelURL': getSyncFeatureLevelURL.toString(),
     'exports.getConfigurationURL': getConfigurationURL.toString(),
     'exports.checkFeatureLevel': checkFeatureLevel.toString(),
+    'exports.checkFeatureLevelTimer': checkFeatureLevelTimer.toString(),
     'exports.registerFirestoreListener': registerFirestoreListener.toString(),
+    'exports.updateDeviceReading': updateDeviceReading.toString(),
     'global.handler': handler.toString()
   });
 });

@@ -380,12 +380,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
             (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
             (s.Internals.SUBTYPE === 'RolloTron Standard') ||
             (s.Internals.subType === 'blindActuator') ||
+            (s.Attributes.model === 'fs20rsu') ||
             genericType === 'blinds') {
       if (!service_name) service_name = 'blinds';
       delete mappings.On;
       delete mappings.Brightness;
       let open = 'opens';
       let close = 'closes';
+      let valClosed = 'closed';
       if (s.Internals.TYPE !== 'EnOcean') {
         if (s.PossibleSets.match(/(^| )on\b/))
           open = 'on';
@@ -396,8 +398,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (s.Internals.TYPE === 'DUOFERN') {
         open = 'up';
         close = 'down';
+      } else if (s.Attributes.model === 'fs20rsu') {
+        open = 'on';
+        close = 'off';
+        valClosed = 'off';
       }
-      mappings.OpenClose = {reading: 'state', valueClosed: 'closed', cmdOpen: open, cmdClose: close};
+      mappings.OpenClose = {reading: 'state', valueClosed: valClosed, cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
           mappings.CurrentPosition = {reading: 'position', invert: true};
           mappings.TargetPosition = {reading: 'position', cmd: 'position', invert: true};
@@ -660,14 +666,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           }
       }
 
-  } else if (!mappings.On
+  } else if (!mappings.On && !mappings.OpenClose
       && s.PossibleSets.match(/(^| )on\b/)
       && s.PossibleSets.match(/(^| )off\b/)) {
       mappings.On = {reading: 'state', valueOff: '/off|A0|000000/', cmdOn: 'on', cmdOff: 'off'};
       if (!s.Readings.state)
           delete mappings.On.reading;
 
-  } else if (!mappings.On
+  } else if (!mappings.On && !mappings.OpenClose
       && s.PossibleSets.match(/(^| )ON\b/)
       && s.PossibleSets.match(/(^| )OFF\b/)) {
       mappings.On = {reading: 'state', valueOff: '/OFF/off/', cmdOn: 'ON', cmdOff: 'OFF'};

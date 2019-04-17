@@ -7,7 +7,7 @@ const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
 const settings = require('./settings.json');
 
-var allDevices = {};
+var allDevicesCache = {};
 //var allInformIds = {};
 var googleToken = '';
 
@@ -148,33 +148,133 @@ function prepareDevice(uid, dev) {
   }
 }
 
-async function loadDevice(uid, devicename) {
-  var dev = undefined;
-  var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
-  ref.forEach(function(child) {
-    if (child.key === 'XXXDEVICEDEFXXX') {
-      dev = child.val();
+async function getLastSyncTimestamp(uid) {
+  //FIXME remove return 0 on 21.04.2019
+  return 0;
+  var lastSyncRef = await realdb.ref('/users/' + uid + '/lastSync').once('value');
+  uidlog(uid, 'getLastSyncTimestamp');
+  if (lastSyncRef.val() && lastSyncRef.val().ts)
+    return lastSyncRef.val().ts;
 
-      prepareDevice(uid, dev);
-    }
-  });
-  
-  return dev;
+  return 0
 }
 
-async function loadDevices(uid) {
-  var devices = {};
-
-  var d = await realdb.ref('/users/' + uid + '/devices').once('value');
-  d.forEach(function(child) {
-    child.forEach(function(r) {
-      if (r.key === 'XXXDEVICEDEFXXX') {
-        devices[r.val().name] = r.val();
-        prepareDevice(uid, devices[r.val().name]);
+async function loadDevice(uid, devicename) {
+  if (!allDevicesCache[uid]) {
+    allDevicesCache[uid] = {
+      timestamp: -1,
+      devices: {
+      }
+    };
+    allDevicesCache[uid]['devices'][devicename] = {
+      'device': {},
+      'readings': {},
+      'timestamp': -1
+    };
+  }
+  
+  var updateDevFromDb = 0;
+  var lastSyncTs = await getLastSyncTimestamp(uid);
+  if (lastSyncTs > 0) {
+    if (allDevicesCache[uid]['devices'][devicename]) {
+      if (lastSyncTs > allDevicesCache[uid]['devices'].timestamp) {
+        updateDevFromDb = 1;
+      }
+      if (lastSyncTs > allDevicesCache[uid]['devices'][devicename].timestamp) {
+        updateDevFromDb = 1;
+      }
+    } else {
+      updateDevFromDb = 1;
+    }
+    
+    if (updateDevFromDb) {
+      var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
+      ref.forEach(function(child) {
+        if (child.key === 'XXXDEVICEDEFXXX') {
+          allDevicesCache[uid]['devices'][devicename] = {
+            'device': child.val(),
+            'timestamp': lastSyncTs,
+            'readings': {}
+          };
+          prepareDevice(uid, allDevicesCache[uid]['devices'][devicename]['device']);
+        }
+      });
+    } else {
+      uidlog(uid, 'CACHED READ ' + devicename);
+    }
+  } else {
+    //OLD
+    var dev = undefined;
+    var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
+    ref.forEach(function(child) {
+      if (child.key === 'XXXDEVICEDEFXXX') {
+        dev = child.val();
+        prepareDevice(uid, dev);
       }
     });
-  });
+    
+    return dev;
+  }
+  
+  return allDevicesCache[uid]['devices'][devicename]['device'];
+}
 
+async function loadDevices(uid, nocache) {
+  var devices = {};
+  
+  if (!allDevicesCache[uid] || nocache) {
+    allDevicesCache[uid] = {
+      timestamp: -1,
+      devices: {}
+    };
+  }
+  
+  var lastSyncTs = await getLastSyncTimestamp(uid);
+  if (lastSyncTs > 0) {
+    var updateDevFromDb = 0;
+    if (lastSyncTs > allDevicesCache[uid].timestamp) {
+      updateDevFromDb = 1;
+    }
+    if (nocache)
+      updateDevFromDb = 1;
+  
+    if (updateDevFromDb) {
+      var allDevices = await realdb.ref('/users/' + uid + '/devices').once('value');
+      allDevices.forEach(function(device) {
+        device.forEach(function(child) {
+          if (child.key === 'XXXDEVICEDEFXXX') {
+            allDevicesCache[uid]['devices'][child.val().name] = {
+              'device': child.val(),
+              'timestamp': lastSyncTs,
+              'readings': {}
+            };
+            prepareDevice(uid, allDevicesCache[uid]['devices'][child.val().name]['device']);
+            devices[child.val().name] = allDevicesCache[uid]['devices'][child.val().name]['device'];
+          }
+        });
+      });
+      allDevicesCache[uid].timestamp = lastSyncTs;
+    } else {
+      for(var d in allDevicesCache[uid]['devices']) {
+        var dd = allDevicesCache[uid]['devices'][d];
+        devices[d] = dd.device;
+      }
+      uidlog(uid, 'CACHED READ ALL');
+    }
+  } else {
+    //OLD
+    var d = await realdb.ref('/users/' + uid + '/devices').once('value');
+    d.forEach(function(child) {
+      child.forEach(function(r) {
+        if (r.key === 'XXXDEVICEDEFXXX') {
+          devices[r.val().name] = r.val();
+          prepareDevice(uid, devices[r.val().name]);
+        }
+      });
+    });
+  
+    return devices;
+  }
   return devices;
 }
 
@@ -184,42 +284,71 @@ async function getAllDevicesAndReadings(uid) {
   var devices = {};
   var tmpDev;
   var found = 0;
-  var allDevices = await realdb.ref('/users/' + uid + '/devices').once('value');
-  allDevices.forEach(function(device) {
-    tmpReadings = {};
+  
+  if (await getLastSyncTimestamp(uid) > 0) {
+    await loadDevices(uid);
     
-    device.forEach(function(child) {
-      if (child.key === 'XXXDEVICEDEFXXX') {
-        found = 1;
-        devices[child.val().name] = {
-          'device': child.val()
-        };
-        prepareDevice(uid, devices[child.val().name]['device']);
-        tmpDev = child.val().name;
-      } else {
-        tmpReadings[child.key] = child.val().value;
-      }
+    var allReadings = await realdb.ref('/users/' + uid + '/readings').once('value');
+    allReadings.forEach(function(device) {
+      tmpReadings = {};
+      
+      device.forEach(function(child) {
+        allDevicesCache[uid]['devices'][child.val().devname]['readings'][child.key] = child.val().value;
+      });
     });
-    devices[tmpDev].readings = tmpReadings;
-  });
-
-  return devices;
+  
+    return allDevicesCache[uid]['devices'];
+  } else {
+    //OLD
+    var allDevices = await realdb.ref('/users/' + uid + '/devices').once('value');
+    allDevices.forEach(function(device) {
+      tmpReadings = {};
+      
+      device.forEach(function(child) {
+        if (child.key === 'XXXDEVICEDEFXXX') {
+          found = 1;
+          devices[child.val().name] = {
+            'device': child.val()
+          };
+          prepareDevice(uid, devices[child.val().name]['device']);
+          tmpDev = child.val().name;
+        } else {
+          tmpReadings[child.key] = child.val().value;
+        }
+      });
+      devices[tmpDev].readings = tmpReadings;
+    });
+  
+    return devices;
+  }
 }
 
-async function getDeviceAndReadings(uid, device) {
+async function getDeviceAndReadings(uid, devname) {
   var readings = {};
-  var dev = 0;
-  var clientstate = await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
-  clientstate.forEach(function(child) {
-    if (child.key === 'XXXDEVICEDEFXXX') {
-      dev = child.val();
-      prepareDevice(uid, dev);
-    } else {
+  
+  if (await getLastSyncTimestamp(uid) > 0) {
+    await loadDevice(uid, devname);
+    
+    var readings = await realdb.ref('/users/' + uid + '/readings/' + devname.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+    readings.forEach(function(child) {
       readings[child.key] = child.val().value;
-    }
-  });
-
-  return {device: dev, readings: readings};
+    });
+  
+    return {device: allDevicesCache[uid]['devices'][devname]['device'], readings: readings};
+  } else {
+    var dev = 0;
+    var clientstate = await realdb.ref('/users/' + uid + '/devices/' + devname.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+    clientstate.forEach(function(child) {
+      if (child.key === 'XXXDEVICEDEFXXX') {
+        dev = child.val();
+        prepareDevice(uid, dev);
+      } else {
+        readings[child.key] = child.val().value;
+      }
+    });
+  
+    return {device: dev, readings: readings};
+  }
 }
 
 async function getClientVersion(uid) {
@@ -331,8 +460,6 @@ async function reportState(uid, device) {
     
     if (reportStateRes.status == 401) {
       google_token = await retrieveGoogleToken(uid);
-    } else if (reportStateRes.status == 404) {
-      break;
     } else {
       //save the token to database
       setGoogleToken(google_token);
