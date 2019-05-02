@@ -107,3 +107,6 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'firebase') {
   exports["firebase"] = require('./firebase_token').firebase;
 } //firebase/token
 
+if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'admin') {
+  exports["admin"] = require('./admin').admin;
+} //admin/

@@ -149,8 +149,6 @@ function prepareDevice(uid, dev) {
 }
 
 async function getLastSyncTimestamp(uid) {
-  //FIXME remove return 0 on 21.04.2019
-  return 0;
   var lastSyncRef = await realdb.ref('/users/' + uid + '/lastSync').once('value');
   uidlog(uid, 'getLastSyncTimestamp');
   if (lastSyncRef.val() && lastSyncRef.val().ts)
