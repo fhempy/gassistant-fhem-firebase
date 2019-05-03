@@ -125,6 +125,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
               case 'UPDATE_SYNCFEATURELEVEL':
                   for (var fhem of this.connections) {
                       fhem.execute('setreading ' + fhem.gassistant + ' gassistant-fhem-usedFeatureLevel ' + event.featurelevel);
+                      fhem.execute('setreading ' + fhem.gassistant + ' gassistant-fhem-googleSync Google SYNC finished');
                   }
                   break;
   

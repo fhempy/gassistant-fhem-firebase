@@ -536,6 +536,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           reading: 'state',
           values: ['/^home/:true', '/^gotosleep/:true', '/^absent/:false', '/^gone/:false']
       }
+  } else if (s.Internals.TYPE === 'FBDECT' && s.Internals.DEF && s.Internals.DEF.match(/HANFUN2,alarmSensor/)) {
+      service_name = 'ContactSensor';
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/off/:CLOSED', '/.*/:OPEN']
+      };
   }
   
   if (match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/)) {
@@ -570,9 +576,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               mappings.TargetTemperature.maxValue = parseFloat(values[2]);
               mappings.TargetTemperature.minStep = parseFloat(values[1]);
           } else {
-              mappings.TargetTemperature.minValue = parseFloat(values[0]);
-              mappings.TargetTemperature.maxValue = parseFloat(values[values.length - 1]);
-              mappings.TargetTemperature.minStep = values[1] - values[0];
+              if (values.length === 4) {
+                mappings.TargetTemperature.minValue = parseFloat(values[0]);
+                mappings.TargetTemperature.maxValue = parseFloat(values[2]);
+                mappings.TargetTemperature.minStep = parseFloat(values[1]);
+              } else {
+                mappings.TargetTemperature.minValue = parseFloat(values[0]);
+                mappings.TargetTemperature.maxValue = parseFloat(values[values.length - 1]);
+                mappings.TargetTemperature.minStep = values[1] - values[0];
+              }
           }
       }
 
