@@ -55,6 +55,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       uiderror(uid, 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without attributes');
       return undefined;
   }
+  if (s.Internals.TYPE === 'gassistant') {
+      uidlog(uid, 'ignoring gassistant device ' + s.Internals.NAME);
+      return undefined;
+  }
 
   if (s.Attributes.disable == 1) {
       uidlog(uid, s.Internals.NAME + ' is currently disabled');
@@ -267,7 +271,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   
   if (s.Internals.TYPE == 'XiaomiSmartHome_Device' && s.Internals.MODEL == 'sensor_magnet.aq2') {
     if (!service_name) service_name = 'door';
-    mappings.OpenClose = {reading: 'state', valueClosed: 'close'};
+    mappings.OpenClose = {reading: 'state', values: ['/^close/:CLOSED', '/.*/:OPEN']};
   }
   
   if (s.Internals.TYPE == 'LightScene') {
@@ -373,7 +377,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (s.PossibleAttrs.match(/(^| )setList\b/) && !s.Attributes.setList) s.Attributes.setList = 'on off';
       var parts = s.Attributes.setList.split(' ');
       if (parts.length == 2) {
-          mappings.OpenClose = {reading: 'state', valueClosed: parts[1], cmdOpen: parts[0], cmdClose: parts[1] };
+          mappings.OpenClose = {reading: 'state', values: ['/^' + parts[0] + '/:CLOSED', '/.*/:OPEN'], cmdOpen: parts[0], cmdClose: parts[1] };
       }
   } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
             (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && genericType === 'blinds') ||
@@ -403,7 +407,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         close = 'off';
         valClosed = 'off';
       }
-      mappings.OpenClose = {reading: 'state', valueClosed: valClosed, cmdOpen: open, cmdClose: close};
+      mappings.OpenClose = {reading: 'state', values: ['/^' + valClosed + '/:CLOSED', '/.*/:OPEN'], cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
           mappings.CurrentPosition = {reading: 'position', invert: true};
           mappings.TargetPosition = {reading: 'position', cmd: 'position', invert: true};
@@ -414,7 +418,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
                 mappings.TargetPosition.cmd = 'pos';
           }
       } else if (s.Internals.TYPE == 'ZWave' ) {
-          mappings.OpenClose = {reading: 'state', valueClosed: 'off', cmdOpen: 'on', cmdClose: 'off', max: 99};
+          mappings.OpenClose = {reading: 'state', values: ['/^off/:CLOSED', '/.*/:OPEN'], cmdOpen: 'on', cmdClose: 'off', max: 99};
           if(s.Readings.position !== undefined) {
               // FIBARO System FGRM222 Roller Shutter Controller 2
               // If the device is configured to use Fibaro command class instead of ZWave command class,
@@ -436,12 +440,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         mappings.CurrentPosition = {reading: 'level', invert: true};
         mappings.TargetPosition = {reading: 'level', cmd: 'level', invert: true};
         if (s.Internals.TYPE === 'HM485') {
-          mappings.OpenClose.valueClosed = 'level_100';
+          mappings.OpenClose.values = ['/^level_100/:CLOSED', '/.*/:OPEN'];
         }
       }
 
   } else if (genericType == 'blinds' && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
-    mappings.OpenClose = {reading:'state', valueClosed:'close', cmdOpen:'open', cmdClose:'close'};
+    mappings.OpenClose = {reading:'state', values: ['/^close/:CLOSED', '/.*/:OPEN'], cmdOpen:'open', cmdClose:'close'};
 
   } else if (s.Attributes.model === 'HM-SEC-WIN') {
       if (!service_name) service_name = 'window';
@@ -494,7 +498,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       service_name = 'ContactSensor';
       mappings.OpenClose = {
           reading: 'Window',
-          valueClosed: 'Closed'
+          values: ['/^Closed/:CLOSED', '/.*/:OPEN']
       };
 
   } else if (s.Internals.TYPE == 'MAX'
@@ -502,14 +506,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       service_name = 'ContactSensor';
       mappings.OpenClose = {
           reading: 'state',
-          valueClosed: 'closed'
+          values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
 
   } else if (s.Attributes.subType == 'threeStateSensor') {
       service_name = 'ContactSensor';
       mappings.OpenClose = {
           reading: 'contact',
-          valueClosed: 'closed'
+          values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
 
   } else if (s.Internals.TYPE == 'PRESENCE') {
@@ -566,7 +570,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               mappings.TargetTemperature.maxValue = parseFloat(values[2]);
               mappings.TargetTemperature.minStep = parseFloat(values[1]);
           } else {
-              uidlog(uid, 'TargetTemperatureValues: ' + match[3]);
               mappings.TargetTemperature.minValue = parseFloat(values[0]);
               mappings.TargetTemperature.maxValue = parseFloat(values[values.length - 1]);
               mappings.TargetTemperature.minStep = values[1] - values[0];
@@ -748,15 +751,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (!service_name) service_name = servicetmp;
   } else if (s.Internals.TYPE === 'tahoma') {
     if (s.Internals.SUBTYPE === 'DEVICE' && s.Internals.inControllable === 'rts:BlindRTSComponent') {
-      mappings.OpenClose = {reading: 'state', valueClosed: '0', cmdOpen: 'up', cmdClose: 'down' };
+      mappings.OpenClose = {reading: 'state', values: ['/^0/:CLOSED', '/.*/:OPEN'], cmdOpen: 'up', cmdClose: 'down' };
     } else if (s.Internals.inControllable === 'io:RollerShutterVeluxIOComponent') {
       if (!service_name) service_name = 'blinds';
-      mappings.OpenClose = {reading: 'OpenClosedState', valueClosed: 'closed', cmdOpen: 'open', cmdClose: 'close'};
+      mappings.OpenClose = {reading: 'OpenClosedState', values: ['/^closed/:CLOSED', '/.*/:OPEN'], cmdOpen: 'open', cmdClose: 'close'};
       mappings.CurrentPosition = {reading: 'ClosureState', invert: true};
       mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim', invert: true};
     } else if (s.Internals.inControllable === 'io:WindowOpenerVeluxIOComponent') {
       if (!service_name) service_name = 'window';
-      mappings.OpenClose = {reading: 'OpenClosedState', valueClosed: 'closed', cmdOpen: 'open', cmdClose: 'close'};
+      mappings.OpenClose = {reading: 'OpenClosedState', values: ['/^closed/:CLOSED', '/.*/:OPEN'], cmdOpen: 'open', cmdClose: 'close'};
       mappings.CurrentPosition = {reading: 'ClosureState', invert: true};
       mappings.TargetPosition = {reading: 'ClosureState', cmd: 'dim', invert: true};
     }

@@ -105,9 +105,10 @@ app.get('/listversions', secured(), async (req, res) => {
     var result = '';
     var colRefs = await utils.getFirestoreDB().getCollections();
     for (let col of colRefs) {
+      result = result + col.id + ":";
       const doc = await col.doc('client').get();
       if (doc.exists && doc.data().packageversion) {
-        result = result + col.id + ":" + doc.data().packageversion;
+        result = result + doc.data().packageversion;
       }
       const hbRef = await utils.getRealDB().ref('/users/' + col.id + '/heartbeat').once('value');
       if (hbRef.val() && hbRef.val().time) {

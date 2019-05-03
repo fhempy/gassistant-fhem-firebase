@@ -118,7 +118,7 @@ async function processQUERY(uid, input, reportstate) {
             devices[d.id].openPercent = await cached2Format(uid, device.mappings.CurrentPosition, readings);
           } else {
             //queryonly
-            devices[d.id].openPercent = await cached2Format(uid, device.mappings.OpenClose, readings);
+            devices[d.id].openPercent = await cached2Format(uid, device.mappings.OpenClose, readings) === 'CLOSED' ? 0 : 100;
           }
         }
 		
@@ -252,9 +252,6 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
 
     } else if (reading == 'reachable') {
         value = parseInt(value);
-        
-    } else if (mapping.characteristic_type == 'OpenClose') {
-        value = mapping.valueClosed == value ? 0 : 100;
 
     } else if (reading === 'state' && ( mapping.On
             && typeof mapping.values !== 'object'
