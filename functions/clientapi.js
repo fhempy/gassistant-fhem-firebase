@@ -812,6 +812,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (mappings.Brightness) {
       if (!service_name) service_name = 'light';
     }
+  } else if (s.Internals.TYPE === 'HUEDevice' && s.Internals.modelid === 'lumi.sensor_magnet.aq2') {
+    if (!service_name) service_name = 'door';
+    mappings.OpenClose = {reading: 'state', values: ['/^closed/:CLOSED', '/.*/:OPEN']};
   }
 
   try {
