@@ -78,52 +78,9 @@ var processSYNC = function (uid, devices) {
   
               //DEVICE TYPE
               if (device.service_name) {
-                  if (device.service_name === 'vacuum') {
-                      d.type = 'action.devices.types.VACUUM';
-                  } else if (device.service_name === 'light' || device.service_name === 'OccupancySensor') {
-                      d.type = 'action.devices.types.LIGHT';
-                  } else if (device.service_name === 'switch') {
-                      d.type = 'action.devices.types.SWITCH';
-                  } else if (device.service_name === 'outlet') {
-                      d.type = 'action.devices.types.OUTLET';
-                  } else if (device.service_name === 'thermostat' || device.service_name == 'thermometer') {
-                      d.type = 'action.devices.types.THERMOSTAT';
-                  } else if (device.service_name === 'coffeemaker') {
-                      d.type = 'action.devices.types.COFFEE_MAKER';
-                  } else if (device.service_name === 'aircondition') {
-                      d.type = 'action.devices.types.AC_UNIT';
-                  } else if (device.service_name === 'airfreshener') {
-                      d.type = 'action.devices.types.AIRFRESHENER';
-                  } else if (device.service_name === 'airpurifier') {
-                      d.type = 'action.devices.types.AIRPURIFIER';
-                  } else if (device.service_name === 'blinds' || device.service_name === 'blind') {
-                      d.type = 'action.devices.types.BLINDS';
-                  } else if (device.service_name === 'camera') {
-                      d.type = 'action.devices.types.CAMERA';
-                  } else if (device.service_name === 'dishwasher') {
-                      d.type = 'action.devices.types.DISHWASHER';
-                  } else if (device.service_name === 'dryer') {
-                      d.type = 'action.devices.types.DRYER';
-                  } else if (device.service_name === 'fan') {
-                      d.type = 'action.devices.types.FAN';
-                  } else if (device.service_name === 'fireplace') {
-                      d.type = 'action.devices.types.FIREPLACE';
-                  } else if (device.service_name === 'heater') {
-                      d.type = 'action.devices.types.HEATER';
-                  } else if (device.service_name === 'kettle') {
-                      d.type = 'action.devices.types.KETTLE';
-                  } else if (device.service_name === 'oven') {
-                      d.type = 'action.devices.types.OVEN';
-                  } else if (device.service_name === 'refrigerator') {
-                      d.type = 'action.devices.types.REFRIGERATOR';
-                  } else if (device.service_name === 'scene') {
-                      d.type = 'action.devices.types.SCENE';
-                  } else if (device.service_name === 'sprinkler') {
-                      d.type = 'action.devices.types.SPRINKLER';
-                  } else if (device.service_name === 'washer') {
-                      d.type = 'action.devices.types.WASHER';
-                  } else if (device.service_name === 'door' || device.service_name === 'contact' || device.service_name === 'window' || device.service_name === 'ContactSensor' || device.service_name === 'security') {
-                      d.type = 'action.devices.types.DOOR';
+                  var gTypes = utils.getGoogleDeviceTypesMappings();
+                  if (gTypes[device.service_name] !== undefined) {
+                    d.type = gTypes[device.service_name];
                   } else {
                       uiderror(uid, "genericDeviceType " + device.service_name + " not supported in gassistant-fhem");
                       continue;

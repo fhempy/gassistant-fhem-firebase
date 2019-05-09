@@ -12,8 +12,6 @@ const hquery = require('./handleQUERY');
 const util = require('util');
 const settings = require('./settings.json');
 
-const GOOGLE_DEVICE_TYPES = ['switch','outlet','light','thermostat','aircondition','airfreshener','airpurifier','blinds','camera','coffeemaker','dishwasher','dryer','fan','fireplace','heater','kettle','oven','refrigerator','scene','sprinkler','vacuum','washer'];
-
 var deviceRooms = {};
 
 async function generateAttributes(uid, realDBUpdateJSON) {
@@ -482,20 +480,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           cmds: ['SECURED:lock', 'UNSECURED:unlock'],
       };
 
-  } else if (genericType == 'lock') {
-      mappings.TargetDoorState = {reading: '', default: 'CLOSED', timeout: 500, cmds: ['OPEN:open']};
-      mappings.LockCurrentState = {
-          reading: 'state',
-          values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED']
-      };
-      mappings.LockTargetState = {
-          reading: 'state',
-          values: ['/^locked/:SECURED', '/.*/:UNSECURED'],
-          cmds: ['SECURED:lock+locked', 'UNSECURED:lock+unlocked']
-      };
-
   } else if (s.Internals.TYPE === 'CUL_FHTTK') {
-      service_name = 'ContactSensor';
+      if (!service_name) service_name = 'door';
       mappings.OpenClose = {
           reading: 'Window',
           values: ['/^Closed/:CLOSED', '/.*/:OPEN']
@@ -503,41 +489,41 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
   } else if (s.Internals.TYPE == 'MAX'
       && s.Internals.type == 'ShutterContact') {
-      service_name = 'ContactSensor';
+      if (!service_name) service_name = 'door';
       mappings.OpenClose = {
           reading: 'state',
           values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
 
   } else if (s.Attributes.subType == 'threeStateSensor') {
-      service_name = 'ContactSensor';
+      if (!service_name) service_name = 'door';
       mappings.OpenClose = {
           reading: 'contact',
           values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
 
   } else if (s.Internals.TYPE == 'PRESENCE') {
-      service_name = 'OccupancySensor';
+      service_name = 'light';
       mappings.OccupancyDetected = {
           reading: 'state',
           values: ['present:true', 'absent:false']
       };
 
   } else if (s.Internals.TYPE == 'ROOMMATE' || s.Internals.TYPE == 'GUEST') {
-      service_name = 'OccupancySensor';
+      service_name = 'light';
       mappings.OccupancyDetected = {
           reading: 'presence',
           values: ['/present/:true', '/.*/:false']
       };
 
   } else if (s.Internals.TYPE == 'RESIDENTS') {
-      service_name = 'security';
+      service_name = 'light';
       mappings.OccupancyDetected = {
           reading: 'state',
           values: ['/^home/:true', '/^gotosleep/:true', '/^absent/:false', '/^gone/:false']
       }
   } else if (s.Internals.TYPE === 'FBDECT' && s.Internals.DEF && s.Internals.DEF.match(/HANFUN2,alarmSensor/)) {
-      service_name = 'ContactSensor';
+      if (!service_name) service_name = 'door';
       mappings.OpenClose = {
         reading: 'state',
         values: ['/off/:CLOSED', '/.*/:OPEN']
@@ -830,9 +816,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       uiderror(uid, s.Internals.NAME + ': no service type detected');
       return;
   }
-
-  if (service_name === 'lock' || service_name === 'garage' || service_name === 'window')
-      delete mappings.On;
 
   if (Object.keys(mappings).length === 0) {
     uiderror(uid, 'No mappings (e.g. on/off) found for ' + s.Internals.NAME);
@@ -1466,7 +1449,7 @@ function registerClientApi(app) {
   });
 
   app.get('/getconfiguration', (req, res) => {
-    res.send({devicetypes: GOOGLE_DEVICE_TYPES});
+    res.send({devicetypes: utils.getGoogleDeviceTypes()});
   });
 }
 

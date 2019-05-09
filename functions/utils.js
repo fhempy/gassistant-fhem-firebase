@@ -20,6 +20,59 @@ const firestoredb = admin.firestore();
 
 var ratePerUser = {};
 
+const GOOGLE_DEVICE_TYPES = {
+  'aircondition': 'action.devices.types.AC_UNIT',
+  'airfreshener': 'action.devices.types.AIRFRESHENER',
+  'airpurifier':  'action.devices.types.AIRPURIFIER',
+  'awning':       'action.devices.types.AWNING',
+  'blinds':       'action.devices.types.BLINDS',
+  'boiler':       'action.devices.types.BOILER',
+  'camera':       'action.devices.types.CAMERA',
+  'coffeemaker':  'action.devices.types.COFFEE_MAKER',
+  'curtain':      'action.devices.types.CURTAIN',
+  'dishwasher':   'action.devices.types.DISHWASHER',
+  'door':         'action.devices.types.DOOR',
+  'dryer':        'action.devices.types.DRYER',
+  'fan':          'action.devices.types.FAN',
+  'fireplace':    'action.devices.types.FIREPLACE',
+  'garage':       'action.devices.types.GARAGE',
+  'gate':         'action.devices.types.GATE',
+  'heater':       'action.devices.types.HEATER',
+  'hood':         'action.devices.types.HOOD',
+  'kettle':       'action.devices.types.KETTLE',
+  'light':        'action.devices.types.LIGHT',
+  'lock':         'action.devices.types.LOCK',
+  'microwave':    'action.devices.types.MICROWAVE',
+  'outlet':       'action.devices.types.OUTLET',
+  'oven':         'action.devices.types.OVEN',
+  'pregola':      'action.devices.types.PERGOLA',
+  'refrigerator': 'action.devices.types.REFRIGERATOR',
+  'scene':        'action.devices.types.SCENE',
+  'securitysystem':'action.devices.types.SECURITYSYSTEM',
+  'shutter':      'action.devices.types.SHUTTER',
+  'shower':       'action.devices.types.SHOWER',
+  'sprinkler':    'action.devices.types.SPRINKLER',
+  'switch':       'action.devices.types.SWITCH',
+  'thermostat':   'action.devices.types.THERMOSTAT',
+  'vacuum':       'action.devices.types.VACUUM',
+  'valve':        'action.devices.types.VALVE',
+  'washer':       'action.devices.types.WASHER',
+  'waterheater':  'action.devices.types.WATERHEATER',
+  'window':       'action.devices.types.WINDOW'
+};
+
+function getGoogleDeviceTypes() {
+  var gDevTypes = [];
+  for (var t in GOOGLE_DEVICE_TYPES) {
+    gDevTypes.push(t);
+  }
+  return gDevTypes;
+}
+
+function getGoogleDeviceTypesMappings() {
+  return GOOGLE_DEVICE_TYPES;
+}
+
 function rateLimiter(rate, seconds) {
   return function(req, res, next) {
     const {sub: uid} = req.user;
@@ -413,5 +466,7 @@ module.exports = {
   getAllDevicesAndReadings,
   getDeviceAndReadings,
   rateLimiter,
-  getClientVersion
+  getClientVersion,
+  getGoogleDeviceTypes,
+  getGoogleDeviceTypesMappings
 };
