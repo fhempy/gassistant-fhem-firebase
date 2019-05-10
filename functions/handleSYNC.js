@@ -51,7 +51,8 @@ var processSYNC = function (uid, devices) {
               || device.mappings.StartStop
               || device.mappings.Dock
               || device.mappings.OpenClose
-              || device.mappings.Locate) {
+              || device.mappings.Locate
+              || device.mappings.ArmDisarm) {
               //console.log(device);
   
               //console.log("Start handling ", device.ghomeName);
@@ -116,6 +117,11 @@ var processSYNC = function (uid, devices) {
               		});
               		
                   d.attributes.availableToggles = availableTogglesList;
+              }
+
+              //ArmDisarm
+              if (device.mappings.ArmDisarm) {
+                  d.traits.push("action.devices.traits.ArmDisarm");
               }
   
               //Brightness

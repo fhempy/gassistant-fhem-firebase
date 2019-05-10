@@ -802,6 +802,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (!service_name) service_name = 'door';
     mappings.OpenClose = {reading: 'state', values: ['/^closed/:CLOSED', '/.*/:OPEN']};
   }
+  
+  //SERVICENAME
+  if (service_name === 'securitysystem') {
+    mappings.ArmDisarm = {reading: 'state', values: ['/on/:ARMED', '/.*/:DISARMED'], cmdArm: 'on', cmdDisarm: 'off', exitAllowance: 60, cancelArm: 'off'};
+    delete mappings.On;
+  }
 
   try {
     fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);

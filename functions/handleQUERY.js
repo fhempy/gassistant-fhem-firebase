@@ -107,6 +107,13 @@ async function processQUERY(uid, input, reportstate) {
               devices[d.id].on = turnedOn;
         }
 
+        //ArmDisarm
+        if (device.mappings.ArmDisarm) {
+          devices[d.id].isArmed = await cached2Format(uid, device.mappings.ArmDisarm, readings) === 'ARMED' ? true : false;
+          if (device.mappings.ArmDisarm.exitAllowance)
+            devices[d.id].exitAllowance = device.mappings.ArmDisarm.exitAllowance;
+        }
+
         //OccupancySensor
         if (device.mappings.OccupancyDetected) {
           devices[d.id].on = await cached2Format(uid, device.mappings.OccupancyDetected, readings);

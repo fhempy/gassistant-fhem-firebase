@@ -24,6 +24,7 @@ const REQUEST_COLORABSOLUTE = "action.devices.commands.ColorAbsolute";
 const REQUEST_SET_TOGGLES = "action.devices.commands.SetToggles";
 const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
 const REQUEST_OPENCLOSE = "action.devices.commands.OpenClose";
+const REQUEST_ARMDISARM = "action.devices.commands.ArmDisarm";
 
 
 async function handleEXECUTE(uid, reqId, res, input) {
@@ -40,6 +41,7 @@ async function handleEXECUTE(uid, reqId, res, input) {
       }
     }
     var response = createDirective(reqId, payload);
+    uidlog(uid, 'response: ' + JSON.stringify(response));
     res.send(response);
   } catch (err) {
     uiderror(uid, err, err);
@@ -133,7 +135,11 @@ async function processEXECUTE(uid, reqId, input) {
                 case REQUEST_OPENCLOSE:
                     responses.push(...await processEXECUTESetOpenClose(uid, reqId, device, exec.params, fhemExecCmd));
                     break;
-                    
+
+                case REQUEST_ARMDISARM:
+                    responses.push(...await processEXECUTEArmDisarm(uid, reqId, device, exec.params, fhemExecCmd));
+                    break;
+
                 default:
                     //return unsupported operation
                     uiderror(uid, "Unsupported operation" + requestedName);
@@ -168,7 +174,7 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
     let res = [];
 
     res.push({
-        ids: [device.id],
+        ids: [device.uuid_base],
         status: 'SUCCESS',
         states: {
             on: true,
@@ -178,6 +184,33 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
 
     return res;
 }// processEXECUTETurnOff
+
+async function processEXECUTEArmDisarm(uid, reqId, device, params, fhemExecCmd) {
+    var arm = false;
+    if (params.arm) {
+      if (params.cancel) {
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ArmDisarm, device.mappings.ArmDisarm.cmdCancel));
+      } else {
+        arm = true;
+        fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ArmDisarm, device.mappings.ArmDisarm.cmdArm));
+      }
+    } else {
+      fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ArmDisarm, device.mappings.ArmDisarm.cmdDisarm));
+    }
+
+    let res = [];
+
+    res.push({
+        ids: [device.uuid_base],
+        status: 'SUCCESS',
+        states: {
+            isArmed: arm,
+            exitAllowance: device.mappings.ArmDisarm.exitAllowance
+        }
+    });
+
+    return res;
+}// processEXECUTEArmDisarm
 
 async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCmd) {
     if (device.mappings.TargetPosition && params.openPercent !== 0 && params.openPercent !== 100) {
@@ -191,7 +224,7 @@ async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCm
     let res = [];
 
     res.push({
-        ids: [device.id],
+        ids: [device.uuid_base],
         status: 'SUCCESS',
         states: {
             openPercent: params.openPercent,
@@ -220,7 +253,7 @@ async function processEXECUTEBrightnessAbsolute(uid, reqId, device, brightness, 
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, mapping, parseInt(target)));
 
     return [{
-        ids: [device.id],
+        ids: [device.uuid_base],
         status: 'SUCCESS',
         states: {
             brightness: brightness
@@ -236,7 +269,7 @@ async function processEXECUTESetTargetTemperature(uid, reqId, device, targetTemp
 
     if (targetTemperature < min || targetTemperature > max)
         return [{
-          ids: [device.id],
+          ids: [device.uuid_base],
           status: 'ERROR',
           errorCode: 'valueOutOfRange'
         }];
@@ -248,7 +281,7 @@ async function processEXECUTESetTargetTemperature(uid, reqId, device, targetTemp
             thermostatTemperatureSetpoint: targetTemperature
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; // processEXECUTESetTargetTemperature
 
@@ -260,7 +293,7 @@ async function processEXECUTESetThermostatMode(uid, reqId, device, thermostatMod
             thermostatMode: thermostatMode
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 };
 
@@ -272,7 +305,7 @@ async function processEXECUTEDock(uid, reqId, device, fhemExecCmd) {
             isDocked: true
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; //processEXECUTEDock
 
@@ -284,7 +317,7 @@ async function processEXECUTELocate(uid, reqId, device, fhemExecCmd) {
             generatedAlert: true
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; //processEXECUTELocate
 
@@ -296,7 +329,7 @@ async function processEXECUTEStartStop(uid, reqId, device, start, fhemExecCmd) {
             isRunning: start
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; //processEXECUTEStartStop
 
@@ -308,7 +341,7 @@ async function processEXECUTEPauseUnpause(uid, reqId, device, pause, fhemExecCmd
             isPaused: pause
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; //processEXECUTEPauseUnpause
 
@@ -320,7 +353,7 @@ async function processEXECUTESetFanSpeed(uid, reqId, device, speedname, fhemExec
             currentFanSpeedSetting: speedname
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; //processEXECUTEPauseUnpause
 
@@ -335,7 +368,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExe
                     spectrumRgb: color.spectrumRGB
                 }
             },
-            ids: [device.id],
+            ids: [device.uuid_base],
             status: "SUCCESS",
             online: "true"
         });
@@ -356,7 +389,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExe
                     }
                 }
             },
-            ids: [device.id],
+            ids: [device.uuid_base],
             status: "SUCCESS",
             online: "true"
         });
@@ -368,7 +401,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExe
                     temperatureK: color.temperature
                 }
             },
-            ids: [device.id],
+            ids: [device.uuid_base],
             status: "SUCCESS",
             online: "true"
         });
@@ -392,7 +425,7 @@ async function processEXECUTESetToggles(uid, reqId, device, toggleSettings, fhem
 							}
 						},
 						status: 'SUCCESS',
-						ids: [device.id]
+						ids: [device.uuid_base]
 					};
 					ret.states.currentToggleSettings[toggle] = value;
 					retArr.push(ret);
@@ -414,7 +447,7 @@ async function processEXECUTEActivateScene(uid, reqId, device, scenename, deacti
         states: {
         },
         status: 'success',
-        ids: [device.id]
+        ids: [device.uuid_base]
     }];
 }; //processEXECUTEActivateScene
 
@@ -432,7 +465,7 @@ async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
 						}
 					},
 					status: 'SUCCESS',
-					ids: [device.id]
+					ids: [device.uuid_base]
 				};
 				ret.states.currentModeSettings[mode] = value;
 				retArr.push(ret);
@@ -520,7 +553,12 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
 
         }
 
-        var cmd = mapping.cmd + ' ' + value;
+        var cmd;
+        if (mapping.cmd) {
+          cmd = mapping.cmd + ' ' + value;
+        } else {
+          cmd = value;
+        }
 
         if (mapping.characteristic_type == 'StartStop' && traitCommand && traitCommand == 'PauseUnpause') {
             if (mapping.cmdPause !== undefined && value == 1)
