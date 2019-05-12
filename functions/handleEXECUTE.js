@@ -205,7 +205,7 @@ async function processEXECUTEArmDisarm(uid, reqId, device, params, fhemExecCmd) 
         status: 'SUCCESS',
         states: {
             isArmed: arm,
-            exitAllowance: device.mappings.ArmDisarm.exitAllowance
+            exitAllowance: parseInt(device.mappings.ArmDisarm.exitAllowance)
         }
     });
 
