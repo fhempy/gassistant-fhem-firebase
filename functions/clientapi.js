@@ -370,14 +370,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
   }
 
-  if (genericType == 'garage') {
-      service_name = 'garage';
-      if (s.PossibleAttrs.match(/(^| )setList\b/) && !s.Attributes.setList) s.Attributes.setList = 'on off';
-      var parts = s.Attributes.setList.split(' ');
-      if (parts.length == 2) {
-          mappings.OpenClose = {reading: 'state', values: ['/^' + parts[0] + '/:CLOSED', '/.*/:OPEN'], cmdOpen: parts[0], cmdClose: parts[1] };
-      }
-  } else if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
+  if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
             (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && genericType === 'blinds') ||
             (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
             (s.Internals.SUBTYPE === 'RolloTron Standard') ||
@@ -1443,7 +1436,7 @@ function registerClientApi(app) {
   app.get('/getfeaturelevel', (req, res) => {
     res.send({featurelevel: settings.FEATURELEVEL, changelog: settings.CHANGELOG});
   });
-  
+
   app.get('/getsyncfeaturelevel', async (req, res) => {
     const {sub: uid} = req.user;
     var featurelevel = await utils.getSyncFeatureLevel(uid);
