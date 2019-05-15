@@ -34,8 +34,8 @@ async function generateAttributes(uid, realDBUpdateJSON) {
         uidlog(uid, 'no mappings for device ' + device.data().json.Internals.NAME);
       }
     } catch (err) {
+      uiderror(err);
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
-      console.error(err);
     }
   }
   return usedDeviceReadings;
@@ -1457,5 +1457,8 @@ function registerClientApi(app) {
 
 module.exports = {
   registerClientApi
+}
+
+i
 }
 

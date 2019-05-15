@@ -447,7 +447,7 @@ async function processEXECUTEActivateScene(uid, reqId, device, scenename, deacti
         states: {
         },
         status: 'success',
-        ids: [device.uuid_base]
+        ids: [device.uuid_base.replace(/[^\w_\-=#;:?@&]/g, '_') + '-' + scenename]
     }];
 }; //processEXECUTEActivateScene
 
