@@ -178,17 +178,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
   
   
   async function updateDeviceReading(device, reading, val) {
-    if (1 || require('./version').split('.')[0] < 2) {
-      await database.realdb.ref('users/' + database.getUid() + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val});
-      await database.realdb.ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val, devname: device});
-    } else {
-      if (typeof syncFeatureLevel === 'undefined' || syncFeatureLevel < 3) {
-        //OLD
-        await database.realdb.ref('users/' + database.getUid() + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val});
-      } else {
-        await database.realdb.ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val, devname: device});
-      }
-    }
+    await database.realdb.ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({value: val, devname: device});
   }
 
   async function

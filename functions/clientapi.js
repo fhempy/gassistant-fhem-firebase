@@ -23,8 +23,8 @@ async function generateAttributes(uid, realDBUpdateJSON) {
   var usedDeviceReadings = {};
   var informIds = {};
   for (device of devicesRef.docs) {
-    uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
     try {
+      uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
       var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
       var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
       if (resTraits) {
@@ -1458,7 +1458,3 @@ function registerClientApi(app) {
 module.exports = {
   registerClientApi
 }
-
-i
-}
-
