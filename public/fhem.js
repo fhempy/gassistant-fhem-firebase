@@ -530,7 +530,6 @@ FHEM.prototype.connect = async function (callback, filter) {
             con.auth = this.connection.auth;
           }
   
-          database.getDB().collection(database.getUid()).doc('devices').collection('devices').doc('TEST').set(JSON.parse(JSON.stringify({'asdf': 'asdfljas'})));
           FHEM_activeDevices = {};
           json['Results'].map(function (s) {
             FHEM_activeDevices[s.Internals.NAME] = 1;

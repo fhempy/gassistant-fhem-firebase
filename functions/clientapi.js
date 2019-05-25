@@ -34,7 +34,7 @@ async function generateAttributes(uid, realDBUpdateJSON) {
         uidlog(uid, 'no mappings for device ' + device.data().json.Internals.NAME);
       }
     } catch (err) {
-      uiderror(err);
+      //uiderror(uid, err);
       uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
     }
   }
