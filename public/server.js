@@ -149,7 +149,11 @@ function registerFirestoreListener() {
       events.forEach((event) => {
         log.info('GOOGLE MSG RECEIVED: ' + JSON.stringify(event.data()));
         if (event.data()) {
-          handler.bind(this)(event.data());
+          if (event.data().ts) {
+            if (event.data().ts > (Date.now()-5000)) {
+              handler.bind(this)(event.data());
+            }
+          }
         }
         event.ref.delete();
       });

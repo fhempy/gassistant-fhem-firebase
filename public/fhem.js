@@ -28,6 +28,7 @@ var use_ssl;
 
 var md5;
 var initSync = 0;
+var firstRun = 0;
 var gassistant;
 
 FHEM.useSSL = function(s) {
@@ -303,7 +304,7 @@ function FHEM_startLongpoll(connection) {
         FHEM_longpoll[connection.base_url].connected = false;
 
         FHEM_longpoll[connection.base_url].disconnects++;
-        var timeout = 500 * FHEM_longpoll[connection.base_url].disconnects - 300;
+        var timeout = 5000 * FHEM_longpoll[connection.base_url].disconnects - 300;
         if (timeout > 30000) timeout = 30000;
 
         connection.log('longpoll ended, reconnect in: ' + timeout + 'msec');
@@ -497,6 +498,15 @@ FHEM.prototype.connect = async function (callback, filter) {
 
         if (md5 !== currmd5) {
           try {
+            var currReadings = await database.getRealDB().ref('users/' + database.getUid() + '/readings').once('value');
+            if (Object.keys(currReadings.val()).length === 0) {
+              firstRun = 1;
+            }
+          } catch (err) {
+            firstRun = 1;
+          }
+
+          try {
             await database.getRealDB().ref('users/' + database.getUid() + '/devices').remove();
             await database.getRealDB().ref('users/' + database.getUid() + '/readings').remove();
           } catch (err) {
@@ -552,6 +562,9 @@ FHEM.prototype.connect = async function (callback, filter) {
               }
             }
           }.bind(this));
+
+          if (firstRun)
+            await database.initiateSync();
         } else {
           this.log.info("No changes, therefore no reload required.");
         }

@@ -253,6 +253,9 @@ async function loadDevice(uid, devicename) {
     uidlog(uid, 'CACHED READ ' + devicename);
   }
 
+  if (!allDevicesCache[uid] || !allDevicesCache[uid]['devices'] || !allDevicesCache[uid]['devices'][devicename] || !allDevicesCache[uid]['devices'][devicename]['device'])
+    return {};
+
   return allDevicesCache[uid]['devices'][devicename]['device'];
 }
 
@@ -324,21 +327,21 @@ async function getAllDevicesAndReadings(uid) {
 async function getDeviceAndReadings(uid, devname) {
   var readings = {};
   
-  await loadDevice(uid, devname);
+  var dev = await loadDevice(uid, devname);
   
   var readings = await realdb.ref('/users/' + uid + '/readings/' + devname.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
   readings.forEach(function(child) {
     readings[child.key] = child.val().value;
   });
 
-  return {device: allDevicesCache[uid]['devices'][devname]['device'], readings: readings};
+  return {device: dev, readings: readings};
 }
 
 async function getClientVersion(uid) {
   var docRef = await firestoredb.collection(uid).doc('client').get();
   var client = docRef.data();
   var usedVersion = "0.0.1";
-  if (client.packageversion)
+  if (client && client.packageversion)
     usedVersion = client.packageversion;
   return usedVersion;
 }

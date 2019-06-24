@@ -32,7 +32,7 @@ async function handleEXECUTE(uid, reqId, res, input) {
     var payload = await processEXECUTE(uid, reqId, input);
     if (settings.CHECK_CLIENT_VERSION) {
       var clientVersion = await utils.getClientVersion(uid);
-      if (compareVersions(clientVersion, settings.MIN_CLIENT_VERSION) < 0) {
+      if (clientVersion !== "0.0.1" && compareVersions(clientVersion, settings.MIN_CLIENT_VERSION) < 0) {
         uiderror(uid, 'CLIENT UPDATE NEEDED (sudo npm install -g gassistant-fhem --unsafe-perm)');
         if (input.context && input.context.locale_language === 'de') {
           uidlog(uid, 'CLIENT UPDATE NEEDED - VOICE');
@@ -66,7 +66,7 @@ async function processEXECUTE(uid, reqId, input) {
             else
               device = await utils.loadDevice(uid, d.customData.device);
 
-            if (!device) {
+            if (Object.keys(device).length === 0) {
               uiderror(uid, "Device " + d.customData.device + " not found, try reload.");
               return {errorCode: 'deviceNotFound'};
             }
@@ -155,7 +155,7 @@ async function processEXECUTE(uid, reqId, input) {
       fcmds[c.connection] = fcmds[c.connection] ? fcmds[c.connection] + ';' + c.cmd : c.cmd;
     }
     for (var c in fcmds) {
-      await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'EXECUTE', id: 0, cmd: fcmds[c], connection: c});
+      await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'EXECUTE', id: 0, cmd: fcmds[c], connection: c, ts: Date.now()});
     }
 
     //create response payload

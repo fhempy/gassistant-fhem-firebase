@@ -56,6 +56,11 @@ async function processQUERY(uid, input, reportstate) {
           uiderror(uid, 'getDeviceReadingValues failed with ' + err.stack, err);
           continue;
         }
+
+        if (Object.keys(dd.device).length === 0) {
+          //return deviceNotFound
+          return {errorCode: 'deviceNotFound'};
+        }
         
         if (!device.mappings) {
           uiderror(uid, "No mappings defined for device " + device.name);

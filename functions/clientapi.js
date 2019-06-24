@@ -393,7 +393,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (s.Internals.TYPE === 'DUOFERN') {
         open = 'up';
         close = 'down';
-      } else if (s.Attributes.model === 'fs20rsu') {
+      } else if (s.Attributes.model === 'fs20rsu' || s.Internals.TYPE === 'HM485') {
         open = 'on';
         close = 'off';
         valClosed = 'off';
@@ -803,6 +803,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   if (service_name === 'securitysystem') {
     mappings.ArmDisarm = {reading: 'state', values: ['/on/:ARMED', '/.*/:DISARMED'], cmdArm: 'on', cmdDisarm: 'off', exitAllowance: 60, cancelArm: 'off'};
     delete mappings.On;
+  } else if (service_name === 'window' || service_name === 'door') {
+    if (!mappings.OpenClose && s.Internals.TYPE === 'HM485' && s.Attributes.subType === 'sensor') {
+      delete mappings.On;
+      mappings.OpenClose = {reading: 'sensor', values: ['/^open/:OPEN', '/.*/:CLOSED']};
+    } else if (!mappings.OpenClose && s.Internals.TYPE === 'HM485' && s.Attributes.subType === 'digital_input') {
+      delete mappings.On;
+      mappings.OpenClose = {reading: 'state', values: ['/^on/:OPEN', '/.*/:CLOSED']};
+    }
   }
 
   try {

@@ -9,7 +9,7 @@ const createDirective = require('./utils.js').createDirective;
 
 async function setSyncFeatureLevel(uid) {
   await utils.getFirestoreDB().collection(uid).doc('state').set({featurelevel: settings.FEATURELEVEL}, {merge: true});
-  await utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL});
+  await utils.getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'UPDATE_SYNCFEATURELEVEL', featurelevel: settings.FEATURELEVEL, ts: Date.now()});
   await utils.getRealDB().ref('users/' + uid + '/lastSync').set({ts: Date.now()});
 }
 
@@ -23,7 +23,7 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   var payload = await createSYNCResponse(uid);
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
-  await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'REPORTSTATEALL', id: reqId, delay: 40});
+  await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({msg: 'REPORTSTATEALL', id: reqId, delay: 40, ts: Date.now()});
   res.send(response);
 }
 
@@ -279,6 +279,32 @@ var processSYNC = function (uid, devices) {
 async function createSYNCResponse(uid) {
   var NO_CACHE = 1;
   var devices = await utils.loadDevices(uid, NO_CACHE);
+  if (Object.keys(devices).length === 0) {
+    devices['setupdevice'] = {
+      PossibleSets: "on off",
+      alias: "please setup FHEM Connect client",
+      connection: "http://127.0.0.1:8083/fhem",
+      device: "setupdevice",
+      ghomeName: "setup info: https://bit.ly/fhemconnect",
+      ghomeRoom: "FHEM",
+      mappings: {
+        On: {
+          characteristic_type: "On",
+          cmdOff: "off",
+          cmdOn: "on",
+          device: "please setup FHEM Connect client",
+          format: "bool",
+          reading: ["state"],
+          valueOff: "off"
+        }
+      },
+      model: "FHEM Connect",
+      name: "please setup FHEM Connect client",
+      room: "FHEM",
+      type: "dummy",
+      uuid_base: "setuprequired"
+    }; 
+  }
   //generate sync response
   var response = processSYNC(uid, devices);
   //await uidlog(uid, 'sync response: ' + JSON.stringify(response));
