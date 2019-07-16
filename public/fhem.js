@@ -26,10 +26,10 @@ var FHEM_reportStateStore = {};
 var auth;
 var use_ssl;
 
-var md5;
 var initSync = 0;
 var firstRun = 0;
 var gassistant;
+var connectioncounter = 0;
 
 FHEM.useSSL = function(s) {
    use_ssl = s;
@@ -53,6 +53,7 @@ FHEM.auth = function(a) {
 
 //KEEP
 function FHEM(logInstance, config, server) {
+    connectioncounter = connectioncounter + 1;
     this.log = logInstance;
     log = logInstance;
     this.config = config;
@@ -262,7 +263,7 @@ function FHEM_startLongpoll(connection) {
                   }
                   continue;
                 }
-                
+
 //log.info( 'device: ' + device );
 //log.info( 'reading: ' + reading );
                 if (reading === undefined)
@@ -387,17 +388,9 @@ FHEM.prototype.execute_await = async function (cmd) {
   return await FHEM_execute_await(this.connection, cmd);
 }
 
-FHEM.prototype.reload = async function (n) {
-  if (n)
-      this.log.info('reloading ' + n + ' from ' + this.connection.base_url);
-  else
-      this.log.info('reloading ' + this.connection.base_url);
-
-  if (n) {
-      await this.connection.fhem.connect(undefined, 'NAME=' + n);
-  } else {
-      await this.connection.fhem.connect();
-  }
+FHEM.prototype.reload = function () {
+  this.clearDatabase();
+  this.connection.fhem.serverprocess.connectAll();
 }
 
 function setLoginFailed(fhem, err) {
@@ -426,10 +419,11 @@ FHEM.prototype.getFhemGassistantDevice = function() {
               try {
                 await database.refreshAllTokens();
                 this.log.info('refreshAllTokens executed');
+                await this.clearDatabase();
                 await this.connection.fhem.serverprocess.startConnection();
-                this.log.info('start connection executed');
                 this.execute('setreading ' + this.gassistant + ' gassistant-fhem-lasterror none');
                 this.checkAndSetGenericDeviceType();
+                this.log.info('Connection: OK');
               } catch (err) {
                 console.error(err);
                 setLoginFailed(this, err);
@@ -438,10 +432,52 @@ FHEM.prototype.getFhemGassistantDevice = function() {
               this.setLoginRequired();
         }.bind(this));
       } catch (err) {
-        this.log.error('Please define Google Assistant device in FHEM: define gassistant gassistant');
-        process.exit(1);
+        connectioncounter = connectioncounter - 1;
+        if (connectioncounter == 0) {
+          this.log.error('Please define Google Assistant device in FHEM: define gassistant gassistant');
+          process.exit(1);
+        }
       }
     }.bind(this));
+}
+
+FHEM.prototype.clearDatabase = async function () {
+  try {
+    var currReadings = await database.getRealDB().ref('users/' + database.getUid() + '/readings').once('value');
+    if (Object.keys(currReadings.val()).length === 0) {
+      firstRun = 1;
+    }
+  } catch (err) {
+    firstRun = 1;
+  }
+
+  try {
+    await database.getRealDB().ref('users/' + database.getUid() + '/devices').remove();
+    await database.getRealDB().ref('users/' + database.getUid() + '/readings').remove();
+  } catch (err) {
+    console.error('Realtime Database deletion failed: ' + err);
+  }
+  
+  var batch = database.getDB().batch();
+  //DELETE current data in firestore database
+  try {
+    var ref = await database.getDB().collection(database.getUid()).doc('devices').collection('devices').get();
+    for (var r of ref.docs) {
+      batch.delete(r.ref);
+    }
+  } catch (err) {
+    console.error('Device deletion failed: ' + err);
+  }
+
+  try {
+    var ref = await database.getDB().collection(database.getUid()).doc('devices').collection('attributes').get();
+    for (var r of ref.docs) {
+      batch.delete(r.ref);
+    }
+  } catch (err) {
+    console.error('Attribute deletion failed: ' + err);
+  }
+  await batch.commit();
 }
 
 //KEEP
@@ -481,93 +517,38 @@ FHEM.prototype.connect = async function (callback, filter) {
       this.log.info('got: ' + json['totalResultsReturned'] + ' results');
       //TODO check results if they are different from previous ones (do not compare times!!)
       if (json['totalResultsReturned']) {
-        var md5JSON = JSON.parse(JSON.stringify(json['Results']));
-        for (var dev in md5JSON) {
-          for (var i in md5JSON[dev].Internals) {
-            if (['DEF', 'TYPE', 'id', 'SUBTYPE', 'inControllable', 'NAME', 'MODEL', 'modelid'].indexOf(i) <= 0) {
-              delete md5JSON[dev].Internals[i];
-            }
-          }
-          for (var r in md5JSON[dev].Readings) {
-            md5JSON[dev].Readings[r] = {};
-          }
-          md5JSON[dev].PossibleSets = md5JSON[dev].PossibleSets.split(" ").sort();
-          md5JSON[dev].PossibleAttrs = md5JSON[dev].PossibleAttrs.split(" ").sort();
+        var batch = database.getDB().batch();
+
+        var con = {base_url: this.connection.base_url};
+        this.connection.auth = FHEM_connectionAuth[this.connection.base_url];
+        if (this.connection.auth) {
+          con.auth = this.connection.auth;
         }
-        var currmd5 = crypto.createHash('md5').update(JSON.stringify(md5JSON)).digest("hex");
 
-        if (md5 !== currmd5) {
-          try {
-            var currReadings = await database.getRealDB().ref('users/' + database.getUid() + '/readings').once('value');
-            if (Object.keys(currReadings.val()).length === 0) {
-              firstRun = 1;
+        FHEM_activeDevices = {};
+        json['Results'].map(function (s) {
+          FHEM_activeDevices[s.Internals.NAME] = 1;
+          var dbRef = database.getDB().collection(database.getUid()).doc('devices').collection('devices').doc(s.Internals.NAME);
+          batch.set(dbRef, {'json': s, 'connection': con.base_url}, {merge: true});
+        }.bind(this));
+        await batch.commit();
+        
+        initSync = 1;
+        
+        //send current readings database.updateDeviceReading
+        FHEM_deviceReadings = await database.generateMappings();
+          
+        json['Results'].map(function (s) {
+          for (var reading in s.Readings) {
+            if (FHEM_deviceReadings.hasOwnProperty(s.Internals.NAME) && FHEM_deviceReadings[s.Internals.NAME].hasOwnProperty(reading)) {
+              const REPORT_STATE = 0;
+              FHEM_update(s.Internals.NAME, reading, FHEM_deviceReadings[s.Internals.NAME][reading].format, s.Readings[reading].Value, REPORT_STATE);
             }
-          } catch (err) {
-            firstRun = 1;
           }
+        }.bind(this));
 
-          try {
-            await database.getRealDB().ref('users/' + database.getUid() + '/devices').remove();
-            await database.getRealDB().ref('users/' + database.getUid() + '/readings').remove();
-          } catch (err) {
-            console.error('Realtime Database deletion failed: ' + err);
-          }
-  
-          var batch = database.getDB().batch();
-          
-          //DELETE current data in database
-          try {
-            var ref = await database.getDB().collection(database.getUid()).doc('devices').collection('devices').get();
-            for (var r of ref.docs) {
-              batch.delete(r.ref);
-            }
-          } catch (err) {
-            console.error('Device deletion failed: ' + err);
-          }
-          
-          try {
-            var ref = await database.getDB().collection(database.getUid()).doc('devices').collection('attributes').get();
-            for (var r of ref.docs) {
-              batch.delete(r.ref);
-            }
-          } catch (err) {
-            console.error('Attribute deletion failed: ' + err);
-          }
-  
-          var con = {base_url: this.connection.base_url};
-          this.connection.auth = FHEM_connectionAuth[this.connection.base_url];
-          if (this.connection.auth) {
-            con.auth = this.connection.auth;
-          }
-  
-          FHEM_activeDevices = {};
-          json['Results'].map(function (s) {
-            FHEM_activeDevices[s.Internals.NAME] = 1;
-            var dbRef = database.getDB().collection(database.getUid()).doc('devices').collection('devices').doc(s.Internals.NAME);
-            batch.set(dbRef, {'json': s, 'connection': con.base_url}, {merge: true});
-          }.bind(this));
-          await batch.commit();
-          
-          md5 = currmd5;
-          initSync = 1;
-          
-          //send current readings database.updateDeviceReading
-          FHEM_deviceReadings = await database.generateMappings();
-            
-          json['Results'].map(function (s) {
-            for (var reading in s.Readings) {
-              if (FHEM_deviceReadings.hasOwnProperty(s.Internals.NAME) && FHEM_deviceReadings[s.Internals.NAME].hasOwnProperty(reading)) {
-                const REPORT_STATE = 0;
-                FHEM_update(s.Internals.NAME, reading, FHEM_deviceReadings[s.Internals.NAME][reading].format, s.Readings[reading].Value, REPORT_STATE);
-              }
-            }
-          }.bind(this));
-
-          if (firstRun)
-            await database.initiateSync();
-        } else {
-          this.log.info("No changes, therefore no reload required.");
-        }
+        if (firstRun)
+          await database.initiateSync();
       }
       this.execute('setreading ' + this.gassistant + ' gassistant-fhem-connection connected');
 

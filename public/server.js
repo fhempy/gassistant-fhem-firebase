@@ -150,8 +150,10 @@ function registerFirestoreListener() {
         log.info('GOOGLE MSG RECEIVED: ' + JSON.stringify(event.data()));
         if (event.data()) {
           if (event.data().ts) {
-            if (event.data().ts > (Date.now()-5000)) {
+            if (event.data().ts > (Date.now()-10000)) {
               handler.bind(this)(event.data());
+            } else {
+              log.error('  Received message is older than 10s, therefore it gets discarded. Please check your date/time settings if you think that the messages is not that old.');
             }
           }
         }
@@ -195,11 +197,15 @@ Server.prototype.startConnection = async function() {
   this.startServer();
   //load devices
   this.roomOfIntent = {};
+  this.connectAll();
+  
+  checkFeatureLevel.bind(this)();
+}
+
+Server.prototype.connectAll = function() {
   for (var fhem of this.connections) {
     fhem.connect();
   }
-  
-  checkFeatureLevel.bind(this)();
 }
 
 async function checkFeatureLevel() {

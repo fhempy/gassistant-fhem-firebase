@@ -25,7 +25,34 @@ const REQUEST_SET_TOGGLES = "action.devices.commands.SetToggles";
 const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
 const REQUEST_OPENCLOSE = "action.devices.commands.OpenClose";
 const REQUEST_ARMDISARM = "action.devices.commands.ArmDisarm";
+const REQUEST_TIMERSTART = "action.devices.commands.TimerStart";
+const REQUEST_TIMERADJUST = "action.devices.commands.TimerAdjust";
+const REQUEST_TIMERPAUSE = "action.devices.commands.TimerPause";
+const REQUEST_TIMERRESUME = "action.devices.commands.TimerResume";
+const REQUEST_TIMERCANCEL = "action.devices.commands.TimerCancel";
 
+const commandMapping = {};
+commandMapping[REQUEST_SET_BRIGHTNESSABSOLUTE] = 'Brightness';
+commandMapping[REQUEST_SET_MODES] = 'Modes';
+commandMapping[REQUEST_ON_OFF] = 'On';
+commandMapping[REQUEST_SET_TARGET_TEMPERATURE] = 'TargetTemperature';
+commandMapping[REQUEST_SET_THERMOSTAT_MODE] = 'ThermostatModes';
+commandMapping[REQUEST_DOCK] = 'Dock';
+commandMapping[REQUEST_LOCATE] = 'Locate';
+commandMapping[REQUEST_STARTSTOP] = 'StartStop';
+commandMapping[REQUEST_PAUSEUNPAUSE] = 'StartStop';
+commandMapping[REQUEST_FANSPEED] = 'FanSpeed';
+commandMapping[REQUEST_FANSPEEDREVERSE] = 'FanSpeed';
+commandMapping[REQUEST_COLORABSOLUTE] = 'RGB';
+commandMapping[REQUEST_SET_TOGGLES] = 'Toggles';
+commandMapping[REQUEST_ACTIVATE_SCENE] = 'Scene';
+commandMapping[REQUEST_OPENCLOSE] = 'OpenClose';
+commandMapping[REQUEST_ARMDISARM] = 'ArmDisarm';
+commandMapping[REQUEST_TIMERSTART] = 'Timer';
+commandMapping[REQUEST_TIMERADJUST] = 'Timer';
+commandMapping[REQUEST_TIMERPAUSE] = 'Timer';
+commandMapping[REQUEST_TIMERRESUME] = 'Timer';
+commandMapping[REQUEST_TIMERCANCEL] = 'Timer';
 
 async function handleEXECUTE(uid, reqId, res, input) {
   try {
@@ -72,6 +99,41 @@ async function processEXECUTE(uid, reqId, input) {
             }
 
             const requestedName = exec.command;
+
+            if (!commandMapping[requestedName] || !device.mappings[commandMapping[requestedName]]) {
+              uiderror(uid, 'Command ' + requestedName + ' not configured for device ' + d.customData.device);
+              return {errorCode: 'functionNotSupported'};
+            }
+
+            if (device.mappings[commandMapping[requestedName]].pin) {
+              if (!exec.challenge || !exec.challenge.pin) {
+                //pin required
+                responses.push({
+                  "ids": [device.uuid_base],
+                  "status": "ERROR",
+                  "errorCode": "challengeNeeded",
+                  "challengeNeeded": {
+                    "type": "pinNeeded"
+                  }
+                });
+                continue;
+              } else {
+                if (!exec.challenge || exec.challenge.pin !== device.mappings[commandMapping[requestedName]].pin) {
+                  //incorrect pin
+                  responses.push({
+                    "ids": [device.uuid_base],
+                    "status": "ERROR",
+                    "errorCode": "challengeNeeded",
+                    "challengeNeeded": {
+                      "type": "challengeFailedPinNeeded"
+                    }
+                  });
+                  continue;
+                }
+                
+                //correct pin
+              }
+            }
 
             switch (requestedName) {
 
@@ -138,6 +200,10 @@ async function processEXECUTE(uid, reqId, input) {
 
                 case REQUEST_ARMDISARM:
                     responses.push(...await processEXECUTEArmDisarm(uid, reqId, device, exec.params, fhemExecCmd));
+                    break;
+
+                case REQUEST_TIMERSTART:
+                    responses.push(...await processEXECUTETimerStart(uid, reqId, device, exec.params, fhemExecCmd));
                     break;
 
                 default:
@@ -211,6 +277,30 @@ async function processEXECUTEArmDisarm(uid, reqId, device, params, fhemExecCmd) 
 
     return res;
 }// processEXECUTEArmDisarm
+
+async function processEXECUTETimerStart(uid, reqId, device, params, fhemExecCmd) {
+    if (device.mappings.Timer.cmdTimerStart) {
+      fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Timer, device.mappings.Timer.cmdTimerStart + ' ' + params.timerTimeSec));
+    } else {
+      return [{
+          ids: [device.uuid_base],
+          status: 'ERROR',
+          errorCode: 'functionNotSupported'
+        }];
+    }
+
+    let res = [];
+
+    res.push({
+        ids: [device.uuid_base],
+        status: 'SUCCESS',
+        states: {
+            timerRemainingSec: params.timerTimeSec
+        }
+    });
+
+    return res;
+}// processEXECUTETimerStart
 
 async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCmd) {
     if (device.mappings.TargetPosition && params.openPercent !== 0 && params.openPercent !== 100) {
@@ -346,7 +436,7 @@ async function processEXECUTEPauseUnpause(uid, reqId, device, pause, fhemExecCmd
 }; //processEXECUTEPauseUnpause
 
 async function processEXECUTESetFanSpeed(uid, reqId, device, speedname, fhemExecCmd) {
-    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.FanSpeed, speedname));
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.FanSpeed, device.mappings.FanSpeed.speeds[speedname].cmd));
 
     return [{
         states: {

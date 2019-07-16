@@ -35,7 +35,7 @@ async function generateAttributes(uid, realDBUpdateJSON) {
       }
     } catch (err) {
       //uiderror(uid, err);
-      uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err);
+      uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err, err);
     }
   }
   return usedDeviceReadings;
@@ -290,84 +290,87 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.Locate = {cmd: 'locate'};
       //map Paused => paused, Cleaning => running
       mappings.StartStop = {reading: 'state', cmdPause: 'pause', cmdUnpause: 'on', cmdOn: 'on', cmdOff: 'off', values: ['/^Paused/:paused', '/^Cleaning/:running', '/.*/:other']};
-      mappings.Toggles = [{reading: 'cleaning_mode', valueOn: 'turbo', cmdOn: 'cleaning_mode turbo', cmdOff: 'cleaning_mode balanced',
-        toggle_attributes: {
-            name: 'Turbo',
-            name_values: [
-              {
-                name_synonym: ['turbo'],
-                lang: 'en'
-              },
-              {
-                name_synonym: ['turbo', 'turbo-funktion', 'turbofunktion', 'turbo-modus', 'turbomodus'],
-                lang: 'de'
-              }
-            ]
-        }
-      }];
+      mappings.FanSpeed = {reading: 'cleaning_mode', speeds: { 'S1': { 'cmd': 'cleaning_mode quiet', value:'quiet', 'synonyms': {'de': ['langsam', 'leise'], 'en': ['slow', 'quiet']}},
+                                                               'S2': { 'cmd': 'cleaning_mode balanced', value:'balanced', 'synonyms': {'de': ['mittel'],  'en': ['medium','balanced']}},
+                                                               'S3': { 'cmd': 'cleaning_mode max', value:'max','synonyms': {'de': ['maximum'], 'en': ['maximum']}}}, ordered: true, reversible: false};
+      // mappings.Toggles = [{reading: 'cleaning_mode', valueOn: 'turbo', cmdOn: 'cleaning_mode turbo', cmdOff: 'cleaning_mode balanced',
+      //   toggle_attributes: {
+      //       name: 'Turbo',
+      //       name_values: [
+      //         {
+      //           name_synonym: ['turbo'],
+      //           lang: 'en'
+      //         },
+      //         {
+      //           name_synonym: ['turbo', 'turbo-funktion', 'turbofunktion', 'turbo-modus', 'turbomodus'],
+      //           lang: 'de'
+      //         }
+      //       ]
+      //   }
+      // }];
       //FIXME get Modes from cmdlist
-      mappings.Modes = [{
-          reading: 'cleaning_mode',
-		      cmd: 'cleaning_mode',
-		      mode_attributes: {
-              name: 'suction',
-              name_values: [
-              {
-                  name_synonym: ['suction'],
-                  lang: 'en'
-              },
-              {
-                  name_synonym: ['saugkraft', 'saugstärke'],
-                  lang: 'de'
-              }
-              ],
-              settings: [{
-                setting_name: 'quiet',
-                setting_values: [{
-                  setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
-                  lang: 'de'
-                }]
-              },
-              {
-                setting_name: 'balanced',
-                setting_values: [{
-                  setting_synonym: ['balanced', 'normal'],
-                  lang: 'de'
-                }]
-              },
-              {
-                setting_name: 'Turbo',
-                setting_values: [{
-                  setting_synonym: ['turbo'],
-                  lang: 'de'
-                }]
-              },
-              {
-                setting_name: 'maximum',
-                setting_values: [{
-                  setting_synonym: ['maximum', 'max'],
-                  lang: 'de'
-                }]
-              }],
-              ordered: true
-          }
-      }];
-      mappings.Modes[0].reading2homekit = function (mapping, orig) {
-          if (orig == 'turbo')
-              return 'Turbo';
-          else if (orig == 'max')
-              return 'maximum';
-          return orig;
-      };
+      // mappings.Modes = [{
+      //     reading: 'cleaning_mode',
+		    //   cmd: 'cleaning_mode',
+		    //   mode_attributes: {
+      //         name: 'suction',
+      //         name_values: [
+      //         {
+      //             name_synonym: ['suction'],
+      //             lang: 'en'
+      //         },
+      //         {
+      //             name_synonym: ['saugkraft', 'saugstärke'],
+      //             lang: 'de'
+      //         }
+      //         ],
+      //         settings: [{
+      //           setting_name: 'quiet',
+      //           setting_values: [{
+      //             setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
+      //             lang: 'de'
+      //           }]
+      //         },
+      //         {
+      //           setting_name: 'balanced',
+      //           setting_values: [{
+      //             setting_synonym: ['balanced', 'normal'],
+      //             lang: 'de'
+      //           }]
+      //         },
+      //         {
+      //           setting_name: 'Turbo',
+      //           setting_values: [{
+      //             setting_synonym: ['turbo'],
+      //             lang: 'de'
+      //           }]
+      //         },
+      //         {
+      //           setting_name: 'maximum',
+      //           setting_values: [{
+      //             setting_synonym: ['maximum', 'max'],
+      //             lang: 'de'
+      //           }]
+      //         }],
+      //         ordered: true
+      //     }
+      // }];
+      // mappings.Modes[0].reading2homekit = function (mapping, orig) {
+      //     if (orig == 'turbo')
+      //         return 'Turbo';
+      //     else if (orig == 'max')
+      //         return 'maximum';
+      //     return orig;
+      // };
       
-      mappings.Modes[0].homekit2reading = function (mapping, orig) {
-          if (orig == 'Turbo') {
-              return 'turbo';
-          } else if (orig == 'maximum') {
-              return 'max';
-          }
-          return orig;
-      };
+      // mappings.Modes[0].homekit2reading = function (mapping, orig) {
+      //     if (orig == 'Turbo') {
+      //         return 'turbo';
+      //     } else if (orig == 'maximum') {
+      //         return 'max';
+      //     }
+      //     return orig;
+      // };
   }
 
   if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
@@ -813,12 +816,20 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
+  //TRAITS BASED ON POSSIBLE COMMANDS
+  if (!mappings.Timer && s.PossibleSets.match(/(^| )on-for-timer\b/)) {
+      mappings.Timer = {commandOnlyTimer: true, maxTimerLimitSec: 86400, cmdTimerStart: "on-for-timer"};
+  }
+
+  //homebridgeMapping Attribute
   try {
-    fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
+    var mappingsFromHb = fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
+    if (mappingsFromHb !== undefined)
+      mappings = mappingsFromHb;
   } catch(e) {
     uiderror(uid, 'homebridgeMapping error for ' + s.Internals.NAME + ', please delete homebridgeMapping and try again');
   }
-  console.debug('mappings for ' + s.Internals.NAME + ': ' + util.inspect(mappings));
+  uidlog(uid, 'mappings for ' + s.Internals.NAME + ': ' + util.inspect(mappings));
 
   if (service_name !== undefined) {
       uidlog(uid, s.Internals.NAME + ' is ' + service_name);
@@ -1075,18 +1086,27 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
 
     if (homebridgeMapping.match(/^{.*}$/)) {
         try {
-            homebridgeMapping = JSON.parse(homebridgeMapping);
+            var jsonMappings = JSON.parse(homebridgeMapping);
+            if (jsonMappings.clear) {
+              mappings = jsonMappings;
+            } else {
+              for (var m in jsonMappings) {
+                if (m === 'clear')
+                  continue;
+                mappings[m] = jsonMappings[m];
+              }
+            }
+            uidlog(uid, 'JSON format: ok');
         } catch (err) {
             uiderror(uid, '  fromHomebridgeMapping JSON.parse: ' + err);
             return;
         }
 
-        mappings = homebridgeMapping;
-        return;
+        return mappings;
     }
 
     var seen = {};
-    for (var mapping of homebridgeMapping.split(/ |\n/)) {
+    for (var mapping of homebridgeMapping.split(/\n/)) {
         if (!mapping)
             continue;
 
@@ -1120,6 +1140,16 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
                 mappings[characteristic] = mapping;
         }
         seen[characteristic] = true;
+
+        if (params.match(/^{.*}$/)) {
+          try {
+            mappings[characteristic] = JSON.parse(params);
+          } catch (err) {
+            uiderror(uid, '  fromHomebridgeMapping JSON.parse: ' + err);
+            return;
+          }
+          continue;
+        }
 
         for (var param of params.split(',')) {
             if (param == 'clear') {

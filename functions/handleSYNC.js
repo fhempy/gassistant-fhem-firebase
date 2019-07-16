@@ -52,6 +52,8 @@ var processSYNC = function (uid, devices) {
               || device.mappings.Dock
               || device.mappings.OpenClose
               || device.mappings.Locate
+              || device.mappings.FanSpeed
+              || device.mappings.Timer
               || device.mappings.ArmDisarm) {
               //console.log(device);
   
@@ -140,7 +142,24 @@ var processSYNC = function (uid, devices) {
               if (device.mappings.FanSpeed) {
                   d.traits.push("action.devices.traits.FanSpeed");
                   //Attributes
-                  d.attributes.availableFanSpeed = device.mappings.FanSpeed.speed_attributes;
+                  d.attributes.availableFanSpeeds = {};
+                  d.attributes.availableFanSpeeds.speeds = [];
+                  for (var fspeed in device.mappings.FanSpeed.speeds) {
+                    var speedDefinition = {};
+                    //fspeed (e.g. S1)
+                    speedDefinition.speed_name = fspeed;
+                    speedDefinition.speed_values = [];
+                    for (var lang in device.mappings.FanSpeed.speeds[fspeed].synonyms) {
+                      //lang (e.g. de)
+                      //device.mappings.FanSpeed.speeds[fspeed].synonyms[lang] (e.g. langsam, stufe 1)
+                      speedDefinition.speed_values.push({
+                        'speed_synonym': device.mappings.FanSpeed.speeds[fspeed].synonyms[lang],
+                        'lang': lang
+                      });
+                    }
+                    d.attributes.availableFanSpeeds.speeds.push(speedDefinition);
+                  }
+                  d.attributes.availableFanSpeeds.ordered = device.mappings.FanSpeed.ordered;
                   d.attributes.reversible = device.mappings.FanSpeed.reversible;
               }
   
@@ -148,7 +167,14 @@ var processSYNC = function (uid, devices) {
               if (device.mappings.Dock) {
                   d.traits.push("action.devices.traits.Dock");
               }
-              
+
+              //Timer
+              if (device.mappings.Timer) {
+                  d.traits.push("action.devices.traits.Timer");
+                  d.attributes.maxTimerLimitSec = device.mappings.Timer.maxTimerLimitSec;
+                  d.attributes.commandOnlyTimer = device.mappings.Timer.commandOnlyTimer;
+              }
+
               //OpenClose
               if (device.mappings.OpenClose) {
                   d.traits.push("action.devices.traits.OpenClose");
@@ -303,7 +329,7 @@ async function createSYNCResponse(uid) {
       room: "FHEM",
       type: "dummy",
       uuid_base: "setuprequired"
-    }; 
+    };
   }
   //generate sync response
   var response = processSYNC(uid, devices);

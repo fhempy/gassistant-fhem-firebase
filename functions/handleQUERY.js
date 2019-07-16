@@ -154,7 +154,12 @@ async function processQUERY(uid, input, reportstate) {
         
         //action.devices.traits.FanSpeed
         if (device.mappings.FanSpeed) {
-            devices[d.id].currentFanSpeedSetting = await cached2Format(uid, device.mappings.FanSpeed, readings);
+            var rValue = await cached2Format(uid, device.mappings.FanSpeed, readings);
+            for (var fspeed in device.mappings.FanSpeed.speeds) {
+              if (device.mappings.FanSpeed.speeds[fspeed].value === rValue) {
+                devices[d.id].currentFanSpeedSetting = fspeed;
+              }
+            }
         }
         
         //action.devices.traits.Dock
