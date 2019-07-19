@@ -151,8 +151,8 @@ async function initiateSync() {
   return await postCloudFunction(CLOUD_FUNCTIONS_BASE + "/api/initsync");
 }
 
-async function generateMappings() {
-  return await getCloudFunction(CLOUD_FUNCTIONS_BASE + "/api/syncfinished");
+async function generateMappings(devicesJSON) {
+  return await postCloudFunction(CLOUD_FUNCTIONS_BASE + "/api/genmappings", JSON.stringify(devicesJSON));
 };
 
 async function clientHeartbeat() {

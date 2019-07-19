@@ -14,28 +14,43 @@ const settings = require('./settings.json');
 
 var deviceRooms = {};
 
-async function generateAttributes(uid, realDBUpdateJSON) {
-  //generate traits in firestore
-  var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
-  //delete all realtime database data
-  await admin.database().ref('users/' + uid + '/devices').remove();
-  await admin.database().ref('users/' + uid + '/informids').remove();
+async function generateAttributes(uid, realDBUpdateJSON, devicesJSON) {
+  //generate traits
   var usedDeviceReadings = {};
-  var informIds = {};
-  for (device of devicesRef.docs) {
-    try {
-      uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
-      var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
-      var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
-      if (resTraits) {
-        realDBUpdateJSON[dbDev] = resTraits.device;
-        uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
-      } else {
-        uidlog(uid, 'no mappings for device ' + device.data().json.Internals.NAME);
+  if (devicesJSON) {
+    for (var d in devicesJSON) {
+      try {
+        uidlog(uid, 'start generateTraits for ' + devicesJSON[d].json.Internals.NAME);
+        var dbDev = devicesJSON[d].json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
+        var resTraits = await generateTraits(uid, devicesJSON[d], usedDeviceReadings);
+        if (resTraits) {
+          realDBUpdateJSON[dbDev] = resTraits.device;
+          uidlog(uid, 'finished generateTraits for ' + devicesJSON[d].json.Internals.NAME);
+        } else {
+          uidlog(uid, 'no mappings for device ' + devicesJSON[d].json.Internals.NAME);
+        }
+      } catch (err) {
+        //uiderror(uid, err);
+        uiderror(uid, 'failed to generateTraits for ' + devicesJSON[d].json.Internals.NAME + ', ' + err, err);
       }
-    } catch (err) {
-      //uiderror(uid, err);
-      uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err, err);
+    }
+  } else {
+    var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
+    for (device of devicesRef.docs) {
+      try {
+        uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
+        var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
+        var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
+        if (resTraits) {
+          realDBUpdateJSON[dbDev] = resTraits.device;
+          uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
+        } else {
+          uidlog(uid, 'no mappings for device ' + device.data().json.Internals.NAME);
+        }
+      } catch (err) {
+        //uiderror(uid, err);
+        uiderror(uid, 'failed to generateTraits for ' + device.data().json.Internals.NAME + ', ' + err, err);
+      }
     }
   }
   return usedDeviceReadings;
@@ -1382,6 +1397,22 @@ function registerClientApi(app) {
     deviceRooms[uid] = {};
     var realDBUpdateJSON = {};
     var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON);
+    await generateRoomHint(uid, realDBUpdateJSON);
+    uidlog(uid, 'Write to real DB');
+    await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+    uidlog(uid, 'Done');
+
+    uidlog(uid, 'MAPPING CREATION FINISHED');
+    res.send(usedDeviceReadings);
+  });
+
+  app.post('/genmappings', utils.rateLimiter(10, 300), async (req, res) => {
+    const {sub: uid} = req.user;
+    const devicesJSON = req.body;
+
+    deviceRooms[uid] = {};
+    var realDBUpdateJSON = {};
+    var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON, devicesJSON);
     await generateRoomHint(uid, realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');
     await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);

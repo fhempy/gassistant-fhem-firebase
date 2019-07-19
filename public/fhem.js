@@ -16,6 +16,7 @@ module.exports = {
 var log;
 
 var FHEM_longpoll = {};
+var FHEM_devicesJSON = {};
 var FHEM_csrfToken = {};
 var FHEM_activeDevices = {};
 var FHEM_connectionAuth = {};
@@ -388,8 +389,11 @@ FHEM.prototype.execute_await = async function (cmd) {
   return await FHEM_execute_await(this.connection, cmd);
 }
 
-FHEM.prototype.reload = function () {
-  this.clearDatabase();
+FHEM.prototype.reload = async function () {
+  FHEM_activeDevices = {};
+  FHEM_devicesJSON = {};
+  FHEM_deviceReadings = {};
+  await this.clearDatabase();
   this.connection.fhem.serverprocess.connectAll();
 }
 
@@ -455,7 +459,7 @@ FHEM.prototype.clearDatabase = async function () {
     await database.getRealDB().ref('users/' + database.getUid() + '/devices').remove();
     await database.getRealDB().ref('users/' + database.getUid() + '/readings').remove();
   } catch (err) {
-    console.error('Realtime Database deletion failed: ' + err);
+    this.log.error('Realtime Database deletion failed: ' + err);
   }
   
   var batch = database.getDB().batch();
@@ -466,7 +470,7 @@ FHEM.prototype.clearDatabase = async function () {
       batch.delete(r.ref);
     }
   } catch (err) {
-    console.error('Device deletion failed: ' + err);
+    this.log.error('Device deletion failed: ' + err);
   }
 
   try {
@@ -475,7 +479,7 @@ FHEM.prototype.clearDatabase = async function () {
       batch.delete(r.ref);
     }
   } catch (err) {
-    console.error('Attribute deletion failed: ' + err);
+    this.log.error('Attribute deletion failed: ' + err);
   }
   await batch.commit();
 }
@@ -517,26 +521,23 @@ FHEM.prototype.connect = async function (callback, filter) {
       this.log.info('got: ' + json['totalResultsReturned'] + ' results');
       //TODO check results if they are different from previous ones (do not compare times!!)
       if (json['totalResultsReturned']) {
-        var batch = database.getDB().batch();
-
         var con = {base_url: this.connection.base_url};
         this.connection.auth = FHEM_connectionAuth[this.connection.base_url];
         if (this.connection.auth) {
           con.auth = this.connection.auth;
         }
 
-        FHEM_activeDevices = {};
+        var dObj = {};
         json['Results'].map(function (s) {
           FHEM_activeDevices[s.Internals.NAME] = 1;
-          var dbRef = database.getDB().collection(database.getUid()).doc('devices').collection('devices').doc(s.Internals.NAME);
-          batch.set(dbRef, {'json': s, 'connection': con.base_url}, {merge: true});
+          dObj[s.Internals.NAME] = {'json': s, 'connection': con.base_url}, {merge: true};
         }.bind(this));
-        await batch.commit();
+        FHEM_devicesJSON = Object.assign(FHEM_devicesJSON, dObj);
         
         initSync = 1;
         
         //send current readings database.updateDeviceReading
-        FHEM_deviceReadings = await database.generateMappings();
+        FHEM_deviceReadings = Object.assign(FHEM_deviceReadings, await database.generateMappings(FHEM_devicesJSON));
           
         json['Results'].map(function (s) {
           for (var reading in s.Readings) {
