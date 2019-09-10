@@ -815,6 +815,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE === 'EnOcean' && s.Attributes.subType === 'contact') {
     if (!service_name) service_name = 'door';
     mappings.OpenClose = {reading: 'state', values: ['/^closed/:CLOSED', '/.*/:OPEN']};
+  } else if (s.Internals.TYPE === 'STV') {
+    mappings.On = {reading: 'state', valueOff: 'disconnected', cmdOn: 'POWERON', cmdOff: 'POWEROFF'};
   }
   
   //SERVICENAME

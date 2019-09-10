@@ -412,7 +412,7 @@ async function processEXECUTELocate(uid, reqId, device, fhemExecCmd) {
 }; //processEXECUTELocate
 
 async function processEXECUTEStartStop(uid, reqId, device, start, fhemExecCmd) {
-    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.SartStop, start));
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, start));
 
     return [{
         states: {
@@ -424,7 +424,7 @@ async function processEXECUTEStartStop(uid, reqId, device, start, fhemExecCmd) {
 }; //processEXECUTEStartStop
 
 async function processEXECUTEPauseUnpause(uid, reqId, device, pause, fhemExecCmd) {
-    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.SartStop, pause, 'PauseUnpause'));
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, pause, 'PauseUnpause'));
 
     return [{
         states: {
