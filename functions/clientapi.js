@@ -389,12 +389,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
 
   if ((s.PossibleSets.match(/(^| )closes\b/) && s.PossibleSets.match(/(^| )opens\b/)) ||
-            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && genericType === 'blinds') ||
+            (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && (genericType === 'blinds' || genericType === 'shutter')) ||
             (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
             (s.Internals.SUBTYPE === 'RolloTron Standard') ||
             (s.Internals.subType === 'blindActuator') ||
             (s.Attributes.model === 'fs20rsu') ||
-            genericType === 'blinds') {
+            genericType === 'blinds' || genericType === 'shutter') {
       if (!service_name) service_name = 'blinds';
       delete mappings.On;
       delete mappings.Brightness;
@@ -415,6 +415,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         open = 'on';
         close = 'off';
         valClosed = 'off';
+      } else if (s.Internals.ccutype === "HmIP-FROLL") {
+        open = 'pct 100';
+        close = 'pct 0';
+        valClosed = 'closed';
       }
       mappings.OpenClose = {reading: 'state', values: ['/^' + valClosed + '/:CLOSED', '/.*/:OPEN'], cmdOpen: open, cmdClose: close};
       if (s.PossibleSets.match(/(^| )position\b/)) {
@@ -453,7 +457,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         }
       }
 
-  } else if (genericType == 'blinds' && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
+  } else if ((genericType == 'blinds' || genericType == 'shutter') && s.PossibleSets.match(/(^| )open\b/) && s.PossibleSets.match(/(^| )close\b/)) {
     mappings.OpenClose = {reading:'state', values: ['/^close/:CLOSED', '/.*/:OPEN'], cmdOpen:'open', cmdClose:'close'};
 
   } else if (s.Attributes.model === 'HM-SEC-WIN') {
