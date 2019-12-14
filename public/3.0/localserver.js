@@ -15,7 +15,7 @@ var app = express();
 app.use(express.json());
 
 app.post('/fhemconnect/local', async function (req, res) {
-  console.log('LOCAL received:' + JSON.stringify(req.body));
+  console.log('LOCAL received: ' + req.body.inputs[0].intent);
   
   if (req.body.inputs[0].intent == "action.devices.IDENTIFY") {
     var resp = {

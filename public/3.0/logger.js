@@ -1,4 +1,3 @@
-var chalk = require('chalk');
 var util = require('util');
 const log = require("./logger")._system;
 
@@ -51,20 +50,20 @@ Logger.prototype.log = function (level, msg) {
     func = console.log;
 
     if (level == 'debug') {
-        msg = chalk.gray(msg);
+        msg = msg;
     }
     else if (level == 'warn') {
-        msg = chalk.yellow(msg);
+        msg = msg;
         func = console.error;
     }
     else if (level == 'error') {
-        msg = chalk.bold.red(msg);
+        msg = msg;
         func = console.error;
     }
 
     // prepend prefix if applicable
     if (this.prefix)
-        msg = chalk.cyan("[" + this.prefix + "]") + " " + msg;
+        msg = "[" + this.prefix + "]" + " " + msg;
 
     // prepend timestamp
     var date = new Date();

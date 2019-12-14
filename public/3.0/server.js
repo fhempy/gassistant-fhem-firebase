@@ -206,9 +206,9 @@ Server.prototype.startConnection = async function() {
   checkFeatureLevel.bind(this)();
 }
 
-Server.prototype.connectAll = function() {
+Server.prototype.connectAll = async function() {
   for (var fhem of this.connections) {
-    fhem.connect();
+    await fhem.connect();
   }
 }
 

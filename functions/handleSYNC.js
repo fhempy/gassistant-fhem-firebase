@@ -71,6 +71,7 @@ var processSYNC = function (uid, devices) {
                   traits: [],
                   attributes: {},
                   customData: {device: device.device},
+                  otherDeviceIds: [{ deviceId: device.device }],
               };
               
               d.willReportState = !device.mappings.Scene;

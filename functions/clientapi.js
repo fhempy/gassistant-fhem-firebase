@@ -287,7 +287,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.OpenClose = {reading: 'state', values: ['/^close/:CLOSED', '/.*/:OPEN']};
   }
   
-  if (s.Internals.TYPE == 'LightScene') {
+  if (s.Internals.TYPE == 'LightScene' || (s.PossibleSets.match(/(^| )scene\b/) && service_name === "scene")) {
       //name attribut ist der name der scene
       mappings.Scene = [];
       let m;
@@ -407,6 +407,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
         if (s.PossibleSets.match(/(^| )off\b/))
           close = 'off';
+      } else if (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') {
+        open = 'off';
+        close = 'on';
+        valClosed = 'on';
       }
       if (s.Internals.TYPE === 'DUOFERN') {
         open = 'up';
@@ -1106,24 +1110,15 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
     uidlog(uid, 'homebridgeMapping: ' + homebridgeMapping);
 
     if (homebridgeMapping.match(/^{.*}$/)) {
-        try {
-            var jsonMappings = JSON.parse(homebridgeMapping);
-            if (jsonMappings.clear) {
-              mappings = jsonMappings;
-            } else {
-              for (var m in jsonMappings) {
-                if (m === 'clear')
-                  continue;
-                mappings[m] = jsonMappings[m];
-              }
-            }
-            uidlog(uid, 'JSON format: ok');
-        } catch (err) {
-            uiderror(uid, '  fromHomebridgeMapping JSON.parse: ' + err);
-            return;
-        }
+      try {
+        mappings = JSON.parse(homebridgeMapping);
+        uidlog(uid, 'JSON format: ok');
 
         return mappings;
+      } catch (err) {
+        uiderror(uid, 'JSON error: ' + err);
+        return undefined;
+      }
     }
 
     var seen = {};
@@ -1428,6 +1423,22 @@ function registerClientApi(app) {
     res.send(usedDeviceReadings);
   });
   
+  app.post('/3.0/genmappings', utils.rateLimiter(10, 300), async (req, res) => {
+    const {sub: uid} = req.user;
+    const devicesJSON = req.body;
+
+    deviceRooms[uid] = {};
+    var realDBUpdateJSON = {};
+    var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON, devicesJSON);
+    await generateRoomHint(uid, realDBUpdateJSON);
+    uidlog(uid, 'Write to real DB');
+    await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+    uidlog(uid, 'Done');
+
+    uidlog(uid, 'MAPPING CREATION FINISHED');
+    res.send({readings: usedDeviceReadings, mappings: realDBUpdateJSON});
+  });
+  
   app.post('/initsync', async (req, res) => {
     const {sub: uid} = req.user;
     uidlog(uid, 'initiate sync');
@@ -1436,7 +1447,7 @@ function registerClientApi(app) {
       headers: {
         'content-type': 'application/json'
       },
-      body: JSON.stringify({agentUserId: uid})
+      body: JSON.stringify({"agentUserId": uid, "async": true})
     });
     uidlog(uid, 'SYNC initiated');
     res.send({});

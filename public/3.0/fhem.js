@@ -395,7 +395,7 @@ FHEM.prototype.reload = async function () {
   FHEM_devicesJSON = {};
   FHEM_deviceReadings = {};
   await this.clearDatabase();
-  this.connection.fhem.serverprocess.connectAll();
+  await this.connection.fhem.serverprocess.connectAll();
 }
 
 function setLoginFailed(fhem, err) {
