@@ -1109,10 +1109,20 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
 
     uidlog(uid, 'homebridgeMapping: ' + homebridgeMapping);
 
-    if (homebridgeMapping.match(/^{.*}$/)) {
+    if (homebridgeMapping.match(/^{.*}$/s)) {
       try {
-        mappings = JSON.parse(homebridgeMapping);
-        uidlog(uid, 'JSON format: ok');
+        homebridgeMapping = homebridgeMapping.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
+        
+        homebridgeMapping = JSON.parse(homebridgeMapping);
+        
+        mappings = {};
+        
+        for( let characteristic in homebridgeMapping ) {
+          if( !mappings[characteristic] )
+            mappings[characteristic] = {};
+          for( let attrname in homebridgeMapping[characteristic] )
+            mappings[characteristic][attrname] = homebridgeMapping[characteristic][attrname];
+        }
 
         return mappings;
       } catch (err) {

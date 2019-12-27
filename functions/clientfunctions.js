@@ -48,24 +48,6 @@ app.get('/3.0/gethandleEXECUTE', async (req, res) => {
     return commandMapping;
   }
   
-  function handleEXECUTE(uid, reqId, res, input) {
-    try {
-      var payload = processEXECUTE(uid, reqId, input);
-      var response = {
-          requestId: reqId,
-          payload: payload
-      };
-      logger.debug('response: ' + JSON.stringify(response));
-      res.send(response);
-    } catch (err) {
-      logger.error(err, err);
-      res.send({
-          requestId: reqId,
-          payload: {errorCode: 'hardError'}
-      });
-    }
-  }
-  
   function prepareDevice(dev) {
     if (!dev || !dev.mappings) {
       throw new Error('No mappings identified for ' + dev.name);
@@ -736,7 +718,7 @@ app.get('/3.0/gethandleEXECUTE', async (req, res) => {
   }
   
   res.send({
-    'exports.handleEXECUTE': handleEXECUTE.toString(),
+    'exports.handleEXECUTE': require('./handleEXECUTE').handleEXECUTE.toString(),
     'global.getCommandMapping': getCommandMapping.toString(),
     'global.prepareDevice': prepareDevice.toString(),
     'global.loadDevices': loadDevices.toString(),

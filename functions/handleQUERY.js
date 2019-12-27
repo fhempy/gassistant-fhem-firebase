@@ -98,6 +98,23 @@ async function processQUERY(uid, input, reportstate) {
                 devices[d.id].thermostatHumidityAmbient = parseFloat(await cached2Format(uid, device.mappings.CurrentRelativeHumidity, readings));
             }
         }
+        
+        //TemperatureControl
+        if (device.mappings.TemperatureControlSetCelsius || device.mappings.TemperatureControlAmbientCelsius) {
+
+          //TemperatureControlSetCelsius = {reading: 'targetTemperature', cmd: 'desired', minCelsius: 0, maxCelsius: 300, stepCelsius: 10, formatUx: 'C'};
+          //TemperatureControlAmbientCelsius = {reading: 'currentTemperatur'};
+
+          if (device.mappings.TemperatureControlSetCelsius) {
+            const temperatureSetpointCelsius = await cached2Format(uid, device.mappings.TemperatureControlSetCelsius, readings);
+            devices[d.id].temperatureSetpointCelsius = temperatureSetpointCelsius;
+          }
+          
+          if (device.mappings.TemperatureControlAmbientCelsius) {
+            const temperatureAmbientCelsius = await cached2Format(uid, device.mappings.TemperatureControlAmbientCelsius, readings);
+            devices[d.id].temperatureAmbientCelsius = temperatureAmbientCelsius;
+          }
+        }
 		
 		    //OnOff
 		    if (device.mappings.On) {

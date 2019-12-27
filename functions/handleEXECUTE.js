@@ -8,51 +8,6 @@ var compareVersions = require('compare-versions');
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
 
-// trait commands => https://developers.google.com/actions/smarthome/traits/
-const REQUEST_SET_BRIGHTNESSABSOLUTE = "action.devices.commands.BrightnessAbsolute";
-const REQUEST_SET_MODES = "action.devices.commands.SetModes";
-const REQUEST_ON_OFF = "action.devices.commands.OnOff";
-const REQUEST_SET_TARGET_TEMPERATURE = "action.devices.commands.ThermostatTemperatureSetpoint";
-const REQUEST_SET_THERMOSTAT_MODE = "action.devices.commands.ThermostatSetMode";
-const REQUEST_DOCK = "action.devices.commands.Dock";
-const REQUEST_LOCATE = "action.devices.commands.Locate";
-const REQUEST_STARTSTOP = "action.devices.commands.StartStop";
-const REQUEST_PAUSEUNPAUSE = "action.devices.commands.PauseUnpause";
-const REQUEST_FANSPEED = "action.devices.commands.SetFanSpeed";
-const REQUEST_FANSPEEDREVERSE = "action.devices.commands.Reverse";
-const REQUEST_COLORABSOLUTE = "action.devices.commands.ColorAbsolute";
-const REQUEST_SET_TOGGLES = "action.devices.commands.SetToggles";
-const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
-const REQUEST_OPENCLOSE = "action.devices.commands.OpenClose";
-const REQUEST_ARMDISARM = "action.devices.commands.ArmDisarm";
-const REQUEST_TIMERSTART = "action.devices.commands.TimerStart";
-const REQUEST_TIMERADJUST = "action.devices.commands.TimerAdjust";
-const REQUEST_TIMERPAUSE = "action.devices.commands.TimerPause";
-const REQUEST_TIMERRESUME = "action.devices.commands.TimerResume";
-const REQUEST_TIMERCANCEL = "action.devices.commands.TimerCancel";
-
-const commandMapping = {};
-commandMapping[REQUEST_SET_BRIGHTNESSABSOLUTE] = 'Brightness';
-commandMapping[REQUEST_SET_MODES] = 'Modes';
-commandMapping[REQUEST_ON_OFF] = 'On';
-commandMapping[REQUEST_SET_TARGET_TEMPERATURE] = 'TargetTemperature';
-commandMapping[REQUEST_SET_THERMOSTAT_MODE] = 'ThermostatModes';
-commandMapping[REQUEST_DOCK] = 'Dock';
-commandMapping[REQUEST_LOCATE] = 'Locate';
-commandMapping[REQUEST_STARTSTOP] = 'StartStop';
-commandMapping[REQUEST_PAUSEUNPAUSE] = 'StartStop';
-commandMapping[REQUEST_FANSPEED] = 'FanSpeed';
-commandMapping[REQUEST_FANSPEEDREVERSE] = 'FanSpeed';
-commandMapping[REQUEST_COLORABSOLUTE] = 'RGB';
-commandMapping[REQUEST_SET_TOGGLES] = 'Toggles';
-commandMapping[REQUEST_ACTIVATE_SCENE] = 'Scene';
-commandMapping[REQUEST_OPENCLOSE] = 'OpenClose';
-commandMapping[REQUEST_ARMDISARM] = 'ArmDisarm';
-commandMapping[REQUEST_TIMERSTART] = 'Timer';
-commandMapping[REQUEST_TIMERADJUST] = 'Timer';
-commandMapping[REQUEST_TIMERPAUSE] = 'Timer';
-commandMapping[REQUEST_TIMERRESUME] = 'Timer';
-commandMapping[REQUEST_TIMERCANCEL] = 'Timer';
 
 async function handleEXECUTE(uid, reqId, res, input) {
   try {
@@ -77,6 +32,57 @@ async function handleEXECUTE(uid, reqId, res, input) {
 }
 
 async function processEXECUTE(uid, reqId, input) {
+  
+    // trait commands => https://developers.google.com/actions/smarthome/traits/
+    const REQUEST_SET_BRIGHTNESSABSOLUTE = "action.devices.commands.BrightnessAbsolute";
+    const REQUEST_SET_MODES = "action.devices.commands.SetModes";
+    const REQUEST_ON_OFF = "action.devices.commands.OnOff";
+    const REQUEST_SET_TARGET_TEMPERATURE = "action.devices.commands.ThermostatTemperatureSetpoint";
+    const REQUEST_SET_THERMOSTAT_MODE = "action.devices.commands.ThermostatSetMode";
+    const REQUEST_DOCK = "action.devices.commands.Dock";
+    const REQUEST_LOCATE = "action.devices.commands.Locate";
+    const REQUEST_STARTSTOP = "action.devices.commands.StartStop";
+    const REQUEST_PAUSEUNPAUSE = "action.devices.commands.PauseUnpause";
+    const REQUEST_FANSPEED = "action.devices.commands.SetFanSpeed";
+    const REQUEST_FANSPEEDREVERSE = "action.devices.commands.Reverse";
+    const REQUEST_COLORABSOLUTE = "action.devices.commands.ColorAbsolute";
+    const REQUEST_SET_TOGGLES = "action.devices.commands.SetToggles";
+    const REQUEST_ACTIVATE_SCENE = "action.devices.commands.ActivateScene";
+    const REQUEST_OPENCLOSE = "action.devices.commands.OpenClose";
+    const REQUEST_ARMDISARM = "action.devices.commands.ArmDisarm";
+    const REQUEST_TIMERSTART = "action.devices.commands.TimerStart";
+    const REQUEST_TIMERADJUST = "action.devices.commands.TimerAdjust";
+    const REQUEST_TIMERPAUSE = "action.devices.commands.TimerPause";
+    const REQUEST_TIMERRESUME = "action.devices.commands.TimerResume";
+    const REQUEST_TIMERCANCEL = "action.devices.commands.TimerCancel";
+    const REQUEST_SET_TEMPERATURE = "action.devices.commands.SetTemperature";
+    const REQUEST_GET_CAMERASTREAM = "action.devices.commands.GetCameraStream";
+    
+    //map commands to the mapping within the device
+    const commandMapping = {};
+    commandMapping[REQUEST_SET_BRIGHTNESSABSOLUTE] = 'Brightness';
+    commandMapping[REQUEST_SET_MODES] = 'Modes';
+    commandMapping[REQUEST_ON_OFF] = 'On';
+    commandMapping[REQUEST_SET_TARGET_TEMPERATURE] = 'TargetTemperature';
+    commandMapping[REQUEST_SET_THERMOSTAT_MODE] = 'ThermostatModes';
+    commandMapping[REQUEST_DOCK] = 'Dock';
+    commandMapping[REQUEST_LOCATE] = 'Locate';
+    commandMapping[REQUEST_STARTSTOP] = 'StartStop';
+    commandMapping[REQUEST_PAUSEUNPAUSE] = 'StartStop';
+    commandMapping[REQUEST_FANSPEED] = 'FanSpeed';
+    commandMapping[REQUEST_FANSPEEDREVERSE] = 'FanSpeed';
+    commandMapping[REQUEST_COLORABSOLUTE] = 'RGB';
+    commandMapping[REQUEST_SET_TOGGLES] = 'Toggles';
+    commandMapping[REQUEST_ACTIVATE_SCENE] = 'Scene';
+    commandMapping[REQUEST_OPENCLOSE] = 'OpenClose';
+    commandMapping[REQUEST_ARMDISARM] = 'ArmDisarm';
+    commandMapping[REQUEST_TIMERSTART] = 'Timer';
+    commandMapping[REQUEST_TIMERADJUST] = 'Timer';
+    commandMapping[REQUEST_TIMERPAUSE] = 'Timer';
+    commandMapping[REQUEST_TIMERRESUME] = 'Timer';
+    commandMapping[REQUEST_TIMERCANCEL] = 'Timer';
+    commandMapping[REQUEST_SET_TEMPERATURE] = 'TemperatureControlSetCelsius';
+    commandMapping[REQUEST_GET_CAMERASTREAM] = 'CameraStream';
 
     let responses = [];
     let fhemExecCmd = [];
@@ -206,6 +212,14 @@ async function processEXECUTE(uid, reqId, input) {
                     responses.push(...await processEXECUTETimerStart(uid, reqId, device, exec.params, fhemExecCmd));
                     break;
 
+                case REQUEST_SET_TEMPERATURE:
+                    responses.push(...await processEXECUTESetTempearture(uid, reqId, device, exec.params.temperature, fhemExecCmd));
+                    break;
+
+                case REQUEST_GET_CAMERASTREAM:
+                    responses.push(...await processEXECUTEGetCameraStream(uid, reqId, device, exec.params, fhemExecCmd));
+                    break;
+
                 default:
                     //return unsupported operation
                     uiderror(uid, "Unsupported operation" + requestedName);
@@ -250,6 +264,25 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
 
     return res;
 }// processEXECUTETurnOff
+
+async function processEXECUTEGetCameraStream(uid, reqId, device, params, fhemExecCmd) {
+    let res = [];
+    var stateRes = {
+      cameraStreamAccessUrl: device.mappings.CameraStream.stream
+    }
+    
+    if (device.mappings.CameraStream.authToken) {
+      stateRes.cameraStreamAuthToken = device.mappings.CameraStream.authToken;
+    }
+
+    res.push({
+        ids: [device.uuid_base],
+        status: 'SUCCESS',
+        states: stateRes
+    });
+
+    return res;
+}// processEXECUTEGetCameraStream
 
 async function processEXECUTEArmDisarm(uid, reqId, device, params, fhemExecCmd) {
     var arm = false;
@@ -374,6 +407,19 @@ async function processEXECUTESetTargetTemperature(uid, reqId, device, targetTemp
         ids: [device.uuid_base]
     }];
 }; // processEXECUTESetTargetTemperature
+
+async function processEXECUTESetTempearture(uid, reqId, device, temperature, fhemExecCmd) {
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TemperatureControlSetCelsius, temperature));
+
+    return [{
+        states: {
+            temperatureSetpointCelsius: temperature
+            //FIXME temperatureAmbientCelsius: 0
+        },
+        status: 'success',
+        ids: [device.uuid_base]
+    }];
+};//processEXECUTESetTempearture
 
 async function processEXECUTESetThermostatMode(uid, reqId, device, thermostatMode, fhemExecCmd) {
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode));

@@ -2,14 +2,6 @@ const express = require('express');
 const localEXECUTE = require('./localhandleEXECUTE');
 const database = require('./database');
 
-const PORT = 3000;
-
-var bonjour = require('bonjour')();
-// advertise an HTTP server on port PORT
-var srv = bonjour.publish({ name: 'fhemconnect', type:'http', port: PORT, txt:{httpPath:'/fhemconnect/local',httpSSL:false,httpPort:PORT,version:'1.0'}});
-srv.start();
-
-
 var app = express();
 
 app.use(express.json());
@@ -62,6 +54,12 @@ app.post('/fhemconnect/local', async function (req, res) {
   }
 });
 
-app.listen(PORT, "0.0.0.0", function () {
-  console.log('FHEM Connect Google local home server running on port 3000!');
+var server = app.listen(0, "0.0.0.0", function () {
+  var serverPort = server.address().port;
+  console.log('FHEM Connect Google local home server running on port ' + serverPort);
+  
+  var bonjour = require('bonjour')();
+  // advertise an HTTP server on port PORT
+  var srv = bonjour.publish({ name: 'fhemconnect', type:'http', port: serverPort, txt:{httpPath:'/fhemconnect/local',httpSSL:false,httpPort:serverPort,version:'1.0'}});
+  srv.start();
 });

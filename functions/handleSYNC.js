@@ -54,7 +54,10 @@ var processSYNC = function (uid, devices) {
               || device.mappings.Locate
               || device.mappings.FanSpeed
               || device.mappings.Timer
-              || device.mappings.ArmDisarm) {
+              || device.mappings.ArmDisarm
+              || device.mappings.TemperatureControlSetCelsius
+              || device.mappings.TemperatureControlAmbientCelsius
+              || device.mappings.CameraStream) {
               //console.log(device);
   
               //console.log("Start handling ", device.ghomeName);
@@ -202,10 +205,8 @@ var processSYNC = function (uid, devices) {
   
               //TemperatureSetting
               if (device.mappings.TargetTemperature) {
-                  d.attributes = {
+                  d.attributes.thermostatTemperatureUnit = 'C';
                       //FIXME: do not define anything in server.js
-                      thermostatTemperatureUnit: 'C'
-                  };
                   if (device.mappings.ThermostatModes) {
                     //iterate over thermostat modes array
                     var modes = [];
@@ -219,13 +220,39 @@ var processSYNC = function (uid, devices) {
                   }
                   d.traits.push("action.devices.traits.TemperatureSetting");
               } else if (device.mappings.CurrentTemperature) {
-                  d.attributes = {
-                      //FIXME: do not define anything in server.js
-                      thermostatTemperatureUnit: 'C',
-                      availableThermostatModes: 'off',
-                      queryOnlyTemperatureSetting: true
-                  };
+                  d.attributes.thermostatTemperatureUnit = 'C';
+                  d.attributes.availableThermostatModes = 'off';
+                  d.attributes.queryOnlyTemperatureSetting = 'true';
                   d.traits.push("action.devices.traits.TemperatureSetting");
+              }
+              
+              //TemperatureControl
+              if (device.mappings.TemperatureControlSetCelsius || device.mappings.TemperatureControlAmbientCelsius) {
+                d.attributes.temperatureRange = {
+                  minThresholdCelsius: device.mappings.TemperatureControlSetCelsius.minCelsius ? device.mappings.TemperatureControlSetCelsius.minCelsius : 0,
+                  maxThresholdCelsius: device.mappings.TemperatureControlSetCelsius.maxCelsius ? device.mappings.TemperatureControlSetCelsius.maxCelsius : 300
+                };
+                d.attributes.temperatureStepCelsius = device.mappings.TemperatureControlSetCelsius.stepCelsius ? device.mappings.TemperatureControlSetCelsius.stepCelsius : 1;
+                d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlSetCelsius.formatUx ? device.mappings.TemperatureControlSetCelsius.formatUx : "C";
+                if (device.mappings.TemperatureControlSetCelsius && device.mappings.TemperatureControlAmbientCelsius) {
+                  d.attributes.queryOnlyTempeartureControl = false;
+                  d.attributes.commandOnlyTemperatureControl = false;
+                } else if (device.mappings.TemperatureControlSetCelsius) {
+                  d.attributes.queryOnlyTemperatureControl = false;
+                  d.attributes.commandOnlyTemperatureControl = true;
+                } else if (device.mappings.TemperatureControlAmbientCelsius) {
+                  d.attributes.queryOnlyTemperatureControl = true;
+                  d.attributes.commandOnlyTemperatureControl = false;
+                }
+                d.traits.push("action.devices.traits.TemperatureControl");
+              }
+              
+              //CameraStream
+              if (device.mappings.CameraStream) {
+                d.attributes.cameraStreamSupportedProtocols = device.mappings.CameraStream.supportedProtocols ? device.mappings.CameraStream.supportedProtocols : ['hls','dash','smooth_stream','progressive_mp4'];
+                d.attributes.cameraStreamNeedAuthToken = device.mappings.CameraStream.authToken ? true : false;
+                d.attributes.cameraStreamNeedDrmEncryption = device.mappings.CameraStream.drm ? device.mappings.CameraStream.drm : false;
+                d.traits.push("action.devices.traits.CameraStream");
               }
   
               //ColorSetting / ColorTemperature
