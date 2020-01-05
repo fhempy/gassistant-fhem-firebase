@@ -51,12 +51,10 @@ Logger.prototype.log = function (level, msg) {
 
     if (level == 'debug') {
         msg = msg;
-    }
-    else if (level == 'warn') {
+    } else if (level == 'warn') {
         msg = msg;
         func = console.error;
-    }
-    else if (level == 'error') {
+    } else if (level == 'error') {
         msg = msg;
         func = console.error;
     }

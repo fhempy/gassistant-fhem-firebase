@@ -11,7 +11,7 @@ async function checkClientConnection(uid) {
   try {
     var clientstate = await utils.getRealDB().ref('/users/' + uid + '/heartbeat').once('value');
     uidlog(uid, 'check client connection: ' + JSON.stringify(clientstate.val()));
-    if ((clientstate.val() && clientstate.val().active && (clientstate.val().time+65000) > Date.now()) || clientstate.val() === null) {
+    if ((clientstate.val() && clientstate.val().active && (clientstate.val().time + 65000) > Date.now()) || clientstate.val() === null) {
       connectionOk = 1;
       clientConnectionOk[uid] = 1;
     } else {
@@ -33,16 +33,22 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
   const app = express();
   app.use(cors());
   app.use(bodyParser.json());
-  app.use(bodyParser.urlencoded({extended: true}));
+  app.use(bodyParser.urlencoded({
+    extended: true
+  }));
   app.use(utils.jwtCheck);
-  app.use(function(req, res, next) {
-    const {sub: uid} = req.user;
+  app.use(function (req, res, next) {
+    const {
+      sub: uid
+    } = req.user;
     uidlog(uid, 'Function called: ' + req.originalUrl);
     next();
   });
 
   app.post('/smarthome', async (req, res) => {
-    const {sub: uid} = req.user;
+    const {
+      sub: uid
+    } = req.user;
     checkClientConnection(uid);
     uidlog(uid, 'received ' + JSON.stringify(req.body));
     const reqId = req.body.requestId;
@@ -65,7 +71,9 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
       } else {
         //report client not connected
         error = require('./handleERROR');
-        await error.handleERROR(uid, reqId, res, input, {clientnotconnected: 1});
+        await error.handleERROR(uid, reqId, res, input, {
+          clientnotconnected: 1
+        });
       }
     } else if (intent == 'action.devices.EXECUTE') {
       //EXECUTE
@@ -75,7 +83,9 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
       } else {
         //report client not connected
         error = require('./handleERROR');
-        await error.handleERROR(uid, reqId, res, input, {clientnotconnected: 1});
+        await error.handleERROR(uid, reqId, res, input, {
+          clientnotconnected: 1
+        });
       }
     } else if (intent == 'action.devices.DISCONNECT') {
       //DISCONNECT
@@ -83,11 +93,11 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
       await disconnect.handleDISCONNECT(uid, reqId, res);
     }
   });
-  
+
   require('./clientapi').registerClientApi(app);
-  
+
   const api = functions.region('europe-west1').https.onRequest(app);
-  
+
   exports["api"] = api;
 } //api/smarthome
 

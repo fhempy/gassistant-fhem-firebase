@@ -11,16 +11,23 @@ const uidlog = require('./logger.js').uidlog;
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
 
 app.get('/token', utils.jwtCheck, (req, res) => {
-  const {sub: uid} = req.user;
+  const {
+    sub: uid
+  } = req.user;
   uidlog(uid, 'firebase ' + JSON.stringify(req.user));
   try {
     admin.auth().createCustomToken(uid)
-      .then(function(firebaseToken) {
+      .then(function (firebaseToken) {
         uidlog(uid, 'return firebase token: ' + firebaseToken);
-        res.json({firebase_token: firebaseToken, uid: uid});
+        res.json({
+          firebase_token: firebaseToken,
+          uid: uid
+        });
       });
   } catch (err) {
     res.status(500).send({

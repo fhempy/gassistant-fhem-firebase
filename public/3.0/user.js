@@ -18,31 +18,30 @@ var config;
 var customStoragePath;
 var configPath;
 
-function User() {
-}
-  
-User.config = function() {
+function User() {}
+
+User.config = function () {
   return config || (config = Config.load(User.configPath()));
 }
-  
-User.storagePath = function() {
+
+User.storagePath = function () {
   if (customStoragePath) return customStoragePath;
   var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE || '/home/pi';
   return path.join(home, ".fhemconnect");
 }
 
-User.configPath = function() {
+User.configPath = function () {
   return configPath ? configPath : path.join(User.storagePath(), "config.json");
 }
 
-User.persistPath = function() {
+User.persistPath = function () {
   return path.join(User.storagePath(), "persist");
 }
 
-User.setStoragePath = function(path) {
+User.setStoragePath = function (path) {
   customStoragePath = path;
 }
 
-User.setConfigPath = function(path) {
+User.setConfigPath = function (path) {
   configPath = path;
 }

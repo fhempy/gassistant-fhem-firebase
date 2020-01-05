@@ -6,7 +6,11 @@ const uidlog = require('./logger').uidlog;
 
 
 async function setDisconnected(uid) {
-  await admin.firestore().collection(uid).doc('state').set({disconnected: 1}, {merge: true});
+  await admin.firestore().collection(uid).doc('state').set({
+    disconnected: 1
+  }, {
+    merge: true
+  });
 };
 
 async function handleDISCONNECT(uid, reqId, res) {
@@ -32,7 +36,7 @@ async function deleteUserCollection(uid) {
   for (var r of ref.docs) {
     batch.delete(r.ref);
   }
-  
+
   await batch.commit();
 }
 
@@ -40,13 +44,14 @@ async function deleteHomegraph(uid) {
   var google_token = await utils.getGoogleToken();
   if (!google_token)
     google_token = await utils.retrieveGoogleToken(uid);
-    
+
   uidlog(uid, 'google token: ' + google_token);
-  
+
   //report state
   const fetch = require('node-fetch');
-  for (var i=0; i<2; i++) {
-    var options = { method: 'DELETE',
+  for (var i = 0; i < 2; i++) {
+    var options = {
+      method: 'DELETE',
       headers: {
         Authorization: 'Bearer ' + google_token,
         'X-GFE-SSL': 'yes',
@@ -55,7 +60,7 @@ async function deleteHomegraph(uid) {
     };
     const deleteRes = await fetch('https://homegraph.googleapis.com/v1/{' + uid + '=agentUsers/**}', options);
     uidlog(uid, 'deletehomegraphres: ' + deleteRes.status);
-    
+
     if (deleteRes.status == 401) {
       google_token = await utils.retrieveGoogleToken(uid);
     } else {

@@ -13,29 +13,45 @@ const hquery = require('./handleQUERY');
 const app3 = express();
 app3.use(cors());
 app3.use(bodyParser.json());
-app3.use(bodyParser.urlencoded({extended: true}));
+app3.use(bodyParser.urlencoded({
+  extended: true
+}));
 app3.use(utils.jwtCheck);
-app3.use(function(req, res, next) {
-  const {sub: uid} = req.user;
+app3.use(function (req, res, next) {
+  const {
+    sub: uid
+  } = req.user;
   uidlog(uid, 'Function called: ' + req.originalUrl);
   next();
 });
 
 app3.post('/singledevice', async (req, res) => {
-  const {sub: uid} = req.user;
+  const {
+    sub: uid
+  } = req.user;
   const device = req.body.device;
 
   //reportstate
-  await utils.reportState(uid, device);
+  try {
+    await utils.reportState(uid, device);
+  } catch (err) {
+    uiderror(uid, "Error in ReportState (" + device + "): " + err, err);
+  }
   res.send({});
 });
 
 app3.get('/alldevices', async (req, res) => {
-  const {sub: uid} = req.user;
+  const {
+    sub: uid
+  } = req.user;
   const device = req.body.device;
 
   //reportstate all
-  await utils.reportState(uid);
+  try {
+    await utils.reportState(uid);
+  } catch (err) {
+    uiderror(uid, "Error in ReportState: " + err, err);
+  }
   res.send({});
 });
 

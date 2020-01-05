@@ -20,8 +20,8 @@ var Auth0Strategy = require('passport-auth0');
 
 var sess = {
   store: new FirebaseStore({
-         database: firebase.database()
-    }),
+    database: firebase.database()
+  }),
   name: '__session',
   secret: settings.COOKIE_SECRET,
   cookie: {
@@ -32,8 +32,7 @@ var sess = {
 };
 
 // Configure Passport to use Auth0
-var strategy = new Auth0Strategy(
-  {
+var strategy = new Auth0Strategy({
     domain: settings.AUTH0_LOGIN_DOMAIN,
     clientID: settings.AUTH0_WEB_CLIENTID,
     clientSecret: settings.AUTH0_WEB_CLIENTSECRET,
@@ -49,11 +48,11 @@ var strategy = new Auth0Strategy(
 
 passport.use(strategy);
 
-passport.serializeUser(function(user, done) {
+passport.serializeUser(function (user, done) {
   done(null, user);
 });
 
-passport.deserializeUser(function(user, done) {
+passport.deserializeUser(function (user, done) {
   done(null, user);
 });
 
@@ -68,7 +67,7 @@ app.use(session(sess));
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   var uid = 'unknown';
   if (req.user) {
     uid = req.user.id;
@@ -92,30 +91,44 @@ app.use(function (req, res, next) {
 app.use('/', authRouter);
 
 var secured = function () {
-  return function secured (req, res, next) {
-    if (req.user) { return next(); }
+  return function secured(req, res, next) {
+    if (req.user) {
+      return next();
+    }
     req.session.returnTo = req.originalUrl;
     res.redirect('/admin/login');
   };
 };
 
 app.get('/listversions', secured(), async (req, res) => {
-  const {id: uid} = req.user;
+  const {
+    id: uid
+  } = req.user;
   if (uid === settings.ADMIN_UID) {
     var result = '';
-    var colRefs = await utils.getFirestoreDB().getCollections();
+    const allHbRef = await utils.getRealDB().ref('/users/').once('value');
+    var colRefs = await utils.getFirestoreDB().listCollections();
+    var docRefs = [];
+    for (let col of colRefs) {
+      docRefs.push(col.doc('client'));
+    }
+    var allDocs = await utils.getFirestoreDB().getAll(...docRefs);
+    
+    var i=0;
     for (let col of colRefs) {
       result = result + col.id + ":";
-      const doc = await col.doc('client').get();
+      const doc = allDocs[i];
       if (doc.exists && doc.data().packageversion) {
         result = result + doc.data().packageversion;
       }
-      const hbRef = await utils.getRealDB().ref('/users/' + col.id + '/heartbeat').once('value');
-      if (hbRef.val() && hbRef.val().time) {
-        if (hbRef.val().time > (Date.now() - 600000)) {
-          result = result + ":ACTIVE";
-        } else {
-          result = result + ":-";
+      if (allHbRef.val()[col.id] && allHbRef.val()[col.id].heartbeat) {
+        const hbRef = allHbRef.val()[col.id].heartbeat;
+        if (hbRef.time) {
+          if (hbRef.time > (Date.now() - 600000)) {
+            result = result + ":ACTIVE";
+          } else {
+            result = result + ":-";
+          }
         }
       }
       result = result + "<br>";

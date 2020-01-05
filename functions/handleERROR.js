@@ -6,6 +6,8 @@ const uidlog = require('./logger').uidlog;
 
 exports.handleERROR = async function handleERROR(uid, reqId, res, input, errorcode) {
   if (errorcode && errorcode.clientnotconnected) {
-    res.send(utils.createDirective(reqId, {errorCode: 'deviceOffline'}));
+    res.send(utils.createDirective(reqId, {
+      errorCode: 'deviceOffline'
+    }));
   }
 }
