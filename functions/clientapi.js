@@ -431,8 +431,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.On = {
       reading: 'in_cleaning',
       valueOff: 'no',
-      cmdOn: 'on',
-      cmdOff: 'off'
+      cmdOn: 'start',
+      cmdOff: 'charge'
     };
     mappings.Dock = {
       reading: 'state',
@@ -1265,6 +1265,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdOn: 'POWERON',
       cmdOff: 'POWEROFF'
     };
+  } else if (s.Internals.TYPE === 'SamsungAV') {
+    mappings.On = {
+      reading: 'state',
+      valueOff: 'absent',
+      cmdOn: 'poweron',
+      cmdOff: 'poweroff'
+    };
   }
 
   //SERVICENAME
@@ -1472,9 +1479,14 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
 
   if (homebridgeMapping.match(/^{.*}$/s)) {
     try {
-      homebridgeMapping = homebridgeMapping.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
-
-      homebridgeMapping = JSON.parse(homebridgeMapping);
+      try {
+        homebridgeMapping = JSON.parse(homebridgeMapping);
+        uidlog(uid, "homebridgeMapping JSON: ok");
+      } catch (err) {
+        homebridgeMapping = homebridgeMapping.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
+        uidlog(uid, 'homebridgeMapping formatted: ' + homebridgeMapping);  
+        homebridgeMapping = JSON.parse(homebridgeMapping);
+      }
 
       if (homebridgeMapping.clear)
         mappings = {};
@@ -1482,13 +1494,18 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
       for (let characteristic in homebridgeMapping) {
         if (!mappings[characteristic])
           mappings[characteristic] = {};
-        for (let attrname in homebridgeMapping[characteristic])
-          mappings[characteristic][attrname] = homebridgeMapping[characteristic][attrname];
+
+        if (Array.isArray(homebridgeMapping[characteristic])) {
+          mappings[characteristic] = homebridgeMapping[characteristic];
+        } else {
+          for (let attrname in homebridgeMapping[characteristic])
+            mappings[characteristic][attrname] = homebridgeMapping[characteristic][attrname];
+        }
       }
 
       return mappings;
     } catch (err) {
-      uiderror(uid, 'JSON error: ' + err);
+      uiderror(uid, 'JSON error in homebridgeMapping: ' + JSON.stringify(homebridgeMapping) + " => " + err);
       return undefined;
     }
   }
