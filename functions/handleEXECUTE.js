@@ -764,7 +764,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
         cmd = mapping.cmdClose;
 
       else if (typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined)
-        cmd = mapping.homekit2cmd[value];
+        cmd = mapping.homekit2cmd[value].replace(';', ';set ' + mapping.device + ' ');
 
       else if (typeof mapping.homekit2cmd_re === 'object') {
         for (var entry of mapping.homekit2cmd_re) {

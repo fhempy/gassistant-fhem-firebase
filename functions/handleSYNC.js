@@ -122,6 +122,8 @@ var processSYNC = function (uid, devices) {
             d.type = 'action.devices.types.BLINDS';
           } else if (device.mappings.Scene) {
             d.type = 'action.devices.types.SCENE';
+          } else if (device.mappings.CameraStream) {
+            d.type = 'action.devices.types.CAMERA';
           } else {
             d.type = 'action.devices.types.SWITCH';
           }
