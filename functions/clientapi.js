@@ -1186,7 +1186,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
     }
   } else if (s.Internals.TYPE === 'MQTT2_DEVICE') {
-    if (s.Attributes.model === "zigbee2mqtt_light_rgb_rgb") {
+    if (s.Attributes.model === "zigbee2mqtt_light_rgb_hex") {
       if (!service_name) service_name = "light";
       mappings.On = {
         reading: 'state',
@@ -1196,7 +1196,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.Brightness = {
         reading: 'brightness',
-        cmd: 'brightness'
+        cmd: 'brightness',
+        max: 255,
+        maxValue: 100
       };
       mappings.RGB = {
         reading: 'hex',
