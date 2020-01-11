@@ -61,6 +61,8 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_TIMERCANCEL = "action.devices.commands.TimerCancel";
   const REQUEST_SET_TEMPERATURE = "action.devices.commands.SetTemperature";
   const REQUEST_GET_CAMERASTREAM = "action.devices.commands.GetCameraStream";
+  const REQUEST_EFFECT_COLORLOOP = "action.devices.commands.ColorLoop";
+  const REQUEST_EFFECT_STOP = "action.devices.commands.StopEffect";
 
   //map commands to the mapping within the device
   const commandMapping = {};
@@ -87,6 +89,8 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_TIMERCANCEL] = 'Timer';
   commandMapping[REQUEST_SET_TEMPERATURE] = 'TemperatureControlSetCelsius';
   commandMapping[REQUEST_GET_CAMERASTREAM] = 'CameraStream';
+  commandMapping[REQUEST_EFFECT_COLORLOOP] = 'LightEffects';
+  commandMapping[REQUEST_EFFECT_STOP] = 'LightEffects';
 
   let responses = [];
   let fhemExecCmd = [];
@@ -182,6 +186,14 @@ async function processEXECUTE(uid, reqId, input) {
 
           case REQUEST_SET_BRIGHTNESSABSOLUTE:
             response = await processEXECUTEBrightnessAbsolute(uid, reqId, device, exec.params.brightness, fhemExecCmd);
+            break;
+
+          case REQUEST_EFFECT_COLORLOOP:
+            response = await processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd);
+            break;
+
+          case REQUEST_EFFECT_STOP:
+            response = await processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd);
             break;
 
           case REQUEST_SET_TARGET_TEMPERATURE:
@@ -315,6 +327,36 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
 
   return res;
 } // processEXECUTETurnOff
+
+async function processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffects, "colorLoop"));
+
+  let res = [];
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      on: true,
+      activeLightEffect: 'colorLoop'
+    }
+  });
+  return res;
+} // processEXECUTESetEffectColorLoop
+
+async function processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffects, "none"));
+
+  let res = [];
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      on: true,
+      activeLightEffect: ''
+    }
+  });
+  return res;
+} // processEXECUTESetEffectStop
 
 async function processEXECUTEGetCameraStream(uid, reqId, device, readings, params, fhemExecCmd) {
   let res = [];

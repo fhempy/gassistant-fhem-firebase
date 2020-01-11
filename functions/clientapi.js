@@ -245,6 +245,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
+  if (match = s.PossibleSets.match(/(^| )effect:none,colorloop\b/)) {
+    mappings.LightEffects = {
+      reading: 'effect',
+      values: ['/colorloop/:colorLoop', '/.*/:none'],
+      cmds: ['colorLoop:effect colorloop', 'none:effect none']
+    };
+  }
+
   if (match = s.PossibleSets.match(/(^| )hue(:[^\b\s]*(,(\d+))+)?\b/)) {
     max = 359;
     if (match[4] !== undefined)

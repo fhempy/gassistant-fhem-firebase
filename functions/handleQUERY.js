@@ -195,6 +195,13 @@ async function processQUERY(uid, input, reportstate) {
       }
     }
 
+    //action.devices.traits.LightEffects
+    if (device.mappings.LightEffects) {
+      devices[d.id].activeLightEffect = await utils.cached2Format(uid, device.mappings.LightEffects, readings);
+      if ( devices[d.id].activeLightEffect === "none")
+        devices[d.id].activeLightEffect = "";
+    }
+
     //action.devices.traits.Dock
     if (device.mappings.Dock) {
       devices[d.id].isDocked = await utils.cached2Format(uid, device.mappings.Dock, readings);

@@ -72,7 +72,8 @@ var processSYNC = function (uid, devices) {
         device.mappings.ArmDisarm ||
         device.mappings.TemperatureControlSetCelsius ||
         device.mappings.TemperatureControlAmbientCelsius ||
-        device.mappings.CameraStream) {
+        device.mappings.CameraStream ||
+        device.mappings.LightEffects) {
         //console.log(device);
 
         //console.log("Start handling ", device.ghomeName);
@@ -306,6 +307,17 @@ var processSYNC = function (uid, devices) {
           if (device.mappings.Hue.commandOnlyColorSetting)
             d.attributes.commandOnlyColorSetting = true;
           d.traits.push("action.devices.traits.ColorSetting");
+        }
+
+        //LightEffects
+        if (device.mappings.LightEffects) {
+          d.attributes.supportedEffects = [];
+          device.mappings.LightEffects.cmds.forEach(function (cmd) {
+            var match = cmd.match(/(.*):(.*)/);
+            if (match)
+              d.attributes.supportedEffects.push(match[1]);
+          });
+          d.traits.push("action.devices.traits.LightEffects");
         }
 
         //Scene
