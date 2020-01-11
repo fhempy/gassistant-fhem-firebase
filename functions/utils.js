@@ -812,11 +812,11 @@ async function checkLinkedDevices(uid, device) {
     for (var ld of device.mappings.LinkedDevices.devices) {
       //devicename: ld.id
       //blocking: ld.blocking
-      var linkedDevice = await utils.getDeviceAndReadings(uid, ld.id);
+      var linkedDevice = await getDeviceAndReadings(uid, ld.id);
       //check for exceptions in linkedDevice
       if (linkedDevice.device.mappings.Exceptions) {
         for (var exception_name in linkedDevice.device.mappings.Exceptions) {
-          if (await utils.cached2Format(uid, linkedDevice.device.mappings.Exceptions[exception_name], linkedDevice.readings) === "EXCEPTION") {
+          if (await cached2Format(uid, linkedDevice.device.mappings.Exceptions[exception_name], linkedDevice.readings) === "EXCEPTION") {
             if (ld.blocking)
               isBlocking = true;
             currentStatusReport.push({

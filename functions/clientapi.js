@@ -1322,6 +1322,44 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
   uidlog(uid, 'mappings for ' + s.Internals.NAME + ': ' + util.inspect(mappings));
 
+  //SIMPLE MAPPINGS
+  if (mappings.SimpleModes) {
+    mappings.Modes = [];
+    
+    if (!Array.isArray(mappings.SimpleModes))
+      mappings.SimpleModes = [mappings.SimpleModes];
+
+    for (var m in mappings.SimpleModes) {
+      var language = 'de';
+      var mode = {
+        cmds: [],
+        mode_attributes: {
+          settings: []
+        }
+      };
+      for (var synName in mappings.SimpleModes[m]) {
+        if (synName == "reading") {
+          mode.reading = mappings.SimpleModes[m].reading;
+        } else if (synName == "lang") {
+          language = mappings.SimpleModes[m].lang;
+        } else if (synName == "name") {
+          mode.mode_attributes.name = mappings.SimpleModes[m].name;
+          mode.mode_attributes.name_values = [{name_synonym: [mappings.SimpleModes[m].name], lang: language}];
+        } else {
+          mode.mode_attributes.settings.push({
+            setting_name: synName,
+            setting_values: [{
+              setting_synonym: [synName],
+              lang: language
+            }]});
+          mode.cmds.push(synName + ':' + mappings.SimpleModes[m][synName]);
+        }
+      }
+      mappings.Modes.push(mode);
+    }
+    delete mappings.SimpleModes;
+  }
+
   if (service_name !== undefined) {
     uidlog(uid, s.Internals.NAME + ' is ' + service_name);
   } else if (!mappings) {
@@ -1552,7 +1590,7 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
       try {
         mappings[characteristic] = JSON.parse(params);
       } catch (err) {
-        uiderror(uid, '  fromHomebridgeMapping JSON.parse: ' + err);
+        uiderror(uid, '  fromHomebridgeMapping JSON.parse (' + params + '): ' + err, err);
         return;
       }
       continue;
