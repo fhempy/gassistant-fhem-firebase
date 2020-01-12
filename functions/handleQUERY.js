@@ -53,7 +53,7 @@ async function processQUERY(uid, input, reportstate) {
       device = dd.device;
       readings = dd.readings;
     } catch (err) {
-      uiderror(uid, 'getDeviceReadingValues failed with ' + err.stack, err);
+      uiderror(uid, 'FAILED TO LOAD ' + d.customData.device + ', getDeviceReadingValues failed with ' + err, err);
       continue;
     }
 
