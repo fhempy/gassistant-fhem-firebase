@@ -123,8 +123,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.Brightness = {
       reading: 'state',
-      cmd: 'dim',
-      delay: true
+      cmd: 'dim'
     };
 
     mappings.Brightness.reading2homekit = function (mapping, orig) {
@@ -164,8 +163,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.Brightness = {
       reading: 'pct',
-      cmd: 'pct',
-      delay: true
+      cmd: 'pct'
     };
 
   } else if (match = s.PossibleSets.match(/(^| )dim\d+%/)) {
@@ -178,8 +176,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.Brightness = {
       reading: 'state',
-      cmd: ' ',
-      delay: true
+      cmd: ' '
     };
 
     mappings.Brightness.reading2homekit = function (mapping, orig) {
@@ -285,8 +282,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       reading: 'brightness',
       cmd: 'dim',
       max: 100,
-      maxValue: 100,
-      delay: true
+      maxValue: 100
     };
     if (s.PossibleSets.match(/(^| )hue\b/) && s.PossibleSets.match(/(^| )saturation\b/)) {
       mappings.Hue = {
@@ -305,8 +301,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'brightness',
         cmd: 'dim',
         max: 100,
-        maxValue: 1,
-        delay: true
+        maxValue: 1
       };
     }
 
@@ -880,8 +875,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     // MAX / EQ3BT
     mappings.TargetTemperature = {
       reading: 'desiredTemperature',
-      cmd: 'desiredTemperature',
-      delay: true
+      cmd: 'desiredTemperature'
     };
 
     // if (s.Readings.valveposition)
@@ -924,8 +918,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     //PID20
     mappings.TargetTemperature = {
       reading: 'desired',
-      cmd: 'desired',
-      delay: true
+      cmd: 'desired'
     };
 
     // if (s.Readings.actuation)

@@ -25,15 +25,15 @@ async function processQUERY(uid, input, reportstate) {
   let devices = {};
   var allDevices;
 
-  if (input.payload.devices.length > 1) {
-    //preload all devices
-    try {
-      allDevices = await utils.getAllDevicesAndReadings(uid);
-      uidlog(uid, "getAllDevicesAndReadings finished");
-    } catch (err) {
-      uiderror(uid, 'getAllDevicesAndReadings failed with ' + err.stack, err);
-    }
+  //if (input.payload.devices.length > 1) {
+  //preload all devices
+  try {
+    allDevices = await utils.getAllDevicesAndReadings(uid);
+    uidlog(uid, "getAllDevicesAndReadings finished");
+  } catch (err) {
+    uiderror(uid, 'getAllDevicesAndReadings failed with ' + err.stack, err);
   }
+  //}
 
   for (d of input.payload.devices) {
     let device;
@@ -53,7 +53,7 @@ async function processQUERY(uid, input, reportstate) {
       device = dd.device;
       readings = dd.readings;
     } catch (err) {
-      uiderror(uid, 'FAILED TO LOAD ' + d.customData.device + ', getDeviceReadingValues failed with ' + err, err);
+      uiderror(uid, 'FAILED TO LOAD ' + d.customData.device + ' try reload, getDeviceReadingValues failed with ' + err, err);
       continue;
     }
 
@@ -135,7 +135,7 @@ async function processQUERY(uid, input, reportstate) {
     //OnOff
     if (device.mappings.On) {
       var reachable = 1;
-      const turnedOn = await utils.cached2Format(uid, device.mappings.On, readings);
+      const turnedOn = await utils.cached2Format(uid, device.mappings.On, allDevices[device.mappings.On.device].readings);
       if (device.mappings.Reachable) {
         reachable = await utils.cached2Format(uid, device.mappings.Reachable, readings);
       }
@@ -198,7 +198,7 @@ async function processQUERY(uid, input, reportstate) {
     //action.devices.traits.LightEffects
     if (device.mappings.LightEffects) {
       devices[d.id].activeLightEffect = await utils.cached2Format(uid, device.mappings.LightEffects, readings);
-      if ( devices[d.id].activeLightEffect === "none")
+      if (devices[d.id].activeLightEffect === "none")
         devices[d.id].activeLightEffect = "";
     }
 
@@ -298,7 +298,7 @@ async function processQUERY(uid, input, reportstate) {
         }
       }
     }
-    if (devices[d.id].currentStatusReport.length == 0){
+    if (devices[d.id].currentStatusReport.length == 0) {
       delete devices[d.id].status;
       delete devices[d.id].currentStatusReport;
     }

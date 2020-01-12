@@ -100,8 +100,7 @@ async function processEXECUTE(uid, reqId, input) {
 
   for (cmd of input.payload.commands) {
     for (exec of cmd.execution) {
-      if (cmd.devices.length > 1)
-        allDevices = await utils.getAllDevicesAndReadings(uid);
+      allDevices = await utils.getAllDevicesAndReadings(uid);
 
       for (d of cmd.devices) {
         if (allDevices && allDevices[d.customData.device]) {
@@ -159,22 +158,33 @@ async function processEXECUTE(uid, reqId, input) {
           }
         }
 
-        //Errors check
-        if (device.mappings.Errors) {
-          var errFound = false;
-          for (var er in device.mappings.Errors) {
-            const errCheck = await utils.cached2Format(uid, device.mappings.Errors[er], readings);
-            if (errCheck === "ERROR") {
-              responses.push({
-                ids: [device.uuid_base],
-                status: 'ERROR',
-                errorCode: er
-              });
-              errFound = true;
-            }
+        if (device.mappings.On && device.mappings.On.device !== device.name && requestedName !== REQUEST_ON_OFF) {
+          //prevent error check if there is another device which activates the device (e.g. shelly + Hue)
+          if (await utils.cached2Format(uid, device.mappings.On, allDevices[device.mappings.On.device].readings) === false) {
+            //only if device is OFF
+            response = await processEXECUTEOnOff(uid, reqId, device, 1, fhemExecCmd);
+            responses.push(...response);
           }
-          if (errFound) {
-            continue;
+        } else {
+          if (requestedName !== REQUEST_ON_OFF || (requestedName === REQUEST_ON_OFF && device.mappings.On.device === device.name)) {
+            //Errors check
+            if (device.mappings.Errors) {
+              var errFound = false;
+              for (var er in device.mappings.Errors) {
+                const errCheck = await utils.cached2Format(uid, device.mappings.Errors[er], readings);
+                if (errCheck === "ERROR") {
+                  responses.push({
+                    ids: [device.uuid_base],
+                    status: 'ERROR',
+                    errorCode: er
+                  });
+                  errFound = true;
+                }
+              }
+              if (errFound) {
+                continue;
+              }
+            }
           }
         }
 
@@ -825,6 +835,10 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
 
     command = 'set ' + mapping.device + ' ' + cmd;
 
+  }
+
+  if (mapping.delayAfter) {
+    command = command + ";sleep 1";
   }
 
   if (command === undefined) {

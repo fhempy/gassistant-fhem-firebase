@@ -319,8 +319,8 @@ async function loadDevices(uid, nocache) {
             'timestamp': lastSyncTs,
             'readings': {}
           };
-          try{
-            prepareDevice(uid, allDevicesCache[uid]['devices'][child.val().name]['device']);  
+          try {
+            prepareDevice(uid, allDevicesCache[uid]['devices'][child.val().name]['device']);
             devices[child.val().name] = allDevicesCache[uid]['devices'][child.val().name]['device'];
           } catch (err) {
             uiderror(uid, "Error with device " + child.val().name + ": " + err);
@@ -353,6 +353,12 @@ async function getAllDevicesAndReadings(uid) {
     tmpReadings = {};
 
     device.forEach(function (child) {
+      if (!allDevicesCache[uid]['devices'][child.val().devname])
+        allDevicesCache[uid]['devices'][child.val().devname] = {
+          'timestamp': -1,
+          'device': {},
+          'readings': {}
+        };
       allDevicesCache[uid]['devices'][child.val().devname]['readings'][child.key] = child.val().value;
     });
   });
@@ -830,7 +836,10 @@ async function checkLinkedDevices(uid, device) {
       }
     }
   }
-  return {report: currentStatusReport, blocking: isBlocking};
+  return {
+    report: currentStatusReport,
+    blocking: isBlocking
+  };
 }
 
 function FHEM_reading2homekit(uid, mapping, readings) {
