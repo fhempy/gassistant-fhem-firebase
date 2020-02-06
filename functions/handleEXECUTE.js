@@ -1,7 +1,6 @@
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const utils = require('./utils');
-const createDirective = require('./utils').createDirective;
 const settings = require('./settings.json');
 var compareVersions = require('compare-versions');
 
@@ -24,12 +23,12 @@ async function handleEXECUTE(uid, reqId, res, input) {
         }
       }
     }
-    var response = createDirective(reqId, payload);
+    var response = utils.createDirective(reqId, payload);
     uidlog(uid, 'response: ' + JSON.stringify(response));
     res.send(response);
   } catch (err) {
     uiderror(uid, err, err);
-    res.send(createDirective(reqId, {
+    res.send(utils.createDirective(reqId, {
       errorCode: 'hardError'
     }));
   }
@@ -299,15 +298,7 @@ async function processEXECUTE(uid, reqId, input) {
   for (var c of fhemExecCmd) {
     fcmds[c.connection] = fcmds[c.connection] ? fcmds[c.connection] + ';' + c.cmd : c.cmd;
   }
-  for (var c in fcmds) {
-    await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
-      msg: 'EXECUTE',
-      id: 0,
-      cmd: fcmds[c],
-      connection: c,
-      ts: Date.now()
-    });
-  }
+  utils.sendCmd2Fhem(uid, fcmds);
 
   //create response payload
   return {
@@ -812,7 +803,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
       else if (mapping.cmdOpen !== undefined && ((value >= 50 && !mapping.invert) || (value < 50 && mapping.invert === true)))
         cmd = mapping.cmdOpen;
 
-      else if (mapping.cmdOpen !== undefined && ((value < 50 && !mapping.invert) || (value >= 50 && mapping.invert === true)))
+      else if (mapping.cmdClose !== undefined && ((value < 50 && !mapping.invert) || (value >= 50 && mapping.invert === true)))
         cmd = mapping.cmdClose;
 
       else if (typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined)
@@ -838,7 +829,12 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
   }
 
   if (mapping.delayAfter) {
-    command = command + ";sleep 1";
+    var sleepVal = parseInt(mapping.delayAfter);
+    if (isNaN(sleepVal)) {
+      command = command + ";sleep 1";
+    } else {
+      command = command + ";sleep " + sleepVal;
+    }
   }
 
   if (command === undefined) {
@@ -858,5 +854,26 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
 }
 
 module.exports = {
-  handleEXECUTE
+  handleEXECUTE,
+  processEXECUTE,
+  processEXECUTEOnOff,
+  processEXECUTESetEffectColorLoop,
+  processEXECUTESetEffectStop,
+  processEXECUTEGetCameraStream,
+  processEXECUTEArmDisarm,
+  processEXECUTETimerStart,
+  processEXECUTESetOpenClose,
+  processEXECUTEBrightnessAbsolute,
+  processEXECUTESetTargetTemperature,
+  processEXECUTESetThermostatMode,
+  processEXECUTEDock,
+  processEXECUTELocate,
+  processEXECUTEStartStop,
+  processEXECUTEPauseUnpause,
+  processEXECUTESetFanSpeed,
+  processEXECUTESetColorAbsolute,
+  processEXECUTESetToggles,
+  processEXECUTEActivateScene,
+  processEXECUTESetModes,
+  execFHEMCommand
 };

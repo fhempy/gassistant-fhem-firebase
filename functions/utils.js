@@ -148,6 +148,18 @@ const jwtCheck = jwt({
   algorithms: ['RS256']
 });
 
+async function sendCmd2Fhem(uid, fcmds) {
+  for (var c in fcmds) {
+    await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
+      msg: 'EXECUTE',
+      id: 0,
+      cmd: fcmds[c],
+      connection: c,
+      ts: Date.now()
+    });
+  }
+}
+
 function createDirective(reqId, payload) {
   return {
     requestId: reqId,
@@ -918,5 +930,6 @@ module.exports = {
   rateLimiter,
   getClientVersion,
   getGoogleDeviceTypes,
-  getGoogleDeviceTypesMappings
+  getGoogleDeviceTypesMappings,
+  sendCmd2Fhem
 };

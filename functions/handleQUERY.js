@@ -70,16 +70,20 @@ async function processQUERY(uid, input, reportstate) {
     }
 
     //Errors check
-    if (device.mappings.Errors) {
-      for (var er in device.mappings.Errors) {
-        const errCheck = await utils.cached2Format(uid, device.mappings.Errors[er], readings);
-        if (errCheck === "ERROR") {
-          devices[d.id].status = "ERROR";
-          devices[d.id].errorCode = er;
+    if (device.mappings.On && device.mappings.On.device !== device.name) {
+      //no error check, as other device is used for on off
+    } else {
+      if (device.mappings.Errors) {
+        for (var er in device.mappings.Errors) {
+          const errCheck = await utils.cached2Format(uid, device.mappings.Errors[er], readings);
+          if (errCheck === "ERROR") {
+            devices[d.id].status = "ERROR";
+            devices[d.id].errorCode = er;
+          }
         }
-      }
-      if (devices[d.id].errorCode) {
-        continue;
+        if (devices[d.id].errorCode) {
+          continue;
+        }
       }
     }
 

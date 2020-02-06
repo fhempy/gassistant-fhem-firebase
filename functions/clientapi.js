@@ -479,42 +479,42 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mode_attributes: {
         name: 'suction',
         name_values: [{
-            name_synonym: ['suction'],
-            lang: 'en'
-          },
-          {
-            name_synonym: ['saugkraft', 'saugstärke'],
-            lang: 'de'
-          }
+          name_synonym: ['suction'],
+          lang: 'en'
+        },
+        {
+          name_synonym: ['saugkraft', 'saugstärke'],
+          lang: 'de'
+        }
         ],
         settings: [{
-            setting_name: 'quiet',
-            setting_values: [{
-              setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
-              lang: 'de'
-            }]
-          },
-          {
-            setting_name: 'balanced',
-            setting_values: [{
-              setting_synonym: ['balanced', 'normal'],
-              lang: 'de'
-            }]
-          },
-          {
-            setting_name: 'Turbo',
-            setting_values: [{
-              setting_synonym: ['turbo'],
-              lang: 'de'
-            }]
-          },
-          {
-            setting_name: 'maximum',
-            setting_values: [{
-              setting_synonym: ['maximum', 'max'],
-              lang: 'de'
-            }]
-          }
+          setting_name: 'quiet',
+          setting_values: [{
+            setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: 'balanced',
+          setting_values: [{
+            setting_synonym: ['balanced', 'normal'],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: 'Turbo',
+          setting_values: [{
+            setting_synonym: ['turbo'],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: 'maximum',
+          setting_values: [{
+            setting_synonym: ['maximum', 'max'],
+            lang: 'de'
+          }]
+        }
         ],
         ordered: true
       }
@@ -564,28 +564,28 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mode_attributes: {
         name: 'suction',
         name_values: [{
-            name_synonym: ['suction'],
-            lang: 'en'
-          },
-          {
-            name_synonym: ['saugkraft', 'saugstärke'],
-            lang: 'de'
-          }
+          name_synonym: ['suction'],
+          lang: 'en'
+        },
+        {
+          name_synonym: ['saugkraft', 'saugstärke'],
+          lang: 'de'
+        }
         ],
         settings: [{
-            setting_name: 'eco',
-            setting_values: [{
-              setting_synonym: ['eco'],
-              lang: 'de'
-            }]
-          },
-          {
-            setting_name: 'turbo',
-            setting_values: [{
-              setting_synonym: ['turbo'],
-              lang: 'de'
-            }]
-          }
+          setting_name: 'eco',
+          setting_values: [{
+            setting_synonym: ['eco'],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: 'turbo',
+          setting_values: [{
+            setting_synonym: ['turbo'],
+            lang: 'de'
+          }]
+        }
         ],
         ordered: true
       }
@@ -597,6 +597,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
     (s.Internals.SUBTYPE === 'RolloTron Standard') ||
     (s.Internals.subType === 'blindActuator') ||
+    (s.Internals.TYPE === "UNIRoll") ||
     (s.Attributes.model === 'fs20rsu') ||
     genericType === 'blinds' || genericType === 'shutter') {
     if (!service_name) service_name = 'blinds';
@@ -615,8 +616,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       open = 'off';
       close = 'on';
       valClosed = 'on';
-    }
-    if (s.Internals.TYPE === 'DUOFERN') {
+    } else if (s.Internals.TYPE === 'DUOFERN') {
       open = 'up';
       close = 'down';
     } else if (s.Attributes.model === 'fs20rsu' || s.Internals.TYPE === 'HM485') {
@@ -627,6 +627,23 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       open = 'pct 100';
       close = 'pct 0';
       valClosed = 'closed';
+    } else if (s.Internals.TYPE === "MQTT2_DEVICE") {
+      if (s.Attributes.model === "shelly25_roller_invert_0") {
+        open = "open";
+        close = "close";
+        valClosed = "closed";
+      }
+    } else if (s.Internals.TYPE === "UNIRoll") {
+      open = "up";
+      close = "down";
+      valClosed = "down";
+
+      mappings.TargetPosition = {
+        reading: 'state',
+        cmd: 'pos',
+        max: 100,
+        maxValue: s.Attributes.rMax
+      };
     }
     mappings.OpenClose = {
       reading: 'state',
@@ -692,7 +709,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmd: 'pct',
         invert: true
       };
-      if (s.Attributes.param && s.Attributes.param.match(/levelInverse/i)) {
+      if (s.Attributes.model === "HM-LC-BL1PBU-FM" || (s.Attributes.param && s.Attributes.param.match(/levelInverse/i))) {
         mappings.CurrentPosition.invert = false;
         mappings.TargetPosition.invert = false;
       }
@@ -1326,7 +1343,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   //SIMPLE MAPPINGS
   if (mappings.SimpleModes) {
     mappings.Modes = [];
-    
+
     if (!Array.isArray(mappings.SimpleModes))
       mappings.SimpleModes = [mappings.SimpleModes];
 
@@ -1345,14 +1362,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           language = mappings.SimpleModes[m].lang;
         } else if (synName == "name") {
           mode.mode_attributes.name = mappings.SimpleModes[m].name;
-          mode.mode_attributes.name_values = [{name_synonym: [mappings.SimpleModes[m].name], lang: language}];
+          mode.mode_attributes.name_values = [{ name_synonym: [mappings.SimpleModes[m].name], lang: language }];
         } else {
           mode.mode_attributes.settings.push({
             setting_name: synName,
             setting_values: [{
               setting_synonym: [synName],
               lang: language
-            }]});
+            }]
+          });
           mode.cmds.push(synName + ':' + mappings.SimpleModes[m][synName]);
         }
       }
@@ -1525,7 +1543,7 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
         uidlog(uid, "homebridgeMapping JSON: ok");
       } catch (err) {
         homebridgeMapping = homebridgeMapping.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
-        uidlog(uid, 'homebridgeMapping formatted: ' + homebridgeMapping);  
+        uidlog(uid, 'homebridgeMapping formatted: ' + homebridgeMapping);
         homebridgeMapping = JSON.parse(homebridgeMapping);
       }
 
@@ -1610,20 +1628,20 @@ function fromHomebridgeMapping(uid, mappings, homebridgeMapping) {
         if (p[0] == 'values')
           mapping[p[0]] = p[1].split(';');
         else if (p[0] == 'valid')
-        mapping[p[0]] = p[1].split(';');
-      else if (p[0] == 'cmds')
-        mapping[p[0]] = p[1].split(';');
-      else if (p[0] == 'delay') {
-        mapping[p[0]] = parseInt(p[1]);
-        if (isNaN(mapping[p[0]])) mapping[p[0]] = true;
-      } else if (p[0] === 'minValue' || p[0] === 'maxValue' || p[0] === 'minStep' ||
-        p[0] === 'min' || p[0] === 'max' ||
-        p[0] === 'default') {
-        mapping[p[0]] = parseFloat(p[1]);
-        if (isNaN(mapping[p[0]]))
-          mapping[p[0]] = p[1];
-      } else
-        mapping[p[0]] = p[1].replace(/\+/g, ' ');
+          mapping[p[0]] = p[1].split(';');
+        else if (p[0] == 'cmds')
+          mapping[p[0]] = p[1].split(';');
+        else if (p[0] == 'delay') {
+          mapping[p[0]] = parseInt(p[1]);
+          if (isNaN(mapping[p[0]])) mapping[p[0]] = true;
+        } else if (p[0] === 'minValue' || p[0] === 'maxValue' || p[0] === 'minStep' ||
+          p[0] === 'min' || p[0] === 'max' ||
+          p[0] === 'default') {
+          mapping[p[0]] = parseFloat(p[1]);
+          if (isNaN(mapping[p[0]]))
+            mapping[p[0]] = p[1];
+        } else
+          mapping[p[0]] = p[1].replace(/\+/g, ' ');
 
       else if (p.length == 1) {
         if (mappings[param] !== undefined) {
