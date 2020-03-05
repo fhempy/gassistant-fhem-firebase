@@ -6,58 +6,77 @@ const database = require('./database');
 
 const DEFAULT_PORT = 37000;
 
-function startLocalHome() {
+function startLocalHome(serverInstance) {
   var app = express();
+  var inactiveTimer = 0;
+  var activeReadingSet = 0;
+
+  serverInstance.updateLocalHomeState('inactive');
 
   app.use(express.json());
 
   app.post('/fhemconnect/local', async function (req, res) {
-    console.log('LOCAL received: ' + req.body.inputs[0].intent);
-
-    if (req.body.inputs[0].intent == "action.devices.IDENTIFY") {
-      var resp = {
-        requestId: req.body.requestId,
-        payload: {
-          device: {
-            id: 'fhemconnect-id',
-            isLocalOnly: true,
-            isProxy: true,
-            deviceInfo: {
-              hwVersion: "UNKNOWN_HW_VERSION",
-              manufacturer: "FHEM Connect",
-              model: "FHEM Connect",
-              swVersion: "1.0"
+    try {
+      if (req.body.inputs[0].intent == "action.devices.IDENTIFY") {
+        var resp = {
+          requestId: req.body.requestId,
+          payload: {
+            device: {
+              id: 'fhemconnect-id',
+              isLocalOnly: true,
+              isProxy: true,
+              deviceInfo: {
+                hwVersion: "UNKNOWN_HW_VERSION",
+                manufacturer: "FHEM Connect",
+                model: "FHEM Connect",
+                swVersion: "1.0"
+              }
             }
-          }
-        },
-        intenet: "action.devices.IDENTIFY"
-      };
+          },
+          intenet: "action.devices.IDENTIFY"
+        };
 
-      res.send(resp);
-    } else if (req.body.inputs[0].intent == "action.devices.REACHABLE_DEVICES") {
-      var verifiedDevices = [];
-      req.body.devices.forEach(d => {
-        if (typeof d.customData.device !== 'undefined') {
-          verifiedDevices.push({
-            verificationId: d.id
-          });
+        res.send(resp);
+      } else if (req.body.inputs[0].intent == "action.devices.REACHABLE_DEVICES") {
+        //set local home state reading
+        if (inactiveTimer) {
+          clearTimeout(inactiveTimer);
         }
-      });
+        if (activeReadingSet === 0) {
+          await serverInstance.updateLocalHomeState('active');
+          activeReadingSet = 1;
+        }
+        inactiveTimer = setTimeout(async function() { activeReadingSet = 0; await serverInstance.updateLocalHomeState('inactive'); }, 300000);
 
-      var resp = {
-        requestId: req.body.requestId,
-        payload: {
-          devices: verifiedDevices
-        },
-        intent: "action.devices.REACHABLE_DEVICES"
-      };
+        //create response for reachable_devices
+        var verifiedDevices = [];
+        req.body.devices.forEach(d => {
+          if (typeof d.customData.device !== 'undefined') {
+            verifiedDevices.push({
+              verificationId: d.id
+            });
+          }
+        });
 
-      res.send(resp);
-    } else if (req.body.inputs[0].intent == "action.devices.EXECUTE") {
-      localEXECUTE.handleEXECUTE(database.getUid(), req.body.requestId, res, req.body.inputs[0]);
-    } else {
-      //FIXME
-      res.send("ERROR");
+        var resp = {
+          requestId: req.body.requestId,
+          payload: {
+            devices: verifiedDevices
+          },
+          intent: "action.devices.REACHABLE_DEVICES"
+        };
+
+        res.send(resp);
+      } else if (req.body.inputs[0].intent == "action.devices.EXECUTE") {
+        console.log('LOCALHOME received: ' + req.body.inputs[0].intent);
+        localEXECUTE.handleEXECUTE(database.getUid(), req.body.requestId, res, req.body.inputs[0]);
+      } else {
+        //FIXME
+        console.log('LOCALHOME unknown command received: ' + req.body.inputs[0].intent);
+        res.send("ERROR");
+      }
+    } catch (err) {
+      console.error('Error in Local Home: ' + err);
     }
   });
 

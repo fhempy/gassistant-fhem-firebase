@@ -393,9 +393,13 @@ FHEM_update(device, reading, readingSetting, orig, reportState) {
   //FIXME ReportState only when connected
 }
 
+FHEM.prototype.setLocalHomeState = async function (state) {
+  this.execute('setreading ' + this.gassistant + ' gassistant-fhem-localHome ' + state);
+}
+
 //KEEP
 FHEM.prototype.execute = function (cmd, callback) {
-  FHEM_execute(this.connection, cmd, callback)
+  FHEM_execute(this.connection, cmd, callback);
 };
 
 FHEM.prototype.execute_await = async function (cmd) {

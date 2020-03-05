@@ -148,17 +148,21 @@ function registerFirestoreListener() {
   try {
     database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').onSnapshot((events) => {
       events.forEach((event) => {
-        log.info('GOOGLE MSG RECEIVED: ' + JSON.stringify(event.data()));
-        if (event.data()) {
-          if (event.data().ts) {
-            if (event.data().ts > (Date.now() - 10000)) {
-              handler.bind(this)(event.data());
-            } else {
-              log.error('  Received message is older than 10s, therefore it gets discarded. Please check your date/time settings if you think that the messages is not that old.');
+        try {
+          log.info('GOOGLE MSG RECEIVED: ' + JSON.stringify(event.data()));
+          if (event.data()) {
+            if (event.data().ts) {
+              if (event.data().ts > (Date.now() - 10000)) {
+                handler.bind(this)(event.data());
+              } else {
+                log.error('  Received message is older than 10s, therefore it gets discarded. Please check your date/time settings if you think that the messages is not that old.');
+              }
             }
           }
+          event.ref.delete();  
+        } catch (err) {
+          log.error('onSnapshot event failed: ' + err);
         }
-        event.ref.delete();
       });
     });
     firebaseListenerRegistered = true;
@@ -194,7 +198,7 @@ Server.prototype.startConnection = async function () {
   database.reportClientVersion();
   database.clientHeartbeat();
 
-  localhome.startLocalHome();
+  localhome.startLocalHome(this);
   await localEXECUTE.FHEM_getClientFunctions();
 
   //register listener
@@ -204,6 +208,12 @@ Server.prototype.startConnection = async function () {
   this.connectAll();
 
   checkFeatureLevel.bind(this)();
+}
+
+Server.prototype.updateLocalHomeState = async function (state) {
+  for (var fhem of this.connections) {
+    await fhem.setLocalHomeState(state);
+  }
 }
 
 Server.prototype.connectAll = async function () {
