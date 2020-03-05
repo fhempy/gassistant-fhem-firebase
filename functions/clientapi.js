@@ -68,10 +68,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     uiderror(uid, 'ignoring ' + s.Internals.NAME + ' (' + s.Internals.TYPE + ') without attributes');
     return undefined;
   }
-  if (s.Internals.TYPE === 'gassistant') {
-    uidlog(uid, 'ignoring gassistant device ' + s.Internals.NAME);
-    return undefined;
-  }
 
   if (s.Attributes.disable == 1) {
     uidlog(uid, s.Internals.NAME + ' is currently disabled');
@@ -242,11 +238,52 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
+  if (s.Internals.TYPE === "HUEDevice") {
+    if (s.Attributes.subType === "ctdimmer") {
+      //Hue CT mode
+      mappings.ColorMode = {
+        reading: 'colormode',
+        valueCt: 'ct'
+      };
+
+      mappings.ColorTemperature = {
+        reading: 'ct',
+        cmd: 'ct'
+      };
+      mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
+        var match;
+        if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
+          return parseInt(match[2]);
+        }
+        return 0;
+      };
+      mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
+        //kelvin to mired
+        return parseInt(1000000 / orig);
+      };
+
+      mappings.Errors.deviceOffline = {
+        reading: 'reachable',
+        valueError: '0'
+      };
+    }
+  }
+
   if (match = s.PossibleSets.match(/(^| )effect:none,colorloop\b/)) {
-    mappings.LightEffects = {
+    mappings.LightEffectsColorLoop = {
       reading: 'effect',
       values: ['/colorloop/:colorLoop', '/.*/:none'],
       cmds: ['colorLoop:effect colorloop', 'none:effect none']
+    };
+    mappings.LightEffectsSleep = {
+      reading: 'pct',
+      values: ['/0/:none', '/100/:none', '/.*/:sleep'],
+      cmd: 'pct 0'
+    };
+    mappings.LightEffectsWake = {
+      reading: 'pct',
+      values: ['/0/:none', '/100/:none', '/.*/:wake'],
+      cmd: 'pct 100'
     };
   }
 
@@ -399,6 +436,85 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdOn: 'on',
       cmdOff: 'off'
     };
+
+    var channel_01 = "Sender 1";
+    var channel_02 = "Sender 2";
+    var channel_03 = "Sender 3";
+    var channel_04 = "Sender 4";
+    var channel_05 = "Sender 5";
+    var channel_06 = "Sender 6";
+    if (s.Readings.channel_01)
+      channel_01 = s.Readings.channel_01.Value;
+    if (s.Readings.channel_02)
+      channel_02 = s.Readings.channel_02.Value;
+    if (s.Readings.channel_03)
+      channel_03 = s.Readings.channel_03.Value;
+    if (s.Readings.channel_04)
+      channel_04 = s.Readings.channel_04.Value;
+    if (s.Readings.channel_05)
+      channel_05 = s.Readings.channel_05.Value;
+    if (s.Readings.channel_06)
+      channel_06 = s.Readings.channel_06.Value;
+    mappings.Modes = [{
+      reading: 'channel',
+      cmds: ['1:channel 1', '2:channel 2', '3:channel 3', '4:channel 4', '5:channel 5', '6:channel 6'],
+      values: ['1:1', '2:2', '3:3', '4:4', '5:5', '6:6'],
+      mode_attributes: {
+        name: 'Preset',
+        name_values: [{
+          name_synonym: ['Preset', 'Sender'],
+          lang: 'en'
+        },
+        {
+          name_synonym: ['Kanal', 'Preset', 'Sender'],
+          lang: 'de'
+        }
+        ],
+        settings: [{
+          setting_name: '1',
+          setting_values: [{
+            setting_synonym: ['Sender 1', 'Eins', 'Kanal 1', 'Preset 1', channel_01],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '2',
+          setting_values: [{
+            setting_synonym: ['Sender 2', 'Zwei', 'Kanal 2', 'Preset 2', channel_02],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '3',
+          setting_values: [{
+            setting_synonym: ['Sender 3', 'Drei', 'Kanal 3', 'Preset 3', channel_03],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '4',
+          setting_values: [{
+            setting_synonym: ['Sender 4', 'Vier', 'Kanal 4', 'Preset 4', channel_04],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '5',
+          setting_values: [{
+            setting_synonym: ['Sender 5', 'Fuenf', 'Kanal 5', 'Preset 5', channel_05],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '6',
+          setting_values: [{
+            setting_synonym: ['Sender 6', 'Sechs', 'Kanal 6', 'Preset 6', channel_06],
+            lang: 'de'
+          }]
+        }],
+        ordered: true
+      }
+    }];
   }
 
   if (s.Internals.TYPE == 'XiaomiSmartHome_Device' && s.Internals.MODEL == 'sensor_magnet.aq2') {
@@ -457,21 +573,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     //mappings.FanSpeed = {reading: 'cleaning_mode', speeds: { 'S1': { 'cmd': 'cleaning_mode quiet', value:'quiet', 'synonyms': {'de': ['langsam', 'leise'], 'en': ['slow', 'quiet']}},
     //                                                         'S2': { 'cmd': 'cleaning_mode balanced', value:'balanced', 'synonyms': {'de': ['mittel'],  'en': ['medium','balanced']}},
     //                                                         'S3': { 'cmd': 'cleaning_mode max', value:'max','synonyms': {'de': ['maximum'], 'en': ['maximum']}}}, ordered: true, reversible: false};
-    // mappings.Toggles = [{reading: 'cleaning_mode', valueOn: 'turbo', cmdOn: 'cleaning_mode turbo', cmdOff: 'cleaning_mode balanced',
-    //   toggle_attributes: {
-    //       name: 'Turbo',
-    //       name_values: [
-    //         {
-    //           name_synonym: ['turbo'],
-    //           lang: 'en'
-    //         },
-    //         {
-    //           name_synonym: ['turbo', 'turbo-funktion', 'turbofunktion', 'turbo-modus', 'turbomodus'],
-    //           lang: 'de'
-    //         }
-    //       ]
-    //   }
-    // }];
     //FIXME get Modes from cmdlist
     mappings.Modes = [{
       reading: 'cleaning_mode',
@@ -616,7 +717,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       open = 'off';
       close = 'on';
       valClosed = 'on';
-    } else if (s.Internals.TYPE === 'DUOFERN') {
+    }
+
+    if (s.Internals.TYPE === 'DUOFERN') {
       open = 'up';
       close = 'down';
     } else if (s.Attributes.model === 'fs20rsu' || s.Internals.TYPE === 'HM485') {
@@ -641,8 +744,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.TargetPosition = {
         reading: 'state',
         cmd: 'pos',
-        max: 100,
-        maxValue: s.Attributes.rMax
+        max: s.Attributes.rMax,
+        min: s.Attributes.rMin,
+        maxValue: 100,
+        minValue: 0,
+        format: 'int'
       };
     }
     mappings.OpenClose = {
@@ -709,7 +815,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmd: 'pct',
         invert: true
       };
-      if (s.Attributes.model === "HM-LC-BL1PBU-FM" || (s.Attributes.param && s.Attributes.param.match(/levelInverse/i))) {
+      if (s.Attributes.model === "HM-LC-BL1PBU-FM" || (s.Attributes.param && s.Attributes.param.match(/levelInverse/i) || s.Attributes.model === "ROTO_ZEL-STG-RM-FEP-230V")) {
         mappings.CurrentPosition.invert = false;
         mappings.TargetPosition.invert = false;
       }
@@ -775,7 +881,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.LockCurrentState = {
       reading: 'lock',
-      values: ['/uncertain/:UNKNOWN', '/^locked/:SECURED', '/.*/:UNSECURED']
+      values: ['/uncertain/:JAMMED', '/^locked/:SECURED', '/.*/:UNSECURED']
     };
     mappings.LockTargetState = {
       reading: 'lock',
@@ -920,16 +1026,48 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
     if (s.Readings.ecoMode) {
       mappings.ThermostatModes = {
-        reading: ['desiredTemperature', 'ecoMode'],
-        cmds: ['off:desiredTemperature 4.5', 'heat:desiredTemperature 21', 'eco:eco'],
-        values: ['ecoMode=/1/:eco', 'desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
+        reading: ['desiredTemperature', 'ecoMode', 'mode'],
+        cmds: ['auto:mode automatic', 'off:mode manual;desiredTemperature 4.5', 'heat:mode manual;comfort', 'eco:eco', 'on:comfort'],
+        values: ['mode=/Auto/:auto', 'ecoMode=/1/:eco', 'desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
       };
+      mappings.Toggles = [{
+        reading: 'boost', valueOn: '1', cmdOn: 'boost on', cmdOff: 'boost off',
+        toggle_attributes: {
+          name: 'Boost',
+          name_values: [
+            {
+              name_synonym: ['boost', 'boost mode'],
+              lang: 'en'
+            },
+            {
+              name_synonym: ['boost', 'boost modus', 'aufheizen', 'schnell heiz modus', 'schnellheizmodus'],
+              lang: 'de'
+            }
+          ]
+        }
+      }];
     } else if (s.Readings.mode) {
       mappings.ThermostatModes = {
         reading: ['desiredTemperature', 'mode'],
-        cmds: ['off:off', 'heat:comfort', 'eco:eco'],
-        values: ['mode=/off/:off', 'mode=/eco/:eco', 'mode=/.*/:heat']
+        cmds: ['heat:desiredTemperature comfort', 'eco:desiredTemperature eco', 'auto:desiredTemperature auto', 'on:desiredTemperature comfort', 'off:desiredTemperature off'],
+        values: ['mode=/auto/:auto', 'desiredTemperature=/off/:off', 'mode=/eco/:eco', 'mode=/.*/:heat']
       };
+      mappings.Toggles = [{
+        reading: 'mode', valueOn: 'boost', cmdOn: 'desiredTemperature boost', cmdOff: 'desiredTemperature comfort',
+        toggle_attributes: {
+          name: 'Boost',
+          name_values: [
+            {
+              name_synonym: ['boost', 'boost mode'],
+              lang: 'en'
+            },
+            {
+              name_synonym: ['boost', 'boost modus', 'aufheizen', 'schnell heiz modus', 'schnellheizmodus'],
+              lang: 'de'
+            }
+          ]
+        }
+      }];
     }
   } else if (match = s.PossibleSets.match(/(^| )desired(:[^\d]*([^\$ ]*))?/)) {
     //PID20
@@ -1077,7 +1215,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   //    };
 
   //DEVICE SPECIFIC MAPPINGS BASED ON TYPE
-  if (s.Internals.TYPE === 'KNX') {
+  if (s.Internals.TYPE === 'gassistant') {
+    if (!service_name) service_name = 'switch';
+    mappings.SoftwareUpdate = {
+      cmd: 'reload'
+    };
+    mappings.Reboot = {
+      cmd: 'restart'
+    };
+  } else if (s.Internals.TYPE === 'KNX') {
     var defmatch = s.Internals.DEF.match(/([\S]+:[\S]+)\b/g);
     var servicetmp = 'switch';
     var gadcnt = 1;
@@ -1377,6 +1523,33 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.Modes.push(mode);
     }
     delete mappings.SimpleModes;
+  } else if (mappings.SimpleToggles) {
+    mappings.Toggles = [];
+
+    if (!Array.isArray(mappings.SimpleToggles))
+      mappings.SimpleToggles = [mappings.SimpleToggles];
+
+    for (var t in mappings.SimpleToggles) {
+      var language = t.lang || 'de';
+      var toggle = {
+        toggle_attributes: {
+          name_values: [{
+            name_synonym: [],
+            lang: language
+          }]
+        }
+      };
+      toggle = t;
+      toggle.toggle_attributes = {};
+      toggle.toggle_attributes.name = t.voicecmd.split(',')[0];
+      for (var v in t.voicecmd.split(',')) {
+        toggle.toggle_attributes.name_values[0].name_synonym.push(v);
+      }
+      delete toggle.voicecmd;
+      delete toggle.lang;
+      mappings.Toggles.push(toggle);
+    }
+    delete mappings.SimpleToggles;
   }
 
   if (service_name !== undefined) {
@@ -1397,7 +1570,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappingsChar = mappings[characteristic_type];
       if (!Array.isArray(mappingsChar))
           mappingsChar = [mappingsChar];
-
+ 
       for (mapping of mappingsChar) {
           if (characteristic_type === 'On')
               uidlog(uid, '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ';' + mapping.cmdOn + ',' + mapping.cmdOff + ']');
@@ -1766,7 +1939,21 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
       };
     } else if (characteristic_type === 'CurrentRelativeHumidity') {
       compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
-        //DISABLE REPORTSTATE FOR HUMIDITY
+        //check if old != new
+        if (Math.round(oldValue) !== Math.round(newValue)) {
+          if ((oldDevTimestamp + 5000) > Date.now()) {
+            if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+          }
+          //check how old old is
+          if ((oldTimestamp + 60000) > Date.now()) {
+            //oldTimestamp is younger then 60s
+            if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+            return setTimeout(reportStateFunction.bind(null, device), 60000);
+          } else {
+            //oldTimestamp is older then 60s
+            return setTimeout(reportStateFunction.bind(null, device), 60000);
+          }
+        }
         return undefined;
       };
     } else {
