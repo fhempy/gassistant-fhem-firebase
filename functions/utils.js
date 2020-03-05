@@ -34,6 +34,7 @@ const GOOGLE_DEVICE_TYPES = {
   'blinds': 'action.devices.types.BLINDS',
   'boiler': 'action.devices.types.BOILER',
   'camera': 'action.devices.types.CAMERA',
+  'charger': 'action.devices.types.CHARGER',
   'closet': 'action.devices.types.CLOSET',
   'coffee_maker': 'action.devices.types.COFFEE_MAKER',
   'coffeemaker': 'action.devices.types.COFFEE_MAKER', //backward compatibility
