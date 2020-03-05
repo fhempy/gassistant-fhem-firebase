@@ -13,5 +13,5 @@ exports.FHEM_getClientFunctions = async function FHEM_getClientFunctions() {
     eval(loadFctStr);
   }
 
-  setTimeout(FHEM_getClientFunctions, 1209600); //update every 14 days
+  setTimeout(FHEM_getClientFunctions, 1209600000); //update every 14 days
 }
