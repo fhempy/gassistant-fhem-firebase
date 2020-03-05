@@ -62,34 +62,48 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_GET_CAMERASTREAM = "action.devices.commands.GetCameraStream";
   const REQUEST_EFFECT_COLORLOOP = "action.devices.commands.ColorLoop";
   const REQUEST_EFFECT_STOP = "action.devices.commands.StopEffect";
+  const REQUEST_SET_HUMIDITY = "action.devices.commands.SetHumidity";
+  const REQUEST_SET_HUMIDITY_RELATIVE = "action.devices.commands.HumidityRelative";
+  const REQUEST_SET_LOCKUNLOCK = "action.devices.commands.LockUnlock";
+  const REQUEST_SOFTWARE_UPDATE = "action.devices.commands.SoftwareUpdate";
+  const REQUEST_REBOOT = "action.devices.commands.Reboot";
+  const REQUEST_EFFECT_SLEEP = "action.devices.commands.Sleep";
+  const REQUEST_EFFECT_WAKE = "action.devices.commands.Wake";
 
   //map commands to the mapping within the device
   const commandMapping = {};
-  commandMapping[REQUEST_SET_BRIGHTNESSABSOLUTE] = 'Brightness';
-  commandMapping[REQUEST_SET_MODES] = 'Modes';
-  commandMapping[REQUEST_ON_OFF] = 'On';
-  commandMapping[REQUEST_SET_TARGET_TEMPERATURE] = 'TargetTemperature';
-  commandMapping[REQUEST_SET_THERMOSTAT_MODE] = 'ThermostatModes';
-  commandMapping[REQUEST_DOCK] = 'Dock';
-  commandMapping[REQUEST_LOCATE] = 'Locate';
-  commandMapping[REQUEST_STARTSTOP] = 'StartStop';
-  commandMapping[REQUEST_PAUSEUNPAUSE] = 'StartStop';
-  commandMapping[REQUEST_FANSPEED] = 'FanSpeed';
-  commandMapping[REQUEST_FANSPEEDREVERSE] = 'FanSpeed';
-  commandMapping[REQUEST_COLORABSOLUTE] = 'RGB';
-  commandMapping[REQUEST_SET_TOGGLES] = 'Toggles';
-  commandMapping[REQUEST_ACTIVATE_SCENE] = 'Scene';
-  commandMapping[REQUEST_OPENCLOSE] = 'OpenClose';
-  commandMapping[REQUEST_ARMDISARM] = 'ArmDisarm';
-  commandMapping[REQUEST_TIMERSTART] = 'Timer';
-  commandMapping[REQUEST_TIMERADJUST] = 'Timer';
-  commandMapping[REQUEST_TIMERPAUSE] = 'Timer';
-  commandMapping[REQUEST_TIMERRESUME] = 'Timer';
-  commandMapping[REQUEST_TIMERCANCEL] = 'Timer';
-  commandMapping[REQUEST_SET_TEMPERATURE] = 'TemperatureControlSetCelsius';
-  commandMapping[REQUEST_GET_CAMERASTREAM] = 'CameraStream';
-  commandMapping[REQUEST_EFFECT_COLORLOOP] = 'LightEffects';
-  commandMapping[REQUEST_EFFECT_STOP] = 'LightEffects';
+  commandMapping[REQUEST_SET_BRIGHTNESSABSOLUTE] = ['Brightness'];
+  commandMapping[REQUEST_SET_MODES] = ['Modes'];
+  commandMapping[REQUEST_ON_OFF] = ['On'];
+  commandMapping[REQUEST_SET_TARGET_TEMPERATURE] = ['TargetTemperature'];
+  commandMapping[REQUEST_SET_THERMOSTAT_MODE] = ['ThermostatModes'];
+  commandMapping[REQUEST_DOCK] = ['Dock'];
+  commandMapping[REQUEST_LOCATE] = ['Locate'];
+  commandMapping[REQUEST_STARTSTOP] = ['StartStop'];
+  commandMapping[REQUEST_PAUSEUNPAUSE] = ['StartStop'];
+  commandMapping[REQUEST_FANSPEED] = ['FanSpeed'];
+  commandMapping[REQUEST_FANSPEEDREVERSE] = ['FanSpeed'];
+  commandMapping[REQUEST_COLORABSOLUTE] = ['RGB','ColorTemperature'];
+  commandMapping[REQUEST_SET_TOGGLES] = ['Toggles'];
+  commandMapping[REQUEST_ACTIVATE_SCENE] = ['Scene'];
+  commandMapping[REQUEST_OPENCLOSE] = ['OpenClose'];
+  commandMapping[REQUEST_ARMDISARM] = ['ArmDisarm'];
+  commandMapping[REQUEST_TIMERSTART] = ['Timer'];
+  commandMapping[REQUEST_TIMERADJUST] = ['Timer'];
+  commandMapping[REQUEST_TIMERPAUSE] = ['Timer'];
+  commandMapping[REQUEST_TIMERRESUME] = ['Timer'];
+  commandMapping[REQUEST_TIMERCANCEL] = ['Timer'];
+  commandMapping[REQUEST_SET_TEMPERATURE] = ['TemperatureControlSetCelsius'];
+  commandMapping[REQUEST_GET_CAMERASTREAM] = ['CameraStream'];
+  commandMapping[REQUEST_EFFECT_COLORLOOP] = ['LightEffectsColorLoop'];
+  commandMapping[REQUEST_EFFECT_STOP] = ['LightEffectsColorLoop'];
+  commandMapping[REQUEST_SET_HUMIDITY] = ['TargetRelativeHumidity'];
+  commandMapping[REQUEST_SET_HUMIDITY_RELATIVE] = ['TargetRelativeHumidity'];
+  commandMapping[REQUEST_SET_LOCKUNLOCK] = ['LockUnlock'];
+  commandMapping[REQUEST_SOFTWARE_UPDATE] = ['SoftwareUpdate'];
+  commandMapping[REQUEST_REBOOT] = ['Reboot'];
+  commandMapping[REQUEST_EFFECT_SLEEP] = ['LightEffectsSleep'];
+  commandMapping[REQUEST_EFFECT_WAKE] = ['LightEffectsWake'];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -120,14 +134,26 @@ async function processEXECUTE(uid, reqId, input) {
 
         const requestedName = exec.command;
 
-        if (!commandMapping[requestedName] || !device.mappings[commandMapping[requestedName]]) {
+        //check PIN
+        if (!commandMapping[requestedName]) {
+          uiderror(uid, 'Command ' + requestedName + ' not configured in commandMappings for device ' + d.customData.device);
+          return { errorCode: 'functionNotSupported' };
+        }
+
+        var pinMapping = undefined;
+        for (var m in commandMapping[requestedName]) {
+          if (device.mappings[commandMapping[requestedName][m]]) {
+            pinMapping = commandMapping[requestedName][m];
+          }
+        }
+        if (!pinMapping) {
           uiderror(uid, 'Command ' + requestedName + ' not configured for device ' + d.customData.device);
           return {
             errorCode: 'functionNotSupported'
           };
         }
 
-        if (device.mappings[commandMapping[requestedName]].pin) {
+        if (device.mappings[pinMapping].pin) {
           if (!exec.challenge || !exec.challenge.pin) {
             //pin required
             responses.push({
@@ -140,7 +166,7 @@ async function processEXECUTE(uid, reqId, input) {
             });
             continue;
           } else {
-            if (!exec.challenge || exec.challenge.pin !== device.mappings[commandMapping[requestedName]].pin) {
+            if (!exec.challenge || exec.challenge.pin !== device.mappings[pinMapping].pin) {
               //incorrect pin
               responses.push({
                 "ids": [device.uuid_base],
@@ -201,6 +227,14 @@ async function processEXECUTE(uid, reqId, input) {
             response = await processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd);
             break;
 
+          case REQUEST_EFFECT_SLEEP:
+            response = await processEXECUTESetEffectSleep(uid, reqId, device, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_EFFECT_WAKE:
+            response = await processEXECUTESetEffectWake(uid, reqId, device, exec.params, fhemExecCmd);
+            break;
+
           case REQUEST_EFFECT_STOP:
             response = await processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd);
             break;
@@ -249,7 +283,7 @@ async function processEXECUTE(uid, reqId, input) {
             //response = await processEXECUTEReverse(uid, reqId,exec.params.reverse));
             break;
 
-            //action.devices.traits.Modes: COMMANDS
+          //action.devices.traits.Modes: COMMANDS
           case REQUEST_SET_MODES:
             response = await processEXECUTESetModes(uid, reqId, device, exec, fhemExecCmd);
             break;
@@ -272,6 +306,26 @@ async function processEXECUTE(uid, reqId, input) {
 
           case REQUEST_GET_CAMERASTREAM:
             response = await processEXECUTEGetCameraStream(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SET_HUMIDITY:
+            response = await processEXECUTESetHumidity(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SET_HUMIDITY_RELATIVE:
+            response = await processEXECUTESetHumidityRelative(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SET_LOCKUNLOCK:
+            response = await processEXECUTELockUnlock(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SOFTWARE_UPDATE:
+            response = await processEXECUTESoftwareUpdate(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+          
+          case REQUEST_REBOOT:
+            response = await processEXECUTEReboot(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
           default:
@@ -344,8 +398,45 @@ async function processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd)
   return res;
 } // processEXECUTESetEffectColorLoop
 
+async function processEXECUTESetEffectSleep(uid, reqId, device, params, fhemExecCmd) {
+  var duration = '';
+  if (params.duration)
+    duration = params.duration;
+
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffectsSleep, duration));
+
+  let res = [];
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      on: true,
+      activeLightEffect: 'sleep'
+    }
+  });
+  return res;
+} // processEXECUTESetEffectSleep
+
+async function processEXECUTESetEffectWake(uid, reqId, device, params, fhemExecCmd) {
+  var duration = '';
+  if (params.duration)
+    duration = params.duration;
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffectsWake, duration));
+
+  let res = [];
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      on: true,
+      activeLightEffect: 'wake'
+    }
+  });
+  return res;
+} // processEXECUTESetEffectWake
+
 async function processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd) {
-  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffects, "none"));
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffectsColorLoop, "none"));
 
   let res = [];
   res.push({
@@ -515,6 +606,65 @@ async function processEXECUTESetTempearture(uid, reqId, device, temperature, fhe
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetTempearture
+
+async function processEXECUTESetHumidity(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetRelativeHumidity, params.humidity));
+
+  return [{
+    states: {
+      humiditySetpointPercent: params.humidity
+      //FIXME humidityAmbientPercent: 0
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetHumidity
+
+async function processEXECUTESetHumidityRelative(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetRelativeHumidity, params.humidity));
+
+  return [{
+    states: {
+      humiditySetpointPercent: params.humidity
+      //FIXME humidityAmbientPercent: 0
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetHumidityRelative
+
+async function processEXECUTESetLockUnlock(uid, reqId, device, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LockTargetState, params.lock));
+
+  return [{
+    states: {
+      isLocked: params.lock
+      //FIXME isJammed: 0
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetLockUnlock
+
+async function processEXECUTESoftwareUpdate(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.SoftwareUpdate, ''));
+
+  return [{
+    states: {},
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESoftwareUpdate
+
+async function processEXECUTEReboot(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Reboot, ''));
+
+  return [{
+    states: {},
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTEReboot
 
 async function processEXECUTESetThermostatMode(uid, reqId, device, thermostatMode, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode));
@@ -857,7 +1007,14 @@ module.exports = {
   handleEXECUTE,
   processEXECUTE,
   processEXECUTEOnOff,
+  processEXECUTESetHumidity,
+  processEXECUTESetHumidityRelative,
+  processEXECUTESetLockUnlock,
+  processEXECUTESoftwareUpdate,
+  processEXECUTEReboot,
   processEXECUTESetEffectColorLoop,
+  processEXECUTESetEffectSleep,
+  processEXECUTESetEffectWake,
   processEXECUTESetEffectStop,
   processEXECUTEGetCameraStream,
   processEXECUTEArmDisarm,

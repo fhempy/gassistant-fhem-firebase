@@ -161,6 +161,33 @@ async function processQUERY(uid, input, reportstate) {
       devices[d.id].on = await utils.cached2Format(uid, device.mappings.OccupancyDetected, readings);
     }
 
+    //HumidifierSetting
+    if (device.mappings.CurrentRelativeHumidity || device.mappings.TargetRelativeHumidity) {
+      //humiditySetpointPercent
+      if (device.mappings.TargetRelativeHumidity) {
+        devices[d.id].humiditySetpointPercent = await utils.cached2Format(uid, device.mappings.TargetRelativeHumidity, readings);
+      }
+      //humidityAmbientPercent
+      if (device.mappings.CurrentRelativeHumidity) {
+        devices[d.id].humidityAmbientPercent = await utils.cached2Format(uid, device.mappings.CurrentRelativeHumidity, readings);
+      }
+      devices.status = "SUCCESS";
+    }
+
+    //LockUnlock
+    if (device.mappings.LockCurrentState || device.mappings.LockTargetState) {
+      //isLocked
+      devices[d.id].isLocked = await utils.cached2Format(uid, device.mappings.LockCurrentState, readings) === "SECURED";
+      //isJammed
+      devices[d.id].isJammed = await utils.cached2Format(uid, device.mappings.LockCurrentState, readings) === "JAMMED";
+    }
+
+    //SoftwareUpdate
+    if (device.mappings.SoftwareUpdate) {
+      //FIXME support last update timestamp
+      //devices[d.id].lastSoftwareUpdateUnixTimestampSec = await utils.cached2Format(uid, device.mappings.SoftwareUpdate, readings);
+    }
+
     //OpenClose
     if (device.mappings.OpenClose) {
       if (device.mappings.CurrentPosition) {
@@ -200,10 +227,22 @@ async function processQUERY(uid, input, reportstate) {
     }
 
     //action.devices.traits.LightEffects
-    if (device.mappings.LightEffects) {
-      devices[d.id].activeLightEffect = await utils.cached2Format(uid, device.mappings.LightEffects, readings);
-      if (devices[d.id].activeLightEffect === "none")
+    if (device.mappings.LightEffectsColorLoop || device.mappings.LightEffectsSleep || device.mappings.LightEffectsWake) {
+      var cl = await utils.cached2Format(uid, device.mappings.LightEffectsColorLoop, readings);
+      var sl = await utils.cached2Format(uid, device.mappings.LightEffectsSleep, readings);
+      var wa = await utils.cached2Format(uid, device.mappings.LightEffectsWake, readings);
+      var effect = "none";
+      if (cl !== "none")
+        effect = cl;
+      if (sl !== "none")
+        effect = sl;
+      if (wa !== "none")
+        effect = wa;
+
+      if (effect === "none")
         devices[d.id].activeLightEffect = "";
+      else
+        devices[d.id].activeLightEffect = effect;
     }
 
     //action.devices.traits.Dock

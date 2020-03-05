@@ -73,7 +73,15 @@ var processSYNC = function (uid, devices) {
         device.mappings.TemperatureControlSetCelsius ||
         device.mappings.TemperatureControlAmbientCelsius ||
         device.mappings.CameraStream ||
-        device.mappings.LightEffects) {
+        device.mappings.LightEffectsColorLoop ||
+        device.mappings.LightEffectsSleep ||
+        device.mappings.LightEffectsWake ||
+        device.mappings.CurrentRelativeHumidity ||
+        device.mappings.TargetRelativeHumidity ||
+        device.mappings.LockCurrentState ||
+        device.mappings.LockTargetState ||
+        device.mappings.Reboot ||
+        device.mappings.SoftwareUpdate) {
         //console.log(device);
 
         //console.log("Start handling ", device.ghomeName);
@@ -125,6 +133,10 @@ var processSYNC = function (uid, devices) {
             d.type = 'action.devices.types.SCENE';
           } else if (device.mappings.CameraStream) {
             d.type = 'action.devices.types.CAMERA';
+          } else if (device.mappings.CurrentRelativeHumidity) {
+            d.type = 'action.devices.types.HUMIDIFIER';
+          } else if (device.mappings.LockTargetState || device.mappings.LockCurrentState) {
+            d.type = 'action.devices.types.LOCK';
           } else {
             d.type = 'action.devices.types.SWITCH';
           }
@@ -145,6 +157,50 @@ var processSYNC = function (uid, devices) {
           });
 
           d.attributes.availableToggles = availableTogglesList;
+        }
+
+        //HumiditySetting
+        if (device.mappings.CurrentRelativeHumidity || device.mappings.TargetRelativeHumidity) {
+          if (!device.mappings.TargetTemperature && device.mappings.TargetRelativeHumidity) {
+            d.traits.push("action.devices.traits.HumiditySetting");
+            //default values
+            var minHumidity = 0;
+            var maxHumidity = 100;
+            if (device.mappings.TargetRelativeHumidity && device.mappings.TargetRelativeHumidity.minHumidity) {
+              minHumidity = device.mappings.TargetRelativeHumidity.minHumidity;
+            }
+            if (device.mappings.TargetRelativeHumidity && device.mappings.TargetRelativeHumidity.maxHumidity) {
+              maxHumidity = device.mappings.TargetRelativeHumidity.maxHumidity;
+            }
+            //attributes
+            if (device.mappings.TargetRelativeHumidity) {
+              d.attributes.humiditySetpointRange = {
+                minPercent: minHumidity,
+                maxPercent: maxHumidity
+              };
+            }
+            if (!device.mappings.TargetRelativeHumidity) {
+              d.attributes.queryOnlyHumiditySetting = true;
+            }
+            if (!device.mappings.CurrentRelativeHumidity) {
+              d.attributes.commandOnlyHumiditySetting = true;
+            }
+          }
+        }
+
+        //LockUnlock
+        if (device.mappings.LockCurrentState || device.mappings.LockTargetState) {
+          d.traits.push("action.devices.traits.LockUnlock");
+        }
+
+        //SoftwareUpdate
+        if (device.mappings.SoftwareUpdate) {
+          d.traits.push("action.devices.traits.SoftwareUpdate");
+        }
+
+        //Reboot
+        if (device.mappings.Reboot) {
+          d.traits.push("action.devices.traits.Reboot");
         }
 
         //ArmDisarm
@@ -307,16 +363,37 @@ var processSYNC = function (uid, devices) {
           if (device.mappings.Hue.commandOnlyColorSetting)
             d.attributes.commandOnlyColorSetting = true;
           d.traits.push("action.devices.traits.ColorSetting");
+        } else if (device.mappings.ColorTemperature) {
+          d.attributes.colorTemperatureRange = {
+            //FIXME get values from device mapping
+            temperatureMinK: 2000,
+            temperatureMaxK: 9000
+          };
+          if (device.mappings.ColorTemperature.commandOnlyColorSetting)
+            d.attributes.commandOnlyColorSetting = true;
+          d.traits.push("action.devices.traits.ColorSetting");
         }
 
         //LightEffects
-        if (device.mappings.LightEffects) {
+        if (device.mappings.LightEffectsColorLoop || device.mappings.LightEffectsSleep || device.mappings.LightEffectsWake) {
           d.attributes.supportedEffects = [];
-          device.mappings.LightEffects.cmds.forEach(function (cmd) {
-            var match = cmd.match(/(.*):(.*)/);
-            if (match)
-              d.attributes.supportedEffects.push(match[1]);
-          });
+          if (device.mappings.LightEffectsColorLoop)
+            d.attributes.supportedEffects.push('colorLoop');
+
+          if (device.mappings.LightEffectsSleep) {
+            d.attributes.defaultSleepDuration = device.mappings.LightEffectsSleep.defaultDuration || 1800;
+            d.attributes.supportedEffects.push('sleep');
+          }
+
+          if (device.mappings.LightEffectsWake) {
+            d.attributes.defaultWakeDuration = device.mappings.LightEffectsWake.defaultDuration || 1800;
+            d.attributes.supportedEffects.push('wake');
+          }
+          // device.mappings.LightEffects.cmds.forEach(function (cmd) {
+          //   var match = cmd.match(/(.*):(.*)/);
+          //   if (match)
+          //     d.attributes.supportedEffects.push(match[1]);
+          // });
           d.traits.push("action.devices.traits.LightEffects");
         }
 
