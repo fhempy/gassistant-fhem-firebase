@@ -69,6 +69,7 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_REBOOT = "action.devices.commands.Reboot";
   const REQUEST_EFFECT_SLEEP = "action.devices.commands.Sleep";
   const REQUEST_EFFECT_WAKE = "action.devices.commands.Wake";
+  const REQUEST_CHARGE = "action.devices.commands.Charge";
 
   //map commands to the mapping within the device
   const commandMapping = {};
@@ -104,6 +105,7 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_REBOOT] = ['Reboot'];
   commandMapping[REQUEST_EFFECT_SLEEP] = ['LightEffectsSleep'];
   commandMapping[REQUEST_EFFECT_WAKE] = ['LightEffectsWake'];
+  commandMapping[REQUEST_CHARGE] = ['EnergyStorageExact', 'EnergyStorageDescriptive'];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -281,6 +283,10 @@ async function processEXECUTE(uid, reqId, input) {
 
           case REQUEST_FANSPEEDREVERSE:
             //response = await processEXECUTEReverse(uid, reqId,exec.params.reverse));
+            break;
+
+          case REQUEST_CHARGE:
+            response = await processEXECUTESetCharge(uid, reqId, device, readings, exec, fhemExecCmd);
             break;
 
           //action.devices.traits.Modes: COMMANDS
@@ -830,6 +836,34 @@ async function processEXECUTEActivateScene(uid, reqId, device, scenename, deacti
   }];
 }; //processEXECUTEActivateScene
 
+async function processEXECUTESetCharge(uid, reqId, device, readings, event, fhemExecCmd) {
+  var es;
+  if (device.mappings.EnergyStorageExact) {
+    es = device.mappings.EnergyStorageExact[0];
+  } else {
+    es = device.mappings.EnergyStorageDescriptive;
+  }
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, es, event.params.charge ? "START" : "STOP", fhemExecCmd));
+
+  var isPluggedValue = false;
+  if (device.mappings.EnergyStoragePluggedIn)
+    isPluggedValue = await utils.cached2Format(uid, device.mappings.EnergyStoragePluggedIn, readings);
+
+  var isChargingValue = false;
+  if (device.mappings.EnergyStorageCharging)
+    isChargingValue = await utils.cached2Format(uid, device.mappings.EnergyStorageCharging, readings);
+  
+  return [{
+    ids: [device.uuid_base],
+    status: "SUCCESS",
+    states: {
+      online: true,
+      isPluggedIn: isPluggedValue,
+      isCharging: isChargingValue
+    }
+  }];
+} //processEXECUTESetCharge
+
 async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
   let retArr = [];
   for (mode of Object.keys(event.params.updateModeSettings)) {
@@ -1030,6 +1064,7 @@ module.exports = {
   processEXECUTESetFanSpeed,
   processEXECUTESetColorAbsolute,
   processEXECUTESetToggles,
+  processEXECUTESetCharge,
   processEXECUTEActivateScene,
   processEXECUTESetModes,
   execFHEMCommand

@@ -198,6 +198,35 @@ async function processQUERY(uid, input, reportstate) {
       }
     }
 
+    //EnergyStorage
+    if (device.mappings.EnergyStorageExact || device.mappings.EnergyStorageDescriptive) {
+      if (device.mappings.EnergyStorageDescriptive) {
+        devices[d.id].descriptiveCapacityRemaining = await utils.cached2Format(uid, device.mappings.EnergyStorageDescriptive, readings);
+      }
+      var es;
+      if (device.mappings.EnergyStoragePluggedIn) {
+        devices[d.id].isPluggedIn = await utils.cached2Format(uid, device.mappings.EnergyStoragePluggedIn, readings);
+      }
+      if (device.mappings.EnergyStorageCharging) {
+        devices[d.id].isCharging = await utils.cached2Format(uid, device.mappings.EnergyStorageCharging, readings);
+      }
+      if (device.mappings.EnergyStorageUntilFull) {
+        devices[d.id].capacityUntilFull = [];
+        device.mappings.EnergyStorageUntilFull.forEach(async (esuf) => {
+          var rawValue = await utils.cached2Format(uid, esuf, readings);
+          devices[d.id].capacityUntilFull.push({"unit": esuf.unit, "rawValue": rawValue});
+        });
+      }
+      if (device.mappings.EnergyStorageExact) {
+        devices[d.id].capacityRemaining = [];
+        device.mappings.EnergyStorageExact.forEach(async (ese) => {
+          var rawValue = await utils.cached2Format(uid, ese, readings);
+          devices[d.id].capacityRemaining.push({"unit": ese.unit, "rawValue": rawValue});
+        });
+      }
+      devices[d.id].status = "SUCCESS";
+    }
+
     //action.devices.traits.Modes: STATES
     if (device.mappings.Modes) {
       devices[d.id].currentModeSettings = {};

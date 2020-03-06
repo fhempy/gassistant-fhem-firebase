@@ -81,7 +81,9 @@ var processSYNC = function (uid, devices) {
         device.mappings.LockCurrentState ||
         device.mappings.LockTargetState ||
         device.mappings.Reboot ||
-        device.mappings.SoftwareUpdate) {
+        device.mappings.SoftwareUpdate ||
+        device.mappings.EnergyStorageDescriptive ||
+        device.mapings.EnergyStorageExact) {
         //console.log(device);
 
         //console.log("Start handling ", device.ghomeName);
@@ -218,6 +220,20 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.StartStop");
           //Attributes
           d.attributes.pausable = true;
+        }
+
+        //EnergyStorage
+        if (device.mappings.EnergyStorageDescriptive || device.mappings.EnergyStorageExact) {
+          d.traits.push("action.devices.traits.EnergyStorage");
+          var es;
+          if (device.mappings.EnergyStorageExact) {
+            es = device.mappings.EnergyStorageExact[0];
+          } else {
+            es = device.mappings.EnergyStorageDescriptive;
+          }
+          d.attributes.queryOnlyEnergyStorage = es.queryOnlyEnergyStorage ? true : false;
+          d.attributes.energyStorageDistanceUnitForUX = es.energyStorageDistanceUnitForUX ? es.energyStorageDistanceUnitForUX : "KILOMETERS";
+          d.attributes.isRechargeable = es.isRechargeable ? true : false;
         }
 
         //FanSpeed
