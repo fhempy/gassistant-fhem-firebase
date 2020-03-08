@@ -72,6 +72,7 @@ const GOOGLE_DEVICE_TYPES = {
   'refrigerator': 'action.devices.types.REFRIGERATOR',
   'scene': 'action.devices.types.SCENE',
   'securitysystem': 'action.devices.types.SECURITYSYSTEM',
+  'sensor': 'action.devices.types.SENSOR',
   'shutter': 'action.devices.types.SHUTTER',
   'shower': 'action.devices.types.SHOWER',
   'sousvide': 'action.devices.types.SOUSVIDE',

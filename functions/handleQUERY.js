@@ -198,6 +198,20 @@ async function processQUERY(uid, input, reportstate) {
       }
     }
 
+    //SensorState
+    // - WaterLeak
+    if (device.mappings.WaterLeak) {
+      if (!devices[d.id].currentSensorStateData)
+        devices[d.id].currentSensorStateData = [];
+
+      devices[d.id].status = "SUCCESS";
+      var currState = await utils.cached2Format(uid, device.mappings.WaterLeak, readings);
+      devices[d.id].currentSensorStateData.push({
+        name: "WaterLeak",
+        currentSensorState: currState
+      });
+    }
+
     //EnergyStorage
     if (device.mappings.EnergyStorageExact || device.mappings.EnergyStorageDescriptive) {
       if (device.mappings.EnergyStorageDescriptive) {

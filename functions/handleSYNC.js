@@ -83,7 +83,8 @@ var processSYNC = function (uid, devices) {
         device.mappings.Reboot ||
         device.mappings.SoftwareUpdate ||
         device.mappings.EnergyStorageDescriptive ||
-        device.mapings.EnergyStorageExact) {
+        device.mappings.EnergyStorageExact ||
+        device.mappings.WaterLeak) {
         //console.log(device);
 
         //console.log("Start handling ", device.ghomeName);
@@ -220,6 +221,26 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.StartStop");
           //Attributes
           d.attributes.pausable = true;
+        }
+
+        //SensorState
+        // - WaterLeak
+        if (device.mappings.WaterLeak) {
+          d.traits.push("action.devices.traits.SensorState");
+          if (!d.attributes.sensorStatesSupported)
+            d.attributes.sensorStatesSupported = [];
+
+          var availableWlStates = [];
+          for (var entry of device.mappings.WaterLeak.values) {
+            var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
+            availableWlStates.push(match[5]);
+          }
+          d.attributes.sensorStatesSupported.push({
+            name: "WaterLeak",
+            descriptiveCapabilities: {
+              availableStates: availableWlStates
+            }
+          });
         }
 
         //EnergyStorage

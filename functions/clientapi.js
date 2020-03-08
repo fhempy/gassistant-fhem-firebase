@@ -517,14 +517,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }];
   }
 
-  if (s.Internals.TYPE == 'XiaomiSmartHome_Device' && s.Internals.MODEL == 'sensor_magnet.aq2') {
-    if (!service_name) service_name = 'door';
-    mappings.OpenClose = {
-      reading: 'state',
-      values: ['/^close/:CLOSED', '/.*/:OPEN']
-    };
-  }
-
   if (s.Internals.TYPE == 'LightScene' || (s.PossibleSets.match(/(^| )scene\b/) && service_name === "scene")) {
     //name attribut ist der name der scene
     mappings.Scene = [];
@@ -1438,6 +1430,20 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdOn: 'poweron',
       cmdOff: 'poweroff'
     };
+  } else if (s.Internals.TYPE === "XiaomiSmartHome_Device") {
+    if (s.Internals.MODEL === "sensor_wleak.aq1") {
+      if (!service_name) service_name = 'sensor';
+      mappings.WaterLeak = {
+        reading: "state",
+        values: ["leak:leak", "no_leak:no leak", "/.*/:unknown"]
+      };
+    } else if (s.Internals.MODEL == 'sensor_magnet.aq2') {
+      if (!service_name) service_name = 'door';
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/^close/:CLOSED', '/.*/:OPEN']
+      };
+    }
   }
 
   //SERVICENAME
