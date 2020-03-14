@@ -550,6 +550,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd: 'charge',
       values: ['/^Docked/:true', '/^Charging/:true', '/.*/:false']
     };
+    mappings.FilterCleanliness = {
+      reading: "consumables_filter",
+      values: ["/^[0-1]?[0-9][0-9]$/:clean", "/^[0-9]$/:dirty", "/^-.*$/:needs replacement", "/.*/:unknown"]
+    };
     mappings.Locate = {
       cmd: 'locate'
     };
@@ -1196,6 +1200,29 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       values: ['/low/:EXCEPTION', '/[0-1]?[0-9]/:EXCEPTION', '/.*/:OK'],
       onlyLinkedInfo: false
     };
+
+    mappings.EnergyStorageDescriptive = {
+      queryOnlyEnergyStorage: true,
+      reading: batt,
+      values: ["/[0]?[0-9]/:CRITICALLY_LOW",
+        "/[1][0-9]/:LOW",
+        "/[2-7][0-9]/:MEDIUM",
+        "/[8][0-9]/:HIGH",
+        "/[1]?[0,9][0-9]/:FULL",
+        "/low/:CRITICALLY_LOW",
+        "/.*/:FULL"]
+    };
+
+    if ((s.Readings.battery && !isNaN(s.Readings.battery.Value)) || (s.Readings.batteryState && !isNaN(s.Readings.batteryState.Value))) {
+      var r = isNaN(s.Readings.battery.Value) ? "batteryState" : "battery";
+      mappings.EnergyStorageExact = [{
+        queryOnlyEnergyStorage: true,
+        reading: r,
+        unit: "PERCENTAGE"
+      }];
+    }
+    if (mappings.EnergyStorageExact)
+      delete mappings.EnergyStorageDescriptive;
   }
 
   //if (s.Readings.pressure)
@@ -1437,6 +1464,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: "state",
         values: ["leak:leak", "no_leak:no leak", "/.*/:unknown"]
       };
+      mappings.Exceptions.waterLeakDetected = {
+        reading: 'state',
+        values: ['leak:EXCEPTION', '/.*/:OK'],
+        onlyLinkedInfo: false
+      };
     } else if (s.Internals.MODEL == 'sensor_magnet.aq2') {
       if (!service_name) service_name = 'door';
       mappings.OpenClose = {
@@ -1444,6 +1476,24 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         values: ['/^close/:CLOSED', '/.*/:OPEN']
       };
     }
+  } else if (s.Internals.TYPE === "BDKM") {
+    mappings.TargetTemperature = {
+      reading: 'RoomTemporaryDesiredTemp',
+      cmd: 'RoomTemporaryDesiredTemp'
+    };
+    mappings.TemperatureControlAmbientCelsius = {"reading": "WaterTemp"};
+    mappings.Toggles = [{
+      reading: 'Einmalladung', valueOn: 'start', cmdOn: 'Einmalladung start', cmdOff: 'Einmalladung stop',
+      toggle_attributes: {
+        name: 'Einmalladung',
+        name_values: [
+          {
+            name_synonym: ['Einmalladung'],
+            lang: 'de'
+          }
+        ]
+      }
+    }];
   }
 
   //SERVICENAME

@@ -199,15 +199,58 @@ async function processQUERY(uid, input, reportstate) {
     }
 
     //SensorState
+    if (device.mappings.WaterLeak || device.mappings.FilterCleanliness || device.mappings.AirQuality || device.mappings.HEPAFilterLifeTime ||
+      device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
+      devices[d.id].currentSensorStateData = [];
+    }
+    // - AirQuality
+    if (device.mappings.AirQuality) {
+      devices[d.id].status = "SUCCESS";
+      var currState = await utils.cached2Format(uid, device.mappings.AirQuality, readings);
+      devices[d.id].currentSensorStateData.push({
+        name: "AirQuality",
+        currentSensorState: currState
+      });
+    }
+    // - HEPAFilterLifeTime
+    if (device.mappings.HEPAFilterLifeTime) {
+      devices[d.id].status = "SUCCESS";
+      var val = await utils.cached2Format(uid, device.mappings.HEPAFilterLifeTime, readings);
+      devices[d.id].currentSensorStateData.push({
+        name: "HEPAFilterLifeTime",
+        rawValue: val
+      });
+    }
+    // - CarbonMonoxideLevel
+    if (device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
+      devices[d.id].status = "SUCCESS";
+      var cml = {
+        name: "CarbonMonoxideLevel"
+      };
+      if (device.mappings.CarbonMonoxideLevelNumeric) {
+        var val = await utils.cached2Format(uid, device.mappings.CarbonMonoxideLevelNumeric, readings);
+        cml.rawValue = val;
+      }
+      if (device.mappings.CarbonMonoxideLevel) {
+        cml.currentSensorState = await utils.cached2Format(uid, device.mappings.CarbonMonoxideLevel, readings);
+      }
+      devices[d.id].currentSensorState.push(cml);
+    }
     // - WaterLeak
     if (device.mappings.WaterLeak) {
-      if (!devices[d.id].currentSensorStateData)
-        devices[d.id].currentSensorStateData = [];
-
       devices[d.id].status = "SUCCESS";
       var currState = await utils.cached2Format(uid, device.mappings.WaterLeak, readings);
       devices[d.id].currentSensorStateData.push({
         name: "WaterLeak",
+        currentSensorState: currState
+      });
+    }
+    // - FilterCleanliness
+    if (device.mappings.FilterCleanliness) {
+      devices[d.id].status = "SUCCESS";
+      var currState = await utils.cached2Format(uid, device.mappings.FilterCleanliness, readings);
+      devices[d.id].currentSensorStateData.push({
+        name: "FilterCleanliness",
         currentSensorState: currState
       });
     }

@@ -84,7 +84,12 @@ var processSYNC = function (uid, devices) {
         device.mappings.SoftwareUpdate ||
         device.mappings.EnergyStorageDescriptive ||
         device.mappings.EnergyStorageExact ||
-        device.mappings.WaterLeak) {
+        device.mappings.WaterLeak ||
+        device.mappings.FilterCleanliness ||
+        device.mappings.AirQuality ||
+        device.mappings.HEPAFilterLifeTime ||
+        device.mappings.CarbonMonoxideLevel ||
+        device.mappings.CarbonMonoxideLevelNumeric) {
         //console.log(device);
 
         //console.log("Start handling ", device.ghomeName);
@@ -224,12 +229,59 @@ var processSYNC = function (uid, devices) {
         }
 
         //SensorState
+        if (device.mappings.WaterLeak || device.mappings.FilterCleanliness || device.mappings.AirQuality || device.mappings.HEPAFilterLifeTime ||
+          device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
+
+          d.traits.push("action.devices.traits.SensorState");
+          d.attributes.sensorStatesSupported = [];
+        }
+        // - AirQuality
+        if (device.mappings.AirQuality) {
+          var availableAQStates = [];
+          for (var entry of device.mappings.AirQuality.values) {
+            var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
+            availableAQStates.push(match[5]);
+          }
+          d.attributes.sensorStatesSupported.push({
+            name: "AirQuality",
+            descriptiveCapabilities: {
+              availableStates: availableAQStates
+            }
+          });
+        }
+        // - CarbonMonoxideLevel
+        if (device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
+          var sss = {
+            name: "CarbonMonoxideLevel"
+          };
+          if (device.mappings.CarbonMonoxideLevel) {
+            var availableCMLStates = [];
+            for (var entry of device.mappings.CarbonMonoxideLevel.values) {
+              var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
+              availableCMLStates.push(match[5]);
+            }
+            sss.descriptiveCapabilities = {
+              availableStates: availableCMLStates
+            };
+          }
+          if (device.mappings.CarbonMonoxideLevelNumeric) {
+            sss.numericCapabilities = {
+              rawValueUnit: "PARTS_PER_MILLION"
+            };
+          }
+          d.attributes.sensorStatesSupported.push(sss);
+        }
+        // - HEPAFilterLifeTime
+        if (device.mappings.HEPAFilterLifeTime) {
+          d.attributes.sensorStatesSupported.push({
+            name: "HEPAFilterLifeTime",
+            numericCapabilities: {
+              rawValueUnit: "PERCENTAGE"
+            }
+          });
+        }
         // - WaterLeak
         if (device.mappings.WaterLeak) {
-          d.traits.push("action.devices.traits.SensorState");
-          if (!d.attributes.sensorStatesSupported)
-            d.attributes.sensorStatesSupported = [];
-
           var availableWlStates = [];
           for (var entry of device.mappings.WaterLeak.values) {
             var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
@@ -239,6 +291,20 @@ var processSYNC = function (uid, devices) {
             name: "WaterLeak",
             descriptiveCapabilities: {
               availableStates: availableWlStates
+            }
+          });
+        }
+        // - FilterCleanliness
+        if (device.mappings.FilterCleanliness) {
+          var availableFilterStates = [];
+          for (var entry of device.mappings.FilterCleanliness.values) {
+            var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
+            availableFilterStates.push(match[5]);
+          }
+          d.attributes.sensorStatesSupported.push({
+            name: "FilterCleanliness",
+            descriptiveCapabilities: {
+              availableStates: availableFilterStates
             }
           });
         }
