@@ -1477,6 +1477,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
     }
   } else if (s.Internals.TYPE === "BDKM") {
+    if (!service_name) service_name = 'thermostat';
     mappings.TargetTemperature = {
       reading: 'RoomTemporaryDesiredTemp',
       cmd: 'RoomTemporaryDesiredTemp'
