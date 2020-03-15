@@ -200,7 +200,8 @@ async function processQUERY(uid, input, reportstate) {
 
     //SensorState
     if (device.mappings.WaterLeak || device.mappings.FilterCleanliness || device.mappings.AirQuality || device.mappings.HEPAFilterLifeTime ||
-      device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
+      device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric || device.mappings.PreFilterLifeTime ||
+      device.mappings.Max2FilterLifeTime || device.mappings.SmokeLevel || device.mappings.SmokeLevelNumeric) {
       devices[d.id].currentSensorStateData = [];
     }
     // - AirQuality
@@ -221,6 +222,24 @@ async function processQUERY(uid, input, reportstate) {
         rawValue: val
       });
     }
+    // - Max2FilterLifeTime
+    if (device.mappings.Max2FilterLifeTime) {
+      devices[d.id].status = "SUCCESS";
+      var val = await utils.cached2Format(uid, device.mappings.Max2FilterLifeTime, readings);
+      devices[d.id].currentSensorStateData.push({
+        name: "Max2FilterLifeTime",
+        rawValue: val
+      });
+    }
+    // - PreFilterLifeTime
+    if (device.mappings.PreFilterLifeTime) {
+      devices[d.id].status = "SUCCESS";
+      var val = await utils.cached2Format(uid, device.mappings.PreFilterLifeTime, readings);
+      devices[d.id].currentSensorStateData.push({
+        name: "PreFilterLifeTime",
+        rawValue: val
+      });
+    }
     // - CarbonMonoxideLevel
     if (device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
       devices[d.id].status = "SUCCESS";
@@ -233,6 +252,21 @@ async function processQUERY(uid, input, reportstate) {
       }
       if (device.mappings.CarbonMonoxideLevel) {
         cml.currentSensorState = await utils.cached2Format(uid, device.mappings.CarbonMonoxideLevel, readings);
+      }
+      devices[d.id].currentSensorState.push(cml);
+    }
+    // - SmokeLevel
+    if (device.mappings.SmokeLevel || device.mappings.SmokeLevelNumeric) {
+      devices[d.id].status = "SUCCESS";
+      var cml = {
+        name: "SmokeLevel"
+      };
+      if (device.mappings.SmokeLevelNumeric) {
+        var val = await utils.cached2Format(uid, device.mappings.SmokeLevelNumeric, readings);
+        cml.rawValue = val;
+      }
+      if (device.mappings.SmokeLevel) {
+        cml.currentSensorState = await utils.cached2Format(uid, device.mappings.SmokeLevel, readings);
       }
       devices[d.id].currentSensorState.push(cml);
     }
@@ -271,14 +305,14 @@ async function processQUERY(uid, input, reportstate) {
         devices[d.id].capacityUntilFull = [];
         device.mappings.EnergyStorageUntilFull.forEach(async (esuf) => {
           var rawValue = await utils.cached2Format(uid, esuf, readings);
-          devices[d.id].capacityUntilFull.push({"unit": esuf.unit, "rawValue": rawValue});
+          devices[d.id].capacityUntilFull.push({ "unit": esuf.unit, "rawValue": rawValue });
         });
       }
       if (device.mappings.EnergyStorageExact) {
         devices[d.id].capacityRemaining = [];
         device.mappings.EnergyStorageExact.forEach(async (ese) => {
           var rawValue = await utils.cached2Format(uid, ese, readings);
-          devices[d.id].capacityRemaining.push({"unit": ese.unit, "rawValue": rawValue});
+          devices[d.id].capacityRemaining.push({ "unit": ese.unit, "rawValue": rawValue });
         });
       }
       devices[d.id].status = "SUCCESS";

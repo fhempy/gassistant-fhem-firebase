@@ -230,7 +230,8 @@ var processSYNC = function (uid, devices) {
 
         //SensorState
         if (device.mappings.WaterLeak || device.mappings.FilterCleanliness || device.mappings.AirQuality || device.mappings.HEPAFilterLifeTime ||
-          device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric) {
+          device.mappings.CarbonMonoxideLevel || device.mappings.CarbonMonoxideLevelNumeric || device.mappings.PreFilterLifeTime ||
+          device.mappings.Max2FilterLifeTime || device.mappings.SmokeLevel || device.mappings.SmokeLevelNumeric) {
 
           d.traits.push("action.devices.traits.SensorState");
           d.attributes.sensorStatesSupported = [];
@@ -271,10 +272,50 @@ var processSYNC = function (uid, devices) {
           }
           d.attributes.sensorStatesSupported.push(sss);
         }
+        // - SmokeLevel
+        if (device.mappings.SmokeLevel || device.mappings.SmokeLevelNumeric) {
+          var sss = {
+            name: "SmokeLevel"
+          };
+          if (device.mappings.SmokeLevel) {
+            var availableSLStates = [];
+            for (var entry of device.mappings.SmokeLevel.values) {
+              var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
+              availableSLStates.push(match[5]);
+            }
+            sss.descriptiveCapabilities = {
+              availableStates: availableSLStates
+            };
+          }
+          if (device.mappings.SmokeLevelNumeric) {
+            sss.numericCapabilities = {
+              rawValueUnit: "PARTS_PER_MILLION"
+            };
+          }
+          d.attributes.sensorStatesSupported.push(sss);
+        }
         // - HEPAFilterLifeTime
         if (device.mappings.HEPAFilterLifeTime) {
           d.attributes.sensorStatesSupported.push({
             name: "HEPAFilterLifeTime",
+            numericCapabilities: {
+              rawValueUnit: "PERCENTAGE"
+            }
+          });
+        }
+        // - Max2FilterLifeTime
+        if (device.mappings.Max2FilterLifeTime) {
+          d.attributes.sensorStatesSupported.push({
+            name: "Max2FilterLifeTime",
+            numericCapabilities: {
+              rawValueUnit: "PERCENTAGE"
+            }
+          });
+        }
+        // - PreFilterLifeTime
+        if (device.mappings.PreFilterLifeTime) {
+          d.attributes.sensorStatesSupported.push({
+            name: "PreFilterLifeTime",
             numericCapabilities: {
               rawValueUnit: "PERCENTAGE"
             }
