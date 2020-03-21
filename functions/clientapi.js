@@ -99,6 +99,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     return undefined;
   }
 
+  if (s.Internals.TYPE === 'FHEMSYNC_DEVICE') {
+    s.Internals.TYPE = s.Internals.REMOTETYPE;
+  }
+
   //CREATE MAPPINGS
   if (genericType === 'blind')
     genericType = 'blinds';
@@ -236,37 +240,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       reading: 'reachable',
       valueError: '0'
     };
-  }
-
-  if (s.Internals.TYPE === "HUEDevice") {
-    if (s.Attributes.subType === "ctdimmer") {
-      //Hue CT mode
-      mappings.ColorMode = {
-        reading: 'colormode',
-        valueCt: 'ct'
-      };
-
-      mappings.ColorTemperature = {
-        reading: 'ct',
-        cmd: 'ct'
-      };
-      mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
-        var match;
-        if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
-          return parseInt(match[2]);
-        }
-        return 0;
-      };
-      mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
-        //kelvin to mired
-        return parseInt(1000000 / orig);
-      };
-
-      mappings.Errors.deviceOffline = {
-        reading: 'reachable',
-        valueError: '0'
-      };
-    }
   }
 
   if (match = s.PossibleSets.match(/(^| )effect:none,colorloop\b/)) {
@@ -997,19 +970,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd: 'desiredTemperature'
     };
 
-    // if (s.Readings.valveposition)
-    //     mappings.Actuation = {
-    //         reading: 'valveposition',
-    //         name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
-    //         maxValue: 100, minValue: 0, minStep: 1
-    //     };
-    // else if (s.Readings.valvePosition)
-    //     mappings.Actuation = {
-    //         reading: 'valvePosition',
-    //         name: 'Actuation', format: 'UINT8', unit: 'PERCENTAGE',
-    //         maxValue: 100, minValue: 0, minStep: 1
-    //     };
-
     if (match[3]) {
       var values = match[3].split(',');
       mappings.TargetTemperature.minValue = parseFloat(values[0]);
@@ -1431,12 +1391,50 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         if (!service_name) service_name = 'light';
       }
     }
-  } else if (s.Internals.TYPE === 'HUEDevice' && s.Internals.modelid === 'lumi.sensor_magnet.aq2') {
-    if (!service_name) service_name = 'door';
-    mappings.OpenClose = {
-      reading: 'state',
-      values: ['/^closed/:CLOSED', '/.*/:OPEN']
-    };
+  } else if (s.Internals.TYPE === 'HUEDevice') {
+    if (s.Attributes.subType === "ctdimmer") {
+      if (!service_name) service_name = 'light';
+      //Hue CT mode
+      mappings.ColorMode = {
+        reading: 'colormode',
+        valueCt: 'ct'
+      };
+
+      mappings.ColorTemperature = {
+        reading: 'ct',
+        cmd: 'ct'
+      };
+      mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
+        var match;
+        if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
+          return parseInt(match[2]);
+        }
+        return 0;
+      };
+      mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
+        //kelvin to mired
+        return parseInt(1000000 / orig);
+      };
+
+      mappings.Errors.deviceOffline = {
+        reading: 'reachable',
+        valueError: '0'
+      };
+    }
+    if (s.Internals.modelid === 'lumi.sensor_magnet.aq2') {
+      if (!service_name) service_name = 'door';
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/^closed/:CLOSED', '/.*/:OPEN']
+      };
+    }
+    if (s.Internals.modelid === "SPZB0001") {
+      if (!service_name) service_name = 'thermostat';
+      mappings.TargetTemperature = {
+        reading: 'heatsetpoint',
+        cmd: 'heatsetpoint'
+      };
+    }
   } else if (s.Internals.TYPE === 'EnOcean' && s.Attributes.subType === 'contact') {
     if (!service_name) service_name = 'door';
     mappings.OpenClose = {
@@ -1482,7 +1480,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       reading: 'RoomTemporaryDesiredTemp',
       cmd: 'RoomTemporaryDesiredTemp'
     };
-    mappings.TemperatureControlAmbientCelsius = {"reading": "WaterTemp"};
+    mappings.TemperatureControlAmbientCelsius = { "reading": "WaterTemp" };
     mappings.Toggles = [{
       reading: 'Einmalladung', valueOn: 'start', cmdOn: 'Einmalladung start', cmdOff: 'Einmalladung stop',
       toggle_attributes: {
@@ -1495,6 +1493,26 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         ]
       }
     }];
+  } else if (s.Internals.TYPE === "EleroDrive") {
+    mappings.OpenClose = {
+      reading: 'state',
+      values: ['/^top_position/:OPEN', '/.*/:OPEN'],
+      cmdOpen: 'moveUp',
+      cmdClose: 'moveDown'
+    };
+  } else if (s.Internals.TYPE === "Shelly") {
+    if (s.Attributes.model === "shellydimmer") {
+      mappings.On = {
+        reading: 'state',
+        valueOff: 'off',
+        cmdOn: 'on',
+        cmdOff: 'off'
+      };
+      mappings.Brightness = {
+        reading: 'pct',
+        cmd: 'pct'
+      };
+    }
   }
 
   //SERVICENAME
@@ -2265,18 +2283,7 @@ function registerClientApi(app) {
     const {
       sub: uid
     } = req.user;
-    uidlog(uid, 'initiate sync');
-    var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync?key=' + settings.HOMEGRAPH_APIKEY, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        "agentUserId": uid,
-        "async": true
-      })
-    });
-    uidlog(uid, 'SYNC initiated');
+    await utils.initSync(uid);
     res.send({});
   });
 

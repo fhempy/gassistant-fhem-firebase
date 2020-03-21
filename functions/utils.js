@@ -1,6 +1,7 @@
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const jwt = require('express-jwt');
+const fetch = require('node-fetch');
 const jwks = require('jwks-rsa');
 const jsonwt = require('jsonwebtoken');
 const uidlog = require('./logger').uidlog;
@@ -162,6 +163,21 @@ async function sendCmd2Fhem(uid, fcmds) {
   }
 }
 
+async function initSync(uid) {
+  uidlog(uid, 'initiate sync');
+  var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync?key=' + settings.HOMEGRAPH_APIKEY, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      "agentUserId": uid,
+      "async": true
+    })
+  });
+  uidlog(uid, 'SYNC initiated');
+}
+
 function createDirective(reqId, payload) {
   return {
     requestId: reqId,
@@ -184,9 +200,9 @@ async function getGoogleToken() {
 function setGoogleToken(google_token) {
   googleToken = google_token;
   firestoredb.collection('settings').doc('googletoken').set({
-      token: google_token
-    })
-    .then(r => {});
+    token: google_token
+  })
+    .then(r => { });
 }
 
 async function getSyncFeatureLevel(uid) {
@@ -407,14 +423,14 @@ async function getClientVersion(uid) {
 
 async function retrieveGoogleToken(uid) {
   var token = jsonwt.sign({
-      "iss": settings.SERVICEACCOUNT,
-      "scope": "https://www.googleapis.com/auth/homegraph",
-      "aud": "https://accounts.google.com/o/oauth2/token"
-    },
+    "iss": settings.SERVICEACCOUNT,
+    "scope": "https://www.googleapis.com/auth/homegraph",
+    "aud": "https://accounts.google.com/o/oauth2/token"
+  },
     settings.PRIVATE_KEY, {
-      algorithm: 'RS256',
-      expiresIn: 60 * 60
-    });
+    algorithm: 'RS256',
+    expiresIn: 60 * 60
+  });
 
   //sign JWT https://github.com/auth0/node-jsonwebtoken
   //request access token from https://accounts.google.com/o/oauth2/token
@@ -426,7 +442,6 @@ async function retrieveGoogleToken(uid) {
   params.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
   params.append('assertion', token);
 
-  const fetch = require('node-fetch');
   var options = {
     method: 'POST',
     body: params
@@ -491,7 +506,6 @@ async function reportState(uid, device) {
     google_token = await retrieveGoogleToken(uid);
 
   //report state
-  const fetch = require('node-fetch');
   for (var i = 0; i < 2; i++) {
     var options = {
       method: 'POST',
@@ -557,9 +571,9 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     value = parseInt(value) ? true : false;
 
   } else if (reading === 'state' && (mapping.On &&
-      typeof mapping.values !== 'object' &&
-      mapping.reading2homekit === undefined &&
-      mapping.valueOn === undefined && mapping.valueOff === undefined)) {
+    typeof mapping.values !== 'object' &&
+    mapping.reading2homekit === undefined &&
+    mapping.valueOn === undefined && mapping.valueOff === undefined)) {
     if (value.match(/^set-/))
       return undefined;
     if (value.match(/^set_/))
@@ -596,7 +610,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     if (typeof mapping.characteristic === 'object')
       format = mapping.characteristic.props.format;
     else if (typeof mapping.characteristic === 'function') {
-      var characteristic = new(Function.prototype.bind.apply(mapping.characteristic, arguments));
+      var characteristic = new (Function.prototype.bind.apply(mapping.characteristic, arguments));
 
       format = characteristic.props.format;
 
@@ -657,7 +671,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
             if (!value)
               uiderror(uid, 'reading ' + entry.reading + ' not found in reading array: ' + JSON.stringify(readings));
           }
-          if (value.toString().match(entry.re)) {
+          if (value && value.toString().match(entry.re)) {
             mapped = entry.to;
             break;
           }
@@ -760,7 +774,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       }
 
       value = parseInt(value + 0.5);
-    } else if (format.match(/string/i)) {}
+    } else if (format.match(/string/i)) { }
 
 
     if (mapping.max && mapping.maxValue) {
@@ -917,6 +931,7 @@ module.exports = {
   checkExceptions,
   checkLinkedDevices,
   createDirective,
+  initSync,
   jwtCheck,
   reportState,
   loadDevice,
