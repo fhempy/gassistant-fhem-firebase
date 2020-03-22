@@ -15,12 +15,12 @@ function uiderror(uid, msg, err) {
     ts: Date.now()
   });
 
-  if ((msg instanceof Error) === false)
-    msg = new Error(msg);
-  console.error(uid + ': ' + msg);
-
+  var errMsg = uid + ": " + msg;
   if (err)
-    console.error(err);
+    errMsg = errMsg + "\n" + err.stack;
+
+  var errObj = new Error(errMsg);
+  console.error(errObj);
 }
 
 module.exports = {

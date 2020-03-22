@@ -353,7 +353,7 @@ async function loadDevices(uid, nocache) {
             prepareDevice(uid, allDevicesCache[uid]['devices'][child.val().name]['device']);
             devices[child.val().name] = allDevicesCache[uid]['devices'][child.val().name]['device'];
           } catch (err) {
-            uiderror(uid, "Error with device " + child.val().name + ": " + err);
+            uiderror(uid, "Error with device " + child.val().name, err);
           }
         }
       });
