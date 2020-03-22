@@ -7,6 +7,7 @@ module.exports = {
   Logger: Logger,
   uiderror: uiderror,
   uidlog: uidlog,
+  nouidlog: nouidlog,
   uidlogfct: uidlogfct,
   setDebugEnabled: setDebugEnabled,
   _system: new Logger() // system logger, for internal use only
@@ -90,6 +91,9 @@ Logger.withPrefix = function (prefix) {
   }
 
   return loggerCache[prefix];
+}
+
+function nouidlog(uid, msg) {
 }
 
 function uidlog(uid, msg) {

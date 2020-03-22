@@ -4,6 +4,8 @@ const express = require('express');
 const localEXECUTE = require('./localhandleEXECUTE');
 const database = require('./database');
 
+const logger = require('./logger').Logger.withPrefix("LOCAL");
+
 const DEFAULT_PORT = 37000;
 
 function startLocalHome(serverInstance) {
@@ -68,15 +70,15 @@ function startLocalHome(serverInstance) {
 
         res.send(resp);
       } else if (req.body.inputs[0].intent == "action.devices.EXECUTE") {
-        console.log('LOCALHOME received: ' + req.body.inputs[0].intent);
+        logger.info('LOCALHOME received: ' + req.body.inputs[0].intent);
         localEXECUTE.handleEXECUTE(database.getUid(), req.body.requestId, res, req.body.inputs[0]);
       } else {
         //FIXME
-        console.log('LOCALHOME unknown command received: ' + req.body.inputs[0].intent);
+        logger.info('LOCALHOME unknown command received: ' + req.body.inputs[0].intent);
         res.send("ERROR");
       }
     } catch (err) {
-      console.error('Error in Local Home: ' + err);
+      logger.error('Error in Local Home: ' + err);
     }
   });
 
@@ -84,18 +86,18 @@ function startLocalHome(serverInstance) {
     startBonjour(server.address().port);
   }).on('error', function (err) {
     if (err.errno === 'EADDRINUSE') {
-      console.log("Default port in use, try different.");
+      logger.info("Default port in use, try different.");
       server = app.listen(0, "0.0.0.0", function () {
         startBonjour(server.address().port);
       });
     } else {
-      console.log(err);
+      logger.info(err);
     }
   });
 }
 
 function startBonjour(serverPort) {
-  console.log('FHEM Connect Google local home server running on port ' + serverPort);
+  logger.info('FHEM Connect Google local home server running on port ' + serverPort);
 
   var bonjour = require('bonjour')();
   // advertise an HTTP server on port PORT

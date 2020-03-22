@@ -1,9 +1,12 @@
 var database = require('./database');
-var fhem2 = require('./fhem');
 
-const uidlog = require('./logger').uidlog;
+const uidlog = require('./logger').nouidlog;
 const uiderror = require('./logger').uiderror;
 
+
+function initSync(uid) {
+  return undefined;
+}
 
 function prepareDevice(uid, dev) {
   if (!dev || !dev.mappings) {
@@ -39,7 +42,7 @@ function prepareDevice(uid, dev) {
 
 function getAllDevicesAndReadings(uid) {
   var devices = {};
-  var readings = fhem2.getCurrentReadings();
+  var readings = require('./fhem').getCurrentReadings();
 
   var allDevices = database.getMappings();
   Object.keys(allDevices).forEach(function (device) {
@@ -55,7 +58,7 @@ function getAllDevicesAndReadings(uid) {
 
 function sendCmd2Fhem(uid, fcmds) {
   for (var c in fcmds) {
-    fhem2.FHEM_execute({
+    require('./fhem').FHEM_execute({
       base_url: c
     }, fcmds[c]);
   }
@@ -171,7 +174,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     if (mapping.event_map !== undefined) {
       var mapped = mapping.event_map[value];
       if (mapped !== undefined) {
-        console.debug(mapping.reading.toString() + ' eventMap: value ' + value + ' mapped to: ' + mapped);
+        uidlog(uid, mapping.reading.toString() + ' eventMap: value ' + value + ' mapped to: ' + mapped);
         value = mapped;
       }
     }
@@ -183,7 +186,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         uiderror(uid, mapping.reading.toString() + ' value ' + value + ' has no part ' + mapping.part);
         return value;
       }
-      console.debug(mapping.reading.toString() + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
+      uidlog(uid, mapping.reading.toString() + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
       value = mapped;
     }
 
@@ -194,7 +197,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         mapped = 1;
       else
         mapped = 0;
-      console.debug(mapping.reading.toString() + ' threshold: value ' + value + ' mapped to ' + mapped);
+      uidlog(uid, mapping.reading.toString() + ' threshold: value ' + value + ' mapped to ' + mapped);
       value = mapped;
     }
 
@@ -244,7 +247,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         mapped = (mapped == 'true');
       }
 
-      console.debug(mapping.reading.toString() + ' values: value ' + value + ' mapped to ' + mapped);
+      uidlog(uid, mapping.reading.toString() + ' values: value ' + value + ' mapped to ' + mapped);
       value = mapped;
     }
 
@@ -279,12 +282,12 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
           mapped = parseInt(value) ? 1 : 0;
       }
       if (mapped !== undefined) {
-        console.debug(mapping.reading.toString() + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
+        uidlog(uid, mapping.reading.toString() + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
         value = mapped;
       }
 
       if (mapping.factor) {
-        console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        uidlog(uid, mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
 
@@ -303,7 +306,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       value = mapped;
 
       if (mapping.factor) {
-        console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        uidlog(uid, mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
 
@@ -317,7 +320,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       value = mapped;
 
       if (mapping.factor) {
-        console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        uidlog(uid, mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
 
@@ -327,14 +330,14 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
 
     if (mapping.max && mapping.maxValue) {
       value = Math.round((value * mapping.maxValue / mapping.max) * 100) / 100;
-      console.debug(mapping.reading.toString() + ' value ' + orig + ' scaled to: ' + value);
+      uidlog(uid, mapping.reading.toString() + ' value ' + orig + ' scaled to: ' + value);
     }
 
     if (mapping.minValue !== undefined && value < mapping.minValue) {
-      console.debug(mapping.reading.toString() + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
+      uidlog(uid, mapping.reading.toString() + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
       value = mapping.minValue;
     } else if (mapping.maxValue !== undefined && value > mapping.maxValue) {
-      console.debug(mapping.reading.toString() + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
+      uidlog(uid, mapping.reading.toString() + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
       value = mapping.maxValue;
     }
 
@@ -365,7 +368,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       }
 
       if (value !== mapped)
-        console.debug(mapping.reading.toString() + ' value: ' + value + ' inverted to ' + mapped);
+        uidlog(uid, mapping.reading.toString() + ' value: ' + value + ' inverted to ' + mapped);
       value = mapped;
     }
     if (format && format.match(/bool/i)) {
@@ -482,5 +485,6 @@ module.exports = {
   cached2Format,
   checkExceptions,
   checkLinkedDevices,
-  sendCmd2Fhem
+  sendCmd2Fhem,
+  initSync
 };

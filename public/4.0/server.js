@@ -11,6 +11,7 @@ const FHEM_execute = require('./fhem').FHEM_execute;
 const database = require('./database');
 const localhome = require('./localserver');
 const localEXECUTE = require('./localhandleEXECUTE');
+const localQUERY = require('./localhandleQUERY');
 
 
 module.exports = {
@@ -200,6 +201,7 @@ Server.prototype.startConnection = async function () {
 
   localhome.startLocalHome(this);
   await localEXECUTE.FHEM_getClientFunctions();
+  await localQUERY.FHEM_getClientFunctions();
 
   //register listener
   this.startServer();

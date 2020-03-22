@@ -151,6 +151,10 @@ async function gethandleEXECUTE() {
   return await getCloudFunction(CLOUD_FUNCTIONS_BASE + "/dynamicfunctionsv1/4.0/gethandleEXECUTE");
 }
 
+async function gethandleQUERY() {
+  return await getCloudFunction(CLOUD_FUNCTIONS_BASE + "/dynamicfunctionsv1/4.0/gethandleQUERY");
+}
+
 async function getServerFeatureLevel() {
   return await getCloudFunction(CLOUD_FUNCTIONS_BASE + "/api/getfeaturelevel");
 }
@@ -166,8 +170,13 @@ async function reportState(device) {
   }));
 };
 
+async function reportStateWithData(data) {
+  log.info('reportstate_v2: ' + JSON.stringify(data));
+  return await postCloudFunction(CLOUD_FUNCTIONS_BASE.replace('europe-west1', 'us-central1') + "/reportstate/singledevice_v2", JSON.stringify({deviceStatus: data}));
+};
+
 async function reportStateAll() {
-  log.info('reportstateall initiated');
+  log.info('reportstate: all');
   return await getCloudFunction(CLOUD_FUNCTIONS_BASE.replace('europe-west1', 'us-central1') + "/reportstate/alldevices");
 };
 
@@ -357,9 +366,11 @@ module.exports = {
   getConfiguration: getConfiguration,
   getClientFunctions: getClientFunctions,
   gethandleEXECUTE: gethandleEXECUTE,
+  gethandleQUERY: gethandleQUERY,
   getServerFeatureLevel: getServerFeatureLevel,
   getSyncFeatureLevel: getSyncFeatureLevel,
   reportState: reportState,
+  reportStateWithData: reportStateWithData,
   reportStateAll: reportStateAll,
   initiateSync: initiateSync,
   generateMappings: generateMappings,

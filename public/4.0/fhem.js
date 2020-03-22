@@ -6,6 +6,7 @@ var util = require('util');
 var database = require('./database');
 var version = require('./version');
 const crypto = require('crypto');
+const localQUERY = require('./localhandleQUERY');
 
 var log;
 
@@ -90,8 +91,9 @@ function FHEM(logInstance, config, server) {
     log: log,
     fhem: this
   };
-  if (config['auth'])
-    auth = config['auth'];
+  if (config['auth']) {
+    FHEM.auth(config['auth']);
+  }
   if (auth) {
     auth.sendImmediately = false;
   }
@@ -369,15 +371,44 @@ FHEM_update(device, reading, readingSetting, orig, reportState) {
     FHEM_reportStateStore[device][reading] = {};
 
   if (reportState) {
+    var query = {
+      intent: 'action.devices.QUERY',
+      payload: {
+        devices: []
+      }
+    };
+  
+    query.payload.devices.push({
+      id: device,
+      customData: {
+        device: device
+      }
+    });
+
+    const reportstate = 1;
+    var deviceQueryRes = await localQUERY.processQUERY(database.getUid(), query, reportstate);
+  
+    //prepare response
+    var dev = {
+      requestId: (Math.floor(Math.random() * Math.floor(1000000000000))).toString(),
+      agentUserId: database.getUid(),
+      payload: {
+        devices: {
+          states: {}
+        }
+      }
+    };
+    dev.payload.devices.states = deviceQueryRes.devices;
+
     const oldDevStore = FHEM_reportStateStore[device];
     if (FHEM_deviceReadings[device][reading].compareFunction) {
       eval('FHEM_deviceReadings[device][reading].compareFunction = ' + FHEM_deviceReadings[device][reading].compareFunction);
       if (!FHEM_reportStateStore[device][reading].oldValue) {
         //first call for this reading
-        FHEM_reportStateStore[device][reading].cancelOldTimeout = FHEM_deviceReadings[device][reading].compareFunction('', 0, orig, undefined, 0, undefined, database.reportState, device);
+        FHEM_reportStateStore[device][reading].cancelOldTimeout = FHEM_deviceReadings[device][reading].compareFunction('', 0, orig, undefined, 0, undefined, database.reportStateWithData, dev);
       } else {
         var store = FHEM_reportStateStore[device][reading];
-        FHEM_reportStateStore[device][reading].cancelOldTimeout = FHEM_deviceReadings[device][reading].compareFunction(store.oldValue, store.oldTimestamp, orig, store.cancelOldTimeout, oldDevStore.oldTimestamp, oldDevStore.cancelOldTimeout, database.reportState, device);
+        FHEM_reportStateStore[device][reading].cancelOldTimeout = FHEM_deviceReadings[device][reading].compareFunction(store.oldValue, store.oldTimestamp, orig, store.cancelOldTimeout, oldDevStore.oldTimestamp, oldDevStore.cancelOldTimeout, database.reportStateWithData, dev);
       }
 
       if (FHEM_reportStateStore[device][reading].cancelOldTimeout) {
