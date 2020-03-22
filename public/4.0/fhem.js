@@ -92,7 +92,7 @@ function FHEM(logInstance, config, server) {
     fhem: this
   };
   if (config['auth']) {
-    FHEM.auth(config['auth']);
+    auth = config['auth'];
   }
   if (auth) {
     auth.sendImmediately = false;
