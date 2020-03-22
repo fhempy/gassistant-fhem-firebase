@@ -65,6 +65,12 @@ app.get('/4.0/gethandleEXECUTE', async (req, res) => {
   });
 });
 
+app.get('/4.0/gethandleQUERY', async (req, res) => {
+  res.send({
+    'exports.processQUERY': require('./handleQUERY').processQUERY.toString()
+  });
+});
+
 app.get('/getdynamicfunctions', async (req, res) => {
   const {
     sub: uid

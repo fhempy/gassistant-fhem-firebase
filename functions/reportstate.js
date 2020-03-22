@@ -25,6 +25,21 @@ app3.use(function (req, res, next) {
   next();
 });
 
+app3.post('/singledevice_v2', async (req, res)  => {
+  const {
+    sub: uid
+  } = req.user;
+  const deviceStatus = req.body.deviceStatus;
+
+  //reportstate
+  try {
+    await utils.reportStateWithData(uid, deviceStatus);
+  } catch (err) {
+    uiderror(uid, "Error in ReportState: " + err, err);
+  }
+  res.send({});
+});
+
 app3.post('/singledevice', async (req, res) => {
   const {
     sub: uid

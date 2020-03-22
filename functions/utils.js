@@ -455,6 +455,37 @@ async function retrieveGoogleToken(uid) {
   return await resJson.access_token;
 }
 
+async function reportStateWithData(uid, data) {
+  //TODO check if token is already older than one hour and renew it if so
+  var google_token = await getGoogleToken();
+  if (!google_token)
+    google_token = await retrieveGoogleToken(uid);
+
+  //report state
+  for (var i = 0; i < 2; i++) {
+    var options = {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + google_token,
+        'X-GFE-SSL': 'yes',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    };
+    uidlog(uid, 'reportState fetch');
+    const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', options);
+    uidlog(uid, 'reportState response: ' + await reportStateRes.status);
+
+    if (reportStateRes.status == 401) {
+      google_token = await retrieveGoogleToken(uid);
+    } else {
+      //save the token to database
+      setGoogleToken(google_token);
+      break;
+    }
+  }
+}
+
 
 async function reportState(uid, device) {
   const hquery = require('./handleQUERY');
@@ -623,7 +654,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     if (mapping.event_map !== undefined) {
       var mapped = mapping.event_map[value];
       if (mapped !== undefined) {
-        console.debug(mapping.reading.toString() + ' eventMap: value ' + value + ' mapped to: ' + mapped);
+        uidlog(uid, mapping.reading.toString() + ' eventMap: value ' + value + ' mapped to: ' + mapped);
         value = mapped;
       }
     }
@@ -635,7 +666,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         uiderror(uid, mapping.reading.toString() + ' value ' + value + ' has no part ' + mapping.part);
         return value;
       }
-      console.debug(mapping.reading.toString() + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
+      uidlog(uid, mapping.reading.toString() + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
       value = mapped;
     }
 
@@ -646,7 +677,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         mapped = 1;
       else
         mapped = 0;
-      console.debug(mapping.reading.toString() + ' threshold: value ' + value + ' mapped to ' + mapped);
+      uidlog(uid, mapping.reading.toString() + ' threshold: value ' + value + ' mapped to ' + mapped);
       value = mapped;
     }
 
@@ -696,7 +727,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         mapped = (mapped == 'true');
       }
 
-      console.debug(mapping.reading.toString() + ' values: value ' + value + ' mapped to ' + mapped);
+      uidlog(uid, mapping.reading.toString() + ' values: value ' + value + ' mapped to ' + mapped);
       value = mapped;
     }
 
@@ -731,12 +762,12 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
           mapped = parseInt(value) ? 1 : 0;
       }
       if (mapped !== undefined) {
-        console.debug(mapping.reading.toString() + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
+        uidlog(uid, mapping.reading.toString() + ' valueOn/valueOff: value ' + value + ' mapped to ' + mapped);
         value = mapped;
       }
 
       if (mapping.factor) {
-        console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        uidlog(uid, mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
 
@@ -755,7 +786,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       value = mapped;
 
       if (mapping.factor) {
-        console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        uidlog(uid, mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
 
@@ -769,7 +800,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       value = mapped;
 
       if (mapping.factor) {
-        console.debug(mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
+        uidlog(uid, mapping.reading.toString() + ' factor: value ' + value + ' mapped to ' + value * mapping.factor);
         value *= mapping.factor;
       }
 
@@ -779,14 +810,14 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
 
     if (mapping.max && mapping.maxValue) {
       value = Math.round((value * mapping.maxValue / mapping.max) * 100) / 100;
-      console.debug(mapping.reading.toString() + ' value ' + orig + ' scaled to: ' + value);
+      uidlog(uid, mapping.reading.toString() + ' value ' + orig + ' scaled to: ' + value);
     }
 
     if (mapping.minValue !== undefined && value < mapping.minValue) {
-      console.debug(mapping.reading.toString() + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
+      uidlog(uid, mapping.reading.toString() + ' value ' + value + ' clipped to minValue: ' + mapping.minValue);
       value = mapping.minValue;
     } else if (mapping.maxValue !== undefined && value > mapping.maxValue) {
-      console.debug(mapping.reading.toString() + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
+      uidlog(uid, mapping.reading.toString() + ' value ' + value + ' clipped to maxValue: ' + mapping.maxValue);
       value = mapping.maxValue;
     }
 
@@ -817,7 +848,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       }
 
       if (value !== mapped)
-        console.debug(mapping.reading.toString() + ' value: ' + value + ' inverted to ' + mapped);
+        uidlog(uid, mapping.reading.toString() + ' value: ' + value + ' inverted to ' + mapped);
       value = mapped;
     }
     if (format && format.match(/bool/i)) {
@@ -934,6 +965,7 @@ module.exports = {
   initSync,
   jwtCheck,
   reportState,
+  reportStateWithData,
   loadDevice,
   loadDevices,
   retrieveGoogleToken,
