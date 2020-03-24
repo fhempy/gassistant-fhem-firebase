@@ -1435,12 +1435,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmd: 'heatsetpoint'
       };
     }
-  } else if (s.Internals.TYPE === 'EnOcean' && s.Attributes.subType === 'contact') {
-    if (!service_name) service_name = 'door';
-    mappings.OpenClose = {
-      reading: 'state',
-      values: ['/^closed/:CLOSED', '/.*/:OPEN']
-    };
+  } else if (s.Internals.TYPE === 'EnOcean') {
+    if (s.Attributes.subType === 'contact') {
+      if (!service_name) service_name = 'door';
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/^closed/:CLOSED', '/.*/:OPEN']
+      };
+    }
   } else if (s.Internals.TYPE === 'STV') {
     mappings.On = {
       reading: 'state',
@@ -1548,6 +1550,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       commandOnlyTimer: true,
       maxTimerLimitSec: 86400,
       cmdTimerStart: "on-for-timer"
+    };
+  }
+  if (match = s.PossibleSets.match(/(^| )dim:slider,0,1,100/) && s.Readings.dim) {
+    mappings.Brightness = {
+      reading: 'dim',
+      cmd: 'dim'
     };
   }
 
