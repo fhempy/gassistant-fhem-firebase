@@ -287,7 +287,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   if (s.Internals.TYPE === 'MilightDevice' &&
     s.PossibleSets.match(/(^| )dim\b/)) {
     // MilightDevice
-    console.debug('detected MilightDevice');
+    uidlog(uid, 'detected MilightDevice');
     mappings.Brightness = {
       reading: 'brightness',
       cmd: 'dim',
@@ -318,7 +318,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE === 'WifiLight' && s.PossibleSets.match(/(^| )RGB\b/) &&
     s.Readings.hue !== undefined && s.Readings.saturation !== undefined && s.Readings.brightness !== undefined) {
     // WifiLight
-    console.debug('detected WifiLight');
+    uidlog(uid, 'detected WifiLight');
     mappings.RGB = {
       reading: 'RGB',
       cmd: 'RGB'
@@ -1567,7 +1567,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } catch (e) {
     uiderror(uid, 'homebridgeMapping error for ' + s.Internals.NAME + ', please delete homebridgeMapping and try again');
   }
-  uidlog(uid, 'mappings for ' + s.Internals.NAME + ': ' + util.inspect(mappings));
 
   //SIMPLE MAPPINGS
   if (mappings.SimpleModes) {
@@ -1635,6 +1634,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     delete mappings.SimpleToggles;
   }
 
+  uidlog(uid, 'mappings for ' + s.Internals.NAME + ': ' + JSON.stringify(mappings));
+
   if (service_name !== undefined) {
     uidlog(uid, s.Internals.NAME + ' is ' + service_name);
   } else if (!mappings) {
@@ -1677,7 +1678,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       }
   }*/
 
-  //log( util.inspect(s) );
+  //log( JSON.stringify(s) );
 
   // device info
   var device = s.Internals.NAME;
@@ -2074,7 +2075,7 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
     for (var entry of mapping.values) {
       var match = entry.match('^((.*?)=)?([^:]*)(:(.*))?$');
       if (!match) {
-        console.error('values: format wrong for ' + entry);
+        uiderror(uid, 'values: format wrong for ' + entry);
         continue;
       }
 
@@ -2103,12 +2104,12 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
       }
     }
     if (mapping.value2homekit_re &&
-      mapping.value2homekit_re.length) console.log('value2homekit_re: ' + util.inspect(mapping.value2homekit_re));
+      mapping.value2homekit_re.length) uidlog(uid, 'value2homekit_re: ' + JSON.stringify(mapping.value2homekit_re));
     if (mapping.value2homekit &&
-      Object.keys(mapping.value2homekit).length) console.log('value2homekit: ' + util.inspect(mapping.value2homekit));
+      Object.keys(mapping.value2homekit).length) uidlog(uid, 'value2homekit: ' + JSON.stringify(mapping.value2homekit));
     if (mapping.homekit2name) {
       if (Object.keys(mapping.homekit2name).length)
-        console.log('homekit2name: ' + util.inspect(mapping.homekit2name));
+        uidlog(uid, 'homekit2name: ' + JSON.stringify(mapping.homekit2name));
       else
         delete mapping.homekit2name;
     }
@@ -2120,7 +2121,7 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
     for (var entry of mapping.cmds) {
       var match = entry.match('^([^:]*)(:(.*))?$');
       if (!match) {
-        console.error('cmds: format wrong for ' + entry);
+        uiderror(uid, 'cmds: format wrong for ' + entry);
         continue;
       }
 
@@ -2140,9 +2141,9 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
       }
     }
     if (mapping.homekit2cmd_re &&
-      mapping.homekit2cmd_re.length) console.log('homekit2cmd_re: ' + util.inspect(mapping.homekit2cmd_re));
+      mapping.homekit2cmd_re.length) uidlog(uid, 'homekit2cmd_re: ' + JSON.stringify(mapping.homekit2cmd_re));
     if (mapping.homekit2cmd &&
-      Object.keys(mapping.homekit2cmd).length) console.log('homekit2cmd: ' + util.inspect(mapping.homekit2cmd));
+      Object.keys(mapping.homekit2cmd).length) uidlog(uid, 'homekit2cmd: ' + JSON.stringify(mapping.homekit2cmd));
   }
 
   if (mapping.reading2homekit !== undefined && typeof mapping.reading2homekit !== 'function') {
@@ -2150,7 +2151,7 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
       try {
         mapping.reading2homekit = new Function('mapping', 'orig', mapping.reading2homekit).bind(null, mapping);
       } catch (err) {
-        console.error('  reading2homekit: ' + err);
+        uiderror(uid, '  reading2homekit: ' + err);
         //delete mapping.reading2homekit;
       }
       //FIXME GOOGLE jsFunctions deactivated
@@ -2158,11 +2159,11 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
       //    if (typeof this.jsFunctions[mapping.reading2homekit] === 'function')
       //        mapping.reading2homekit = this.jsFunctions[mapping.reading2homekit].bind(null, mapping);
       //    else
-      //        console.error('  reading2homekit: no function named ' + mapping.reading2homekit + ' in ' + util.inspect(this.jsFunctions));
+      //        uiderror(uid, '  reading2homekit: no function named ' + mapping.reading2homekit + ' in ' + JSON.stringify(this.jsFunctions));
     }
 
     if (mapping.reading2homekit !== undefined && typeof mapping.reading2homekit !== 'function') {
-      console.error('  reading2homekit disabled.');
+      uiderror(uid, '  reading2homekit disabled.');
       delete mapping.reading2homekit;
     }
   }
@@ -2172,18 +2173,18 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
       try {
         mapping.homekit2reading = new Function('mapping', 'orig', mapping.homekit2reading).bind(null, mapping);
       } catch (err) {
-        console.error('  homekit2reading: ' + err);
+        uiderror(uid, '  homekit2reading: ' + err);
         //delete mapping.homekit2reading;
       }
       //} else if (typeof this.jsFunctions === 'object') {
       //    if (typeof this.jsFunctions[mapping.homekit2reading] === 'function')
       //        mapping.homekit2reading = this.jsFunctions[mapping.homekit2reading].bind(null, mapping);
       //    else
-      //        console.error('  homekit2reading: no function named ' + mapping.homekit2reading + ' in ' + util.inspect(this.jsFunctions));
+      //        uiderror(uid, '  homekit2reading: no function named ' + mapping.homekit2reading + ' in ' + JSON.stringify(this.jsFunctions));
     }
 
     if (mapping.homekit2reading !== undefined && typeof mapping.homekit2reading !== 'function') {
-      console.error('  homekit2reading disabled.');
+      uiderror(uid, '  homekit2reading disabled.');
       delete mapping.homekit2reading;
     }
   }
