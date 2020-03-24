@@ -1642,6 +1642,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     return;
   }
 
+  if (Object.keys(mappings.Exceptions).length === 0) {
+    delete mappings.Exceptions;
+  }
+
+  if (Object.keys(mappings.Errors).length === 0) {
+    delete mappings.Errors;
+  }
+
   if (Object.keys(mappings).length === 0) {
     uiderror(uid, 'No mappings (e.g. on/off) found for ' + s.Internals.NAME);
     return undefined;
