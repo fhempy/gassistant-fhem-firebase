@@ -702,7 +702,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
             if (!value)
               uiderror(uid, 'reading ' + entry.reading + ' not found in reading array: ' + JSON.stringify(readings));
           }
-          if (value && value.toString().match(entry.re)) {
+          if (value.toString().match(entry.re)) {
             mapped = entry.to;
             break;
           }
