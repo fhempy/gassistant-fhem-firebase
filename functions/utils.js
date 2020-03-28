@@ -663,7 +663,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       var mapped = value.split(' ')[mapping.part];
 
       if (mapped === undefined) {
-        uiderror(uid, mapping.reading.toString() + ' value ' + value + ' has no part ' + mapping.part);
+        throw new Error(mapping.reading.toString() + ' value ' + value + ' has no part ' + mapping.part);
         return value;
       }
       uidlog(uid, mapping.reading.toString() + ' parts: using part ' + mapping.part + ' of: ' + value + ' results in: ' + mapped);
@@ -700,7 +700,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
           if (entry.reading) {
             value = readings[entry.reading];
             if (!value)
-              uiderror(uid, 'reading ' + entry.reading + ' not found in reading array: ' + JSON.stringify(readings));
+              throw new Error('reading ' + entry.reading + ' not found in reading array: ' + JSON.stringify(readings));
           }
           if (value.toString().match(entry.re)) {
             mapped = entry.to;
@@ -719,7 +719,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
         mapped = mapping.default;
 
       if (mapped === undefined) {
-        uiderror(uid, mapping.reading.toString() + ' value ' + value + ' not handled in values');
+        throw new Error(mapping.reading.toString() + ' value ' + value + ' not handled in values');
         return undefined;
       }
 
@@ -780,7 +780,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       var mapped = parseFloat(value);
 
       if (typeof mapped !== 'number') {
-        uiderror(uid, mapping.reading.toString() + ' is not a number: ' + value);
+        throw new Error(mapping.reading.toString() + ' is not a number: ' + value);
         return undefined;
       }
       value = mapped;
@@ -794,7 +794,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       var mapped = parseFloat(value);
 
       if (typeof mapped !== 'number') {
-        uiderror(uid, mapping.reading.toString() + ' not a number: ' + value);
+        throw new Error(mapping.reading.toString() + ' not a number: ' + value);
         return undefined;
       }
       value = mapped;
@@ -837,7 +837,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     if (typeof value === 'number') {
       var mapped = value;
       if (isNaN(value)) {
-        uiderror(uid, mapping.reading.toString() + ' not a number: ' + orig);
+        throw new Error(mapping.reading.toString() + ' not a number: ' + orig);
         return undefined;
       } else if (mapping.invert && mapping.minValue !== undefined && mapping.maxValue !== undefined) {
         mapped = mapping.maxValue - value + mapping.minValue;
@@ -918,11 +918,11 @@ function FHEM_reading2homekit(uid, mapping, readings) {
       } else
         value = mapping.reading2homekit(mapping, readings);
     } catch (err) {
-      uiderror(uid, mapping.reading[0] + ' reading2homekit: ' + err.stack, err);
+      throw new Error(mapping.reading[0] + ' reading2homekit: ' + err.stack);
       return undefined;
     }
     if (typeof value === 'number' && isNaN(value)) {
-      uiderror(uid, mapping.reading[0] + ' not a number: ' + readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')] + ' => ' + value);
+      throw new Error(mapping.reading[0] + ' not a number: ' + readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')] + ' => ' + value);
       return undefined;
     }
 

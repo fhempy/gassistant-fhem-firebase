@@ -505,108 +505,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
-  if (s.Internals.TYPE == 'XiaomiDevice' && s.Attributes.subType == 'VacuumCleaner') {
-    service_name = 'vacuum';
-    mappings.Exceptions.binFull = {
-      reading: 'event',
-      values: ['/bin_full/:EXCEPTION', '/.*/:OK'],
-      onlyLinkedInfo: false
-    };
-    mappings.On = {
-      reading: 'in_cleaning',
-      valueOff: 'no',
-      cmdOn: 'start',
-      cmdOff: 'charge'
-    };
-    mappings.Dock = {
-      reading: 'state',
-      cmd: 'charge',
-      values: ['/^Docked/:true', '/^Charging/:true', '/.*/:false']
-    };
-    mappings.FilterCleanliness = {
-      reading: "consumables_filter",
-      values: ["/^[0-1]?[0-9][0-9]$/:clean", "/^[0-9]$/:dirty", "/^-.*$/:needs replacement", "/.*/:unknown"]
-    };
-    mappings.Locate = {
-      cmd: 'locate'
-    };
-    //map Paused => paused, Cleaning => running
-    mappings.StartStop = {
-      reading: 'state',
-      cmdPause: 'pause',
-      cmdUnpause: 'on',
-      cmdOn: 'on',
-      cmdOff: 'off',
-      values: ['/^Paused/:paused', '/^Cleaning/:running', '/.*/:other']
-    };
-    //mappings.FanSpeed = {reading: 'cleaning_mode', speeds: { 'S1': { 'cmd': 'cleaning_mode quiet', value:'quiet', 'synonyms': {'de': ['langsam', 'leise'], 'en': ['slow', 'quiet']}},
-    //                                                         'S2': { 'cmd': 'cleaning_mode balanced', value:'balanced', 'synonyms': {'de': ['mittel'],  'en': ['medium','balanced']}},
-    //                                                         'S3': { 'cmd': 'cleaning_mode max', value:'max','synonyms': {'de': ['maximum'], 'en': ['maximum']}}}, ordered: true, reversible: false};
-    //FIXME get Modes from cmdlist
-    mappings.Modes = [{
-      reading: 'cleaning_mode',
-      cmd: 'cleaning_mode',
-      mode_attributes: {
-        name: 'suction',
-        name_values: [{
-          name_synonym: ['suction'],
-          lang: 'en'
-        },
-        {
-          name_synonym: ['saugkraft', 'saugstärke'],
-          lang: 'de'
-        }
-        ],
-        settings: [{
-          setting_name: 'quiet',
-          setting_values: [{
-            setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: 'balanced',
-          setting_values: [{
-            setting_synonym: ['balanced', 'normal'],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: 'Turbo',
-          setting_values: [{
-            setting_synonym: ['turbo'],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: 'maximum',
-          setting_values: [{
-            setting_synonym: ['maximum', 'max'],
-            lang: 'de'
-          }]
-        }
-        ],
-        ordered: true
-      }
-    }];
-    mappings.Modes[0].reading2homekit = function (mapping, orig) {
-      if (orig == 'turbo')
-        return 'Turbo';
-      else if (orig == 'max')
-        return 'maximum';
-      return orig;
-    };
-
-    mappings.Modes[0].homekit2reading = function (mapping, orig) {
-      if (orig == 'Turbo') {
-        return 'turbo';
-      } else if (orig == 'maximum') {
-        return 'max';
-      }
-      return orig;
-    };
-  }
-
   if (s.Internals.TYPE == 'BOTVAC') {
     service_name = 'vacuum';
     mappings.On = {
@@ -1157,18 +1055,18 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     var batt = s.Readings.battery ? "battery" : "batteryState";
     mappings.Exceptions.lowBattery = {
       reading: batt,
-      values: ['/low/:EXCEPTION', '/[0-1]?[0-9]/:EXCEPTION', '/.*/:OK'],
+      values: ['/low/:EXCEPTION', '/^[0-1]?[0-9]$/:EXCEPTION', '/.*/:OK'],
       onlyLinkedInfo: false
     };
 
     mappings.EnergyStorageDescriptive = {
       queryOnlyEnergyStorage: true,
       reading: batt,
-      values: ["/[0]?[0-9]/:CRITICALLY_LOW",
-        "/[1][0-9]/:LOW",
-        "/[2-7][0-9]/:MEDIUM",
-        "/[8][0-9]/:HIGH",
-        "/[1]?[0,9][0-9]/:FULL",
+      values: ["/^[0]?[0-9]$/:CRITICALLY_LOW",
+        "/^[1][0-9]$/:LOW",
+        "/^[2-7][0-9]$/:MEDIUM",
+        "/^[8][0-9]$/:HIGH",
+        "/^[1]?[0,9][0-9]$/:FULL",
         "/low/:CRITICALLY_LOW",
         "/.*/:FULL"]
     };
@@ -1202,6 +1100,163 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE == 'XiaomiDevice') {
+    if (s.Attributes.subType == 'VacuumCleaner') {
+      service_name = 'vacuum';
+      mappings.Exceptions.binFull = {
+        reading: 'event',
+        values: ['/bin_full/:EXCEPTION', '/.*/:OK'],
+        onlyLinkedInfo: false
+      };
+      mappings.On = {
+        reading: 'in_cleaning',
+        valueOff: 'no',
+        cmdOn: 'start',
+        cmdOff: 'charge'
+      };
+      mappings.Dock = {
+        reading: 'state',
+        cmd: 'charge',
+        values: ['/^Docked/:true', '/^Charging/:true', '/.*/:false']
+      };
+      mappings.FilterCleanliness = {
+        reading: "consumables_filter",
+        values: ["/^[0-1]?[0-9][0-9]$/:clean", "/^[0-9]$/:dirty", "/^-.*$/:needs replacement", "/.*/:unknown"]
+      };
+      mappings.Locate = {
+        cmd: 'locate'
+      };
+      //map Paused => paused, Cleaning => running
+      mappings.StartStop = {
+        reading: 'state',
+        cmdPause: 'pause',
+        cmdUnpause: 'on',
+        cmdOn: 'on',
+        cmdOff: 'off',
+        values: ['/^Paused/:paused', '/^Cleaning/:running', '/.*/:other']
+      };
+      //mappings.FanSpeed = {reading: 'cleaning_mode', speeds: { 'S1': { 'cmd': 'cleaning_mode quiet', value:'quiet', 'synonyms': {'de': ['langsam', 'leise'], 'en': ['slow', 'quiet']}},
+      //                                                         'S2': { 'cmd': 'cleaning_mode balanced', value:'balanced', 'synonyms': {'de': ['mittel'],  'en': ['medium','balanced']}},
+      //                                                         'S3': { 'cmd': 'cleaning_mode max', value:'max','synonyms': {'de': ['maximum'], 'en': ['maximum']}}}, ordered: true, reversible: false};
+      //FIXME get Modes from cmdlist
+      mappings.Modes = [{
+        reading: 'cleaning_mode',
+        cmd: 'cleaning_mode',
+        mode_attributes: {
+          name: 'suction',
+          name_values: [{
+            name_synonym: ['suction'],
+            lang: 'en'
+          },
+          {
+            name_synonym: ['saugkraft', 'saugstärke'],
+            lang: 'de'
+          }
+          ],
+          settings: [{
+            setting_name: 'quiet',
+            setting_values: [{
+              setting_synonym: ['ruhe', 'ruhe-', 'ruhemodus', 'leise'],
+              lang: 'de'
+            }]
+          },
+          {
+            setting_name: 'balanced',
+            setting_values: [{
+              setting_synonym: ['balanced', 'normal'],
+              lang: 'de'
+            }]
+          },
+          {
+            setting_name: 'Turbo',
+            setting_values: [{
+              setting_synonym: ['turbo'],
+              lang: 'de'
+            }]
+          },
+          {
+            setting_name: 'maximum',
+            setting_values: [{
+              setting_synonym: ['maximum', 'max'],
+              lang: 'de'
+            }]
+          }
+          ],
+          ordered: true
+        }
+      }];
+      mappings.Modes[0].reading2homekit = function (mapping, orig) {
+        if (orig == 'turbo')
+          return 'Turbo';
+        else if (orig == 'max')
+          return 'maximum';
+        return orig;
+      };
+
+      mappings.Modes[0].homekit2reading = function (mapping, orig) {
+        if (orig == 'Turbo') {
+          return 'turbo';
+        } else if (orig == 'maximum') {
+          return 'max';
+        }
+        return orig;
+      };
+    } else if (s.Attributes.subType === "SmartFan") {
+      if (!service_name) service_name = 'fan';
+      mappings.On = {
+        reading: 'speed',
+        valueOff: '0',
+        cmdOn: 'on',
+        cmdOff: 'off'
+      };
+      mappings.SimpleModes = [{
+        reading: "mode",
+        name: "Modus",
+        "normal": "mode straight",
+        "natürlich": "mode natural"
+      },{
+        reading: "led",
+        name: "Beleuchtung",
+        "hell": "led bright",
+        "gedimmt": "led dim",
+        "aus": "led off"
+      },{
+        reading: "neigung",
+        name: "Drehung",
+        "30 grad": "angle 30",
+        "60 grad": "angle 60",
+        "90 grad": "angle 90",
+        "120 grad": "angle 120"
+      }];
+      mappings.FanSpeed = {
+        reading: 'level', speeds: {
+          'S1': { 'cmd': 'level 20', value: '20', 'synonyms': { 'de': ['sehr schwach'] } },
+          'S2': { 'cmd': 'level 40', value: '40', 'synonyms': { 'de': ['schwach'] } },
+          'S3': { 'cmd': 'level 60', value: '60', 'synonyms': { 'de': ['mittel'] } },
+          'S4': { 'cmd': 'level 80', value: '80', 'synonyms': { 'de': ['stark'] } },
+          'S5': { 'cmd': 'level 100', value: '100', 'synonyms': { 'de': ['sehr stark'] } }
+        }, ordered: true, reversible: false
+      };
+      mapping.SimpleToggles = [{
+        reading: 'angle_enable',
+        valueOn: 'on',
+        cmdOn: 'angle_enable on',
+        cmdOff: 'angle_enable off',
+        voicecmd: 'Drehung'
+      },{
+        reading: 'child_lock',
+        valueOn: 'on',
+        cmdOn: 'child_lock on',
+        cmdOff: 'child_lock off',
+        voicecmd: 'Kindersicherung'
+      },{
+        reading: 'buzzer',
+        valueOn: '1',
+        cmdOn: 'buzzer on',
+        cmdOff: 'buzzer off',
+        voicecmd: 'Buzzer'
+      }];
+    }
   } else if (s.Internals.TYPE === 'KNX') {
     var defmatch = s.Internals.DEF.match(/([\S]+:[\S]+)\b/g);
     var servicetmp = 'switch';
@@ -1327,6 +1382,49 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'temperature',
         part: 0
       };
+    }
+  } else if (s.Internals.TYPE === "HMCCUDEV") {
+    if (s.Internals.ccutype === "HM-CC-RT-DN") {
+      mappings.TargetTemperature = {
+        reading: '4.SET_TEMPERATURE',
+        cmd: 'control',
+        minThresholdCelsius: 0.5,
+        maxThresholdCelsius: 30.5
+      };
+      mappings.CurrentTemperature = {
+        reading: '4.ACTUAL_TEMPERATURE'
+      };
+      mappings.ThermostatModes = {
+        reading: ['4.CONTROL_MODE', 'state'],
+        cmds: ['off:off', 'heat:Manu', 'auto:Auto'],
+        values: ['state=/0/:off', '4.CONTROL_MODE=/^AUTO/:auto', '/.*/:heat']
+      };
+      mappings.Exceptions.lowBattery = {
+        reading: "4.BATTERY_STATE",
+        values: ['/[2]\.[0-2]/:EXCEPTION', '/.*/:OK'],
+        onlyLinkedInfo: false
+      };
+      mappings.EnergyStorageDescriptive = {
+        queryOnlyEnergyStorage: true,
+        reading: "4.BATTERY_STATE",
+        values: ["/^[2]\.[0-2]$/:CRITICALLY_LOW", "/^[2]\.[3-4]$/:LOW", "/.*/:FULL"]
+      };
+      mappings.Toggles = [{
+        reading: '4.CONTROL_MODE', valueOn: 'BOOST', cmdOn: 'Boost', cmdOff: 'Manu',
+        toggle_attributes: {
+          name: 'Boost',
+          name_values: [
+            {
+              name_synonym: ['boost', 'boost mode'],
+              lang: 'en'
+            },
+            {
+              name_synonym: ['boost', 'boost modus', 'aufheizen', 'schnell heiz modus', 'schnellheizmodus'],
+              lang: 'de'
+            }
+          ]
+        }
+      }];
     }
   } else if (s.Internals.TYPE === 'MQTT2_DEVICE') {
     if (s.Attributes.model === "zigbee2mqtt_light_rgb_hex") {
@@ -1569,6 +1667,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
 
   //SIMPLE MAPPINGS
+  // - SimpleModes
   if (mappings.SimpleModes) {
     mappings.Modes = [];
 
@@ -1605,7 +1704,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.Modes.push(mode);
     }
     delete mappings.SimpleModes;
-  } else if (mappings.SimpleToggles) {
+  } 
+  
+  // - SimpleToggles
+  if (mappings.SimpleToggles) {
     mappings.Toggles = [];
 
     if (!Array.isArray(mappings.SimpleToggles))

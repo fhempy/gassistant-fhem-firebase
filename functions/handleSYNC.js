@@ -445,6 +445,12 @@ var processSYNC = function (uid, devices) {
           } else {
             d.attributes.availableThermostatModes = 'off,heat';
           }
+          if (device.mappings.TargetTemperature.minThresholdCelsius !== undefined && device.mappings.TargetTemperature.maxThresholdCelsius !== undefined) {
+            d.attributes.thermostatTemperatureRange = {
+              minThresholdCelsius: device.mappings.TargetTemperature.minThresholdCelsius,
+              maxThresholdCelsius: device.mappings.TargetTemperature.maxThresholdCelsius
+            };
+          }
           d.traits.push("action.devices.traits.TemperatureSetting");
         } else if (device.mappings.CurrentTemperature) {
           d.attributes.thermostatTemperatureUnit = 'C';
@@ -582,7 +588,7 @@ var processSYNC = function (uid, devices) {
         }
       }
     } catch (err) {
-      uiderror(uid, 'Error with device ' + device.device + ': ' + err, err);
+      uiderror(uid, device.device + ': ' + err, err);
     }
   }
 
