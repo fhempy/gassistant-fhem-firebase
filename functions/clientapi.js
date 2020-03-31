@@ -205,41 +205,49 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
   if (match = s.PossibleSets.match(/(^| )rgb:colorpicker/)) {
     //Hue RGB mode
-    mappings.RGB = {
-      reading: 'rgb',
-      cmd: 'rgb'
-    };
-    mappings.RGB.reading2homekit = function (mapping, orig) {
-      return parseInt('0x' + orig);
-    };
-    mappings.RGB.homekit2reading = function (mapping, orig) {
-      return ("000000" + orig.toString(16)).substr(-6);
-    };
-
-    mappings.ColorMode = {
-      reading: 'colormode',
-      valueCt: 'ct'
-    };
-    mappings.ColorTemperature = {
-      reading: 'ct',
-      cmd: 'ct'
-    };
-    mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
-      var match;
-      if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
-        return parseInt(match[2]);
-      }
-      return 0;
-    };
-    mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
-      //kelvin to mired
-      return parseInt(1000000 / orig);
-    };
-
-    mappings.Errors.deviceOffline = {
-      reading: 'reachable',
-      valueError: '0'
-    };
+    if (s.Readings.rgb) {
+      mappings.RGB = {
+        reading: 'rgb',
+        cmd: 'rgb'
+      };
+      mappings.RGB.reading2homekit = function (mapping, orig) {
+        return parseInt('0x' + orig);
+      };
+      mappings.RGB.homekit2reading = function (mapping, orig) {
+        return ("000000" + orig.toString(16)).substr(-6);
+      };    
+    }
+    
+    if (s.Readings.colormode) {
+      mappings.ColorMode = {
+        reading: 'colormode',
+        valueCt: 'ct'
+      };  
+    }
+    if (s.Readings.ct) {
+      mappings.ColorTemperature = {
+        reading: 'ct',
+        cmd: 'ct'
+      };
+      mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
+        var match;
+        if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
+          return parseInt(match[2]);
+        }
+        return 0;
+      };
+      mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
+        //kelvin to mired
+        return parseInt(1000000 / orig);
+      };  
+    }
+    
+    if (s.Readings.reachable) {
+      mappings.Errors.deviceOffline = {
+        reading: 'reachable',
+        valueError: '0'
+      };
+    }
   }
 
   if (match = s.PossibleSets.match(/(^| )effect:none,colorloop\b/)) {
@@ -1135,10 +1143,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmdOff: 'off',
         values: ['/^Paused/:paused', '/^Cleaning/:running', '/.*/:other']
       };
-      //mappings.FanSpeed = {reading: 'cleaning_mode', speeds: { 'S1': { 'cmd': 'cleaning_mode quiet', value:'quiet', 'synonyms': {'de': ['langsam', 'leise'], 'en': ['slow', 'quiet']}},
-      //                                                         'S2': { 'cmd': 'cleaning_mode balanced', value:'balanced', 'synonyms': {'de': ['mittel'],  'en': ['medium','balanced']}},
-      //                                                         'S3': { 'cmd': 'cleaning_mode max', value:'max','synonyms': {'de': ['maximum'], 'en': ['maximum']}}}, ordered: true, reversible: false};
-      //FIXME get Modes from cmdlist
       mappings.Modes = [{
         reading: 'cleaning_mode',
         cmd: 'cleaning_mode',
@@ -1168,16 +1172,16 @@ async function generateTraits(uid, device, usedDeviceReadings) {
             }]
           },
           {
-            setting_name: 'Turbo',
+            setting_name: 'turbo',
             setting_values: [{
               setting_synonym: ['turbo'],
               lang: 'de'
             }]
           },
           {
-            setting_name: 'maximum',
+            setting_name: 'max',
             setting_values: [{
-              setting_synonym: ['maximum', 'max'],
+              setting_synonym: ['maximum', 'max', 'volle kraft'],
               lang: 'de'
             }]
           }
@@ -1185,22 +1189,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           ordered: true
         }
       }];
-      mappings.Modes[0].reading2homekit = function (mapping, orig) {
-        if (orig == 'turbo')
-          return 'Turbo';
-        else if (orig == 'max')
-          return 'maximum';
-        return orig;
-      };
-
-      mappings.Modes[0].homekit2reading = function (mapping, orig) {
-        if (orig == 'Turbo') {
-          return 'turbo';
-        } else if (orig == 'maximum') {
-          return 'max';
-        }
-        return orig;
-      };
     } else if (s.Attributes.subType === "SmartFan") {
       if (!service_name) service_name = 'fan';
       mappings.On = {
@@ -1221,12 +1209,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "gedimmt": "led dim",
         "aus": "led off"
       },{
-        reading: "neigung",
+        reading: "angle",
         name: "Drehung",
-        "30 grad": "angle 30",
-        "60 grad": "angle 60",
-        "90 grad": "angle 90",
-        "120 grad": "angle 120"
+        "30 Grad": "angle 30",
+        "60 Grad": "angle 60",
+        "90 Grad": "angle 90",
+        "120 Grad": "angle 120"
       }];
       mappings.FanSpeed = {
         reading: 'level', speeds: {
@@ -1237,7 +1225,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           'S5': { 'cmd': 'level 100', value: '100', 'synonyms': { 'de': ['sehr stark'] } }
         }, ordered: true, reversible: false
       };
-      mapping.SimpleToggles = [{
+      mappings.SimpleToggles = [{
         reading: 'angle_enable',
         valueOn: 'on',
         cmdOn: 'angle_enable on',
@@ -1254,7 +1242,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         valueOn: '1',
         cmdOn: 'buzzer on',
         cmdOff: 'buzzer off',
-        voicecmd: 'Buzzer'
+        voicecmd: 'Ton'
       }];
     }
   } else if (s.Internals.TYPE === 'KNX') {
@@ -1270,6 +1258,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       var gadname = def[2] ? def[2].replace(':', '') : '';
       var setget = def[3] ? def[3].replace(':', '') : '';
 
+      if (setget === 'get' || usedDpts[dpt] !== undefined) {
+        if (dpt === 'dpt1.001' && mappings.On) {
+          mappings.On.reading = gadname + '-get';
+        } else if (dpt === 'dpt5.001' && mappings.Brightness) {
+          mappings.Brightness.reading = gadname + '-get';
+        }
+        continue;
+      }
+
       if (setget === 'set' || setget === '') {
         if (gadname === '') {
           gadname = 'g' + gadcnt;
@@ -1283,7 +1280,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         usedDpts[dpt] = 1;
         if (dpt === 'dpt1.001') {
           mappings.On = {
-            reading: 'state',
+            reading: gadname + '-get',
             valueOff: '/off|0 \%/',
             cmdOn: gadname + ' on',
             cmdOff: gadname + ' off'
@@ -1291,20 +1288,20 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         } else if (dpt === 'dpt5.001') {
           servicetmp = 'light';
           mappings.Brightness = {
-            reading: 'state',
-            part: 1,
+            reading: gadname + '-get',
+            part: 0,
             cmd: gadname,
             max: 100,
             maxValue: 100
           };
-        } else if (dpt === 'dpt1.008') {
-          servicetmp = 'light';
-          mappings.On = {
-            reading: 'state',
-            valueOff: '0 %',
-            cmdOn: gadname + ' up',
-            cmdOff: gadname + ' down'
-          };
+        // } else if (dpt === 'dpt1.008') {
+        //   servicetmp = 'light';
+        //   mappings.On = {
+        //     reading: 'state',
+        //     valueOff: '0 %',
+        //     cmdOn: gadname + ' up',
+        //     cmdOff: gadname + ' down'
+        //   };
         } else {
           delete usedDpts[dpt];
         }
@@ -1714,19 +1711,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.SimpleToggles = [mappings.SimpleToggles];
 
     for (var t in mappings.SimpleToggles) {
-      var language = t.lang || 'de';
-      var toggle = {
-        toggle_attributes: {
-          name_values: [{
-            name_synonym: [],
-            lang: language
-          }]
-        }
-      };
-      toggle = t;
+      var language = mappings.SimpleToggles[t].lang || 'de';
+      var toggle = mappings.SimpleToggles[t];
       toggle.toggle_attributes = {};
-      toggle.toggle_attributes.name = t.voicecmd.split(',')[0];
-      for (var v in t.voicecmd.split(',')) {
+      toggle.toggle_attributes.name = mappings.SimpleToggles[t].voicecmd.split(',')[0];
+      toggle.toggle_attributes.name_values = [{ name_synonym: [], lang: language}];
+      for (var v of mappings.SimpleToggles[t].voicecmd.split(',')) {
         toggle.toggle_attributes.name_values[0].name_synonym.push(v);
       }
       delete toggle.voicecmd;
