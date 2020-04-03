@@ -83,6 +83,11 @@ function getDeviceAndReadings(uid, devicename) {
 
 function FHEM_reading2homekit_(uid, mapping, readings) {
   var value = readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')];
+  if (mapping.selectReading && readings[mapping.characteristic_type + '-' + mapping.selectReading]) {
+    var selReading = readings[mapping.characteristic_type + '-' + mapping.selectReading];
+    if (readings[selReading])
+      value = readings[selReading];
+  }
   if (value === undefined)
     return undefined;
 
@@ -122,9 +127,9 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     value = parseInt(value) ? true : false;
 
   } else if (reading === 'state' && (mapping.On &&
-      typeof mapping.values !== 'object' &&
-      mapping.reading2homekit === undefined &&
-      mapping.valueOn === undefined && mapping.valueOff === undefined)) {
+    typeof mapping.values !== 'object' &&
+    mapping.reading2homekit === undefined &&
+    mapping.valueOn === undefined && mapping.valueOff === undefined)) {
     if (value.match(/^set-/))
       return undefined;
     if (value.match(/^set_/))
@@ -161,7 +166,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
     if (typeof mapping.characteristic === 'object')
       format = mapping.characteristic.props.format;
     else if (typeof mapping.characteristic === 'function') {
-      var characteristic = new(Function.prototype.bind.apply(mapping.characteristic, arguments));
+      var characteristic = new (Function.prototype.bind.apply(mapping.characteristic, arguments));
 
       format = characteristic.props.format;
 
@@ -325,7 +330,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       }
 
       value = parseInt(value + 0.5);
-    } else if (format.match(/string/i)) {}
+    } else if (format.match(/string/i)) { }
 
 
     if (mapping.max && mapping.maxValue) {

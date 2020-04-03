@@ -215,14 +215,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.RGB.homekit2reading = function (mapping, orig) {
         return ("000000" + orig.toString(16)).substr(-6);
-      };    
+      };
     }
-    
+
     if (s.Readings.colormode) {
       mappings.ColorMode = {
         reading: 'colormode',
         valueCt: 'ct'
-      };  
+      };
     }
     if (s.Readings.ct) {
       mappings.ColorTemperature = {
@@ -239,9 +239,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
         //kelvin to mired
         return parseInt(1000000 / orig);
-      };  
+      };
     }
-    
+
     if (s.Readings.reachable) {
       mappings.Errors.deviceOffline = {
         reading: 'reachable',
@@ -345,6 +345,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
+  //TODO move to TYPE and GENERIC for RGB
   if (!mappings.RGB || s.Internals.TYPE === 'SWAP_0000002200000003') {
     // rgb/RGB
     let reading = undefined;
@@ -359,7 +360,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd = 'RGB';
     }
 
-    if (reading && cmd) {
+    if (reading && cmd && s.Readings[reading]) {
       mappings.RGB = {
         reading: reading,
         cmd: cmd
@@ -370,14 +371,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.RGB.homekit2reading = function (mapping, orig) {
         return ("000000" + orig.toString(16)).substr(-6);
       };
-      if (s.PossibleSets.match(/(^| )pct\b/)) {
+      if (s.PossibleSets.match(/(^| )pct\b/) && s.Readings.pct) {
         mappings.Brightness = {
           reading: 'pct',
           cmd: 'pct',
           max: 100,
           maxValue: 100
         };
-      } else if (s.PossibleSets.match(/(^| )bright\b/)) {
+      } else if (s.PossibleSets.match(/(^| )bright\b/) && s.Readings.bright) {
         mappings.Brightness = {
           reading: 'bright',
           cmd: 'bright',
@@ -1108,6 +1109,25 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE === "GFPROBT") {
+    if (!service_name) service_name = "sprinkler";
+    mappings.Timer = {
+      commandOnlyTimer: true,
+      maxTimerLimitSec: 86400,
+      cmdTimerStart: "on"
+    };
+    mappings.On = {
+      reading: 'watering',
+      valueOff: '0',
+      cmdOn: 'on',
+      cmdOff: 'off'
+    };
+    mappings.StartStop = {
+      reading: 'watering',
+      valueOff: '0',
+      cmdOn: 'on',
+      cmdOff: 'off'
+    };
   } else if (s.Internals.TYPE == 'XiaomiDevice') {
     if (s.Attributes.subType == 'VacuumCleaner') {
       service_name = 'vacuum';
@@ -1202,13 +1222,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         name: "Modus",
         "normal": "mode straight",
         "natürlich": "mode natural"
-      },{
+      }, {
         reading: "led",
         name: "Beleuchtung",
         "hell": "led bright",
         "gedimmt": "led dim",
         "aus": "led off"
-      },{
+      }, {
         reading: "angle",
         name: "Drehung",
         "30 Grad": "angle 30",
@@ -1231,13 +1251,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmdOn: 'angle_enable on',
         cmdOff: 'angle_enable off',
         voicecmd: 'Drehung'
-      },{
+      }, {
         reading: 'child_lock',
         valueOn: 'on',
         cmdOn: 'child_lock on',
         cmdOff: 'child_lock off',
         voicecmd: 'Kindersicherung'
-      },{
+      }, {
         reading: 'buzzer',
         valueOn: '1',
         cmdOn: 'buzzer on',
@@ -1258,21 +1278,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       var gadname = def[2] ? def[2].replace(':', '') : '';
       var setget = def[3] ? def[3].replace(':', '') : '';
 
+      if (gadname === '') {
+        gadname = 'g' + gadcnt;
+      }
+      gadcnt++;
+
       if (setget === 'get' || usedDpts[dpt] !== undefined) {
         if (dpt === 'dpt1.001' && mappings.On) {
-          mappings.On.reading = gadname + '-get';
+          mappings.On.reading.push(gadname, gadname + '-get', gadname + '-set');
         } else if (dpt === 'dpt5.001' && mappings.Brightness) {
-          mappings.Brightness.reading = gadname + '-get';
+          mappings.Brightness.reading.push(gadname, gadname + '-get', gadname + '-set');
         }
         continue;
       }
 
       if (setget === 'set' || setget === '') {
-        if (gadname === '') {
-          gadname = 'g' + gadcnt;
-          gadcnt++;
-        }
-
         //check if dpt was already assigned
         if (usedDpts[dpt] !== undefined)
           continue;
@@ -1280,7 +1300,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         usedDpts[dpt] = 1;
         if (dpt === 'dpt1.001') {
           mappings.On = {
-            reading: gadname + '-get',
+            reading: [gadname, gadname + '-get', gadname + '-set'],
+            selectReading: "lastUpdate",
             valueOff: '/off|0 \%/',
             cmdOn: gadname + ' on',
             cmdOff: gadname + ' off'
@@ -1288,20 +1309,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         } else if (dpt === 'dpt5.001') {
           servicetmp = 'light';
           mappings.Brightness = {
-            reading: gadname + '-get',
+            reading: [gadname, gadname + '-get', gadname + '-set'],
+            selectReading: "lastUpdate",
             part: 0,
             cmd: gadname,
             max: 100,
             maxValue: 100
           };
-        // } else if (dpt === 'dpt1.008') {
-        //   servicetmp = 'light';
-        //   mappings.On = {
-        //     reading: 'state',
-        //     valueOff: '0 %',
-        //     cmdOn: gadname + ' up',
-        //     cmdOff: gadname + ' down'
-        //   };
+          // } else if (dpt === 'dpt1.008') {
+          //   servicetmp = 'light';
+          //   mappings.On = {
+          //     reading: 'state',
+          //     valueOff: '0 %',
+          //     cmdOn: gadname + ' up',
+          //     cmdOff: gadname + ' down'
+          //   };
         } else {
           delete usedDpts[dpt];
         }
@@ -1701,8 +1723,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.Modes.push(mode);
     }
     delete mappings.SimpleModes;
-  } 
-  
+  }
+
   // - SimpleToggles
   if (mappings.SimpleToggles) {
     mappings.Toggles = [];
@@ -1715,7 +1737,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       var toggle = mappings.SimpleToggles[t];
       toggle.toggle_attributes = {};
       toggle.toggle_attributes.name = mappings.SimpleToggles[t].voicecmd.split(',')[0];
-      toggle.toggle_attributes.name_values = [{ name_synonym: [], lang: language}];
+      toggle.toggle_attributes.name_values = [{ name_synonym: [], lang: language }];
       for (var v of mappings.SimpleToggles[t].voicecmd.split(',')) {
         toggle.toggle_attributes.name_values[0].name_synonym.push(v);
       }

@@ -154,7 +154,7 @@ function FHEM_startLongpoll(connection) {
 
     try {
       var lastEventTime = Date.now();
-      for (;;) {
+      for (; ;) {
         var nOff = input.indexOf('\n', FHEM_longpollOffset);
         if (nOff < 0)
           break;
@@ -342,14 +342,38 @@ function FHEM_startLongpoll(connection) {
 }
 
 async function updateDeviceReading(device, reading, val) {
+  FHEM_devReadingVal[device][reading] = val;
   await database.getRealDB().ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading.replace(/\.|\#|\[|\]|\$/g, '_')).set({
     value: val,
     devname: device
   });
 }
 
+async function updateSelectReading(device, reading, val) {
+  var allDevices = database.getMappings();
+  if (allDevices[device.replace(/\.|\#|\[|\]|\$/g, '_')]) {
+    var d = allDevices[device.replace(/\.|\#|\[|\]|\$/g, '_')]['XXXDEVICEDEFXXX'];
+    if (d.mappings) {
+      Object.keys(d.mappings).forEach(async function (mapping) {
+        if (!Array.isArray(d.mappings[mapping])) {
+          if (d.mappings[mapping].selectReading) {
+            if (d.mappings[mapping].reading.includes(reading)) {
+              FHEM_devReadingVal[device][mapping + '-' + d.mappings[mapping].selectReading] = reading.replace(/\.|\#|\[|\]|\$/g, '_');
+              await database.getRealDB().ref('users/' + database.getUid() + '/readings/' + device.replace(/\.|\#|\[|\]|\$/g, '_') +
+                '/' + mapping + '-' + d.mappings[mapping].selectReading).set({
+                  'value': reading.replace(/\.|\#|\[|\]|\$/g, '_'),
+                  devname: device
+                });
+            }
+          }
+        }
+      });
+    }
+  }
+}
+
 async function
-FHEM_update(device, reading, readingSetting, orig, reportState) {
+  FHEM_update(device, reading, readingSetting, orig, reportState) {
   if (orig === undefined)
     return;
 
@@ -359,11 +383,11 @@ FHEM_update(device, reading, readingSetting, orig, reportState) {
     FHEM_devReadingVal[device][reading] = '';
 
   if (orig !== FHEM_devReadingVal[device][reading] || reportState === 0) {
-    FHEM_devReadingVal[device][reading] = orig;
     await updateDeviceReading(device, reading, orig);
+    await updateSelectReading(device, reading, orig);
     log.info('update reading: ' + device + ':' + reading + ' = ' + orig);
   }
-
+  
   if (!FHEM_reportStateStore[device])
     FHEM_reportStateStore[device] = {};
 
@@ -377,7 +401,7 @@ FHEM_update(device, reading, readingSetting, orig, reportState) {
         devices: []
       }
     };
-  
+
     query.payload.devices.push({
       id: device,
       customData: {
@@ -387,7 +411,7 @@ FHEM_update(device, reading, readingSetting, orig, reportState) {
 
     const reportstate = 1;
     var deviceQueryRes = await localQUERY.processQUERY(database.getUid(), query, reportstate);
-  
+
     //prepare response
     var dev = {
       requestId: (Math.floor(Math.random() * Math.floor(1000000000000))).toString(),
@@ -702,7 +726,7 @@ FHEM.prototype.checkAndSetGenericDeviceType = function () {
 
 //KEEP
 function
-FHEM_execute(connection, cmd, callback) {
+  FHEM_execute(connection, cmd, callback) {
   //log.info('starting FHEM_execute');
   let url = connection.base_url + '?cmd=' + encodeURIComponent(cmd);
   if (FHEM_csrfToken[connection.base_url])
@@ -719,9 +743,9 @@ FHEM_execute(connection, cmd, callback) {
 
   request
     .get({
-        url: url,
-        gzip: true
-      },
+      url: url,
+      gzip: true
+    },
       function (err, response, result) {
         if (!err && response.statusCode == 200) {
           result = result.replace(/[\r\n]/g, '');

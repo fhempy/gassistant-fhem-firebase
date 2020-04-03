@@ -563,6 +563,11 @@ async function reportState(uid, device) {
 
 function FHEM_reading2homekit_(uid, mapping, readings) {
   var value = readings[mapping.reading[0].replace(/\.|\#|\[|\]|\$/g, '_')];
+  if (mapping.selectReading && readings[mapping.characteristic_type + '-' + mapping.selectReading]) {
+    var selReading = readings[mapping.characteristic_type + '-' + mapping.selectReading];
+    if (readings[selReading])
+      value = readings[selReading];
+  }
   if (value === undefined)
     return undefined;
 
