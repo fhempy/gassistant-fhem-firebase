@@ -1167,13 +1167,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'cleaning_mode',
         cmd: 'cleaning_mode',
         mode_attributes: {
-          name: 'suction',
+          name: 'Modus',
           name_values: [{
-            name_synonym: ['suction'],
+            name_synonym: ['mode', 'suction'],
             lang: 'en'
           },
           {
-            name_synonym: ['saugkraft', 'saugstärke'],
+            name_synonym: ['Modus', 'saugkraft', 'saugstärke'],
             lang: 'de'
           }
           ],
