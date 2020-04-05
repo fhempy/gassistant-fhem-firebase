@@ -1048,18 +1048,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
-  if (mappings.OpenClose) {
-    var valuesData = [];
-    for (var v of mappings.OpenClose.values) {
-      valuesData.push(v.replace(":OPEN", ":EXCEPTION").replace(":CLOSED", ":OK"));
-    }
-    mappings.Exceptions.deviceOpen = {
-      reading: mappings.OpenClose.reading,
-      values: valuesData,
-      onlyLinkedInfo: true
-    };
-  }
-
   if (s.Readings.battery || s.Readings.batteryState) {
     var batt = s.Readings.battery ? "battery" : "batteryState";
     mappings.Exceptions.lowBattery = {
@@ -1126,7 +1114,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       reading: 'watering',
       cmdOn: 'on',
       cmdOff: 'off',
-      values: ['/^on/:running', '/.*/:other']
+      values: ['/^1/:running', '/.*/:other']
     };
   } else if (s.Internals.TYPE == 'XiaomiDevice') {
     if (s.Attributes.subType == 'VacuumCleaner') {
@@ -1683,6 +1671,18 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings = mappingsFromHb;
   } catch (e) {
     uiderror(uid, 'homebridgeMapping error for ' + s.Internals.NAME + ', please delete homebridgeMapping and try again');
+  }
+
+  if (mappings.OpenClose) {
+    var valuesData = [];
+    for (var v of mappings.OpenClose.values) {
+      valuesData.push(v.replace(":OPEN", ":EXCEPTION").replace(":CLOSED", ":OK"));
+    }
+    mappings.Exceptions.deviceOpen = {
+      reading: mappings.OpenClose.reading,
+      values: valuesData,
+      onlyLinkedInfo: true
+    };
   }
 
   //SIMPLE MAPPINGS
