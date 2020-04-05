@@ -1124,9 +1124,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.StartStop = {
       reading: 'watering',
-      valueOff: '0',
       cmdOn: 'on',
-      cmdOff: 'off'
+      cmdOff: 'off',
+      values: ['/^on/:running', '/.*/:other']
     };
   } else if (s.Internals.TYPE == 'XiaomiDevice') {
     if (s.Attributes.subType == 'VacuumCleaner') {
