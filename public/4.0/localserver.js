@@ -35,7 +35,7 @@ function startLocalHome(serverInstance) {
               }
             }
           },
-          intenet: "action.devices.IDENTIFY"
+          intent: "action.devices.IDENTIFY"
         };
 
         res.send(resp);

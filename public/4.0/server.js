@@ -55,15 +55,19 @@ Server.prototype._loadConfig = function () {
     }
   }
 
+  var logConfig = config;
+  if (logConfig.auth) {
+    logConfig.auth = "auth used";
+  }
   log.info("---");
-  log.info('config:\n' + JSON.stringify(config) + '\n');
+  log.info('config:\n' + JSON.stringify(logConfig));
   log.info("---");
 
   return config;
 }
 
-Server.prototype.startServer = function () {
-  registerFirestoreListener.bind(this)();
+Server.prototype.startServer = async function () {
+  await registerFirestoreListener.bind(this)();
 }
 
 async function handler(event, callback) {
@@ -142,10 +146,22 @@ async function handler(event, callback) {
 
 } // exports.handler
 
-function registerFirestoreListener() {
+async function registerFirestoreListener() {
   if (firebaseListenerRegistered)
     return undefined;
-  //TODO delete all docs in the collection to prevent using old data
+
+  //delete old messages
+  var batch = database.getDB().batch();
+  try {
+    var ref = await database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').get();
+    for (var r of ref.docs) {
+      batch.delete(r.ref);
+    }
+  } catch (err) {
+    log.error('Failed to delete firestore2fhem messages');
+  }
+  batch.commit();
+
   try {
     database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').onSnapshot((events) => {
       events.forEach((event) => {
@@ -160,7 +176,7 @@ function registerFirestoreListener() {
               }
             }
           }
-          event.ref.delete();  
+          event.ref.delete();
         } catch (err) {
           log.error('onSnapshot event failed: ' + err);
         }

@@ -61,6 +61,7 @@ app.get('/4.0/gethandleEXECUTE', async (req, res) => {
     'global.processEXECUTEActivateScene':  require('./handleEXECUTE').processEXECUTEActivateScene.toString(),
     'global.processEXECUTESetModes':  require('./handleEXECUTE').processEXECUTESetModes.toString(),
     'global.processEXECUTESetCharge': require('./handleEXECUTE').processEXECUTESetCharge.toString(),
+    'global.processEXECUTERotationAbsolute': require('./handleEXECUTE').processEXECUTERotationAbsolute.toString(),
     'global.execFHEMCommand':  require('./handleEXECUTE').execFHEMCommand.toString()
   });
 });

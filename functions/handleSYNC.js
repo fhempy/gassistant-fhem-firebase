@@ -51,45 +51,7 @@ var processSYNC = function (uid, devices) {
     const device = devices[di];
 
     try {
-      if (device.mappings.On ||
-        device.mappings.Modes ||
-        device.mappings.Toggles ||
-        device.mappings.Volumme ||
-        device.mappings.Brightness ||
-        device.mappings.HSVBrightness ||
-        device.mappings.Hue ||
-        device.mappings.RGB ||
-        device.mappings.Scene ||
-        device.mappings.CurrentTemperature ||
-        device.mappings.TargetTemperature ||
-        device.mappings.OccupancyDetected ||
-        device.mappings.StartStop ||
-        device.mappings.Dock ||
-        device.mappings.OpenClose ||
-        device.mappings.Locate ||
-        device.mappings.FanSpeed ||
-        device.mappings.Timer ||
-        device.mappings.ArmDisarm ||
-        device.mappings.TemperatureControlSetCelsius ||
-        device.mappings.TemperatureControlAmbientCelsius ||
-        device.mappings.CameraStream ||
-        device.mappings.LightEffectsColorLoop ||
-        device.mappings.LightEffectsSleep ||
-        device.mappings.LightEffectsWake ||
-        device.mappings.CurrentRelativeHumidity ||
-        device.mappings.TargetRelativeHumidity ||
-        device.mappings.LockCurrentState ||
-        device.mappings.LockTargetState ||
-        device.mappings.Reboot ||
-        device.mappings.SoftwareUpdate ||
-        device.mappings.EnergyStorageDescriptive ||
-        device.mappings.EnergyStorageExact ||
-        device.mappings.WaterLeak ||
-        device.mappings.FilterCleanliness ||
-        device.mappings.AirQuality ||
-        device.mappings.HEPAFilterLifeTime ||
-        device.mappings.CarbonMonoxideLevel ||
-        device.mappings.CarbonMonoxideLevelNumeric) {
+      if (Object.keys(device.mappings).length > 0) {
         //console.log(device);
 
         //console.log("Start handling ", device.ghomeName);
@@ -209,6 +171,41 @@ var processSYNC = function (uid, devices) {
         //Reboot
         if (device.mappings.Reboot) {
           d.traits.push("action.devices.traits.Reboot");
+        }
+
+        //Rotation
+        if (device.mappings.RotationDegrees || device.mappings.RotationPercent) {
+          d.traits.push("action.devices.traits.Rotation");
+          d.attributes.supportsPercent = false;
+          d.attributes.supportsDegrees = false;
+          //Degrees
+          if (device.mappings.RotationDegrees) {
+            d.attributes.supportsDegrees = true;
+            if (device.mappings.RotationDegrees.min &&
+              device.mappings.RotationDegrees.max) {
+              d.attributes.rotationDegreesRange = {
+                rotationDegreesMin: device.mappings.RotationDegrees.min,
+                rotationDegreesMax: device.mappings.RotationDegrees.max
+              };
+            } else {
+              d.attributes.rotationDegreesRange = {
+                rotationDegreesMin: 0,
+                rotationDegreesMax: 360
+              };
+            }
+            if (device.mappings.RotationDegrees.supportsContinuousRotation)
+              d.attributes.supportsContinuousRotation = device.mappings.RotationDegrees.supportsContinuousRotation;
+          }
+          //Percent
+          if (device.mappings.RotationPercent) {
+            d.attributes.supportsPercent = true;
+            if (device.mappings.RotationPercent.supportsContinuousRotation)
+              d.attributes.supportsContinuousRotation = device.mappings.RotationPercent.supportsContinuousRotation;
+          }
+          //commandOnly
+          if (!device.mappings.RotationDegrees.reading && !device.mappings.RotationPercent.reading) {
+            d.attributes.commandOnlyRotation = true;
+          }
         }
 
         //ArmDisarm

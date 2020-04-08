@@ -374,6 +374,14 @@ async function processQUERY(uid, input, reportstate) {
         devices[d.id].isDocked = await utils.cached2Format(uid, device.mappings.Dock, readings);
       }
 
+      //Rotation
+      if (device.mappings.RotationDegrees) {
+        devices[d.id].rotationDegrees = await utils.cached2Format(uid, device.mappings.RotationDegrees, readings);
+      }
+      if (device.mappings.RotationPercent) {
+        devices[d.id].RotationPercent = await utils.cached2Format(uid, device.mappings.RotationPercent, readings);
+      }
+
       //action.devices.traits.ColorSetting
       if (device.mappings.RGB) {
         devices[d.id].color = {};

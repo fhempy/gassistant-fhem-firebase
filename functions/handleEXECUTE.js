@@ -70,6 +70,7 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_EFFECT_SLEEP = "action.devices.commands.Sleep";
   const REQUEST_EFFECT_WAKE = "action.devices.commands.Wake";
   const REQUEST_CHARGE = "action.devices.commands.Charge";
+  const REQUEST_ROTATE_ABSOLUTE = "action.devices.commands.RotateAbsolute";
 
   //map commands to the mapping within the device
   const commandMapping = {};
@@ -106,6 +107,7 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_EFFECT_SLEEP] = ['LightEffectsSleep'];
   commandMapping[REQUEST_EFFECT_WAKE] = ['LightEffectsWake'];
   commandMapping[REQUEST_CHARGE] = ['EnergyStorageExact', 'EnergyStorageDescriptive'];
+  commandMapping[REQUEST_ROTATE_ABSOLUTE] = ['RotationDegrees', 'RotationPercent'];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -287,6 +289,10 @@ async function processEXECUTE(uid, reqId, input) {
 
           case REQUEST_CHARGE:
             response = await processEXECUTESetCharge(uid, reqId, device, readings, exec, fhemExecCmd);
+            break;
+
+          case REQUEST_ROTATE_ABSOLUTE:
+            response = await processEXECUTERotationAbsolute(uid, reqId, device, readings, exec, fhemExecCmd);
             break;
 
           //action.devices.traits.Modes: COMMANDS
@@ -864,6 +870,25 @@ async function processEXECUTESetCharge(uid, reqId, device, readings, event, fhem
   }];
 } //processEXECUTESetCharge
 
+async function processEXECUTERotationAbsolute(uid, reqId, device, readings, event, fhemExecCmd) {
+  var ret = [{
+    ids: [device.uuid_base],
+    status: "SUCCESS",
+    states: {
+      online: true
+    }
+  }]
+  if (event.params.rotationDegrees) {
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.RotationDegrees, event.params.rotationDegrees, fhemExecCmd));
+    ret[0].states.rotationDegrees = event.params.rotationDegrees;
+  } else {
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.RotationPercent, event.params.rotationPercent, fhemExecCmd));
+    ret[0].states.rotationPercent = event.params.rotationPercent;
+  }
+  
+  return ret;
+} //processEXECUTERotationAbsolute
+
 async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
   let retArr = [];
   for (mode of Object.keys(event.params.updateModeSettings)) {
@@ -1063,6 +1088,7 @@ module.exports = {
   processEXECUTEPauseUnpause,
   processEXECUTESetFanSpeed,
   processEXECUTESetColorAbsolute,
+  processEXECUTERotationAbsolute,
   processEXECUTESetToggles,
   processEXECUTESetCharge,
   processEXECUTEActivateScene,

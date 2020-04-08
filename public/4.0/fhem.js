@@ -26,6 +26,7 @@ var initSync = 0;
 var firstRun = 0;
 var gassistant;
 var connectioncounter = 0;
+var longpollRequest = 0;
 
 function getCurrentReadings() {
   return FHEM_devReadingVal;
@@ -139,7 +140,7 @@ function FHEM_startLongpoll(connection) {
       auth: connection.auth,
       rejectUnauthorized: false
     });
-  request.get({
+  longpollRequest = request.get({
     url: url
   }).on('data', async function (data) {
     //log.info( 'data: ' + data );
@@ -465,6 +466,7 @@ FHEM.prototype.reload = async function () {
   FHEM_activeDevices = {};
   FHEM_devicesJSON = {};
   FHEM_deviceReadings = {};
+  longpollRequest.abort();
   await this.clearDatabase();
   await this.connection.fhem.serverprocess.connectAll();
 }
