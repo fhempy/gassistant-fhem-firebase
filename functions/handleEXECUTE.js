@@ -71,9 +71,15 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_EFFECT_WAKE = "action.devices.commands.Wake";
   const REQUEST_CHARGE = "action.devices.commands.Charge";
   const REQUEST_ROTATE_ABSOLUTE = "action.devices.commands.RotateAbsolute";
+  const REQUEST_MUTE = "action.devices.commands.mute";
+  const REQUEST_SET_VOLUME = "action.devices.commands.setVolume";
+  const REQUEST_SET_VOLUME_RELATIVE = "action.devices.commands.volumeRelative";
 
   //map commands to the mapping within the device
   const commandMapping = {};
+  commandMapping[REQUEST_MUTE] = ['Mute'];
+  commandMapping[REQUEST_SET_VOLUME] = ['Volume'];
+  commandMapping[REQUEST_SET_VOLUME_RELATIVE] = ['Volume'];
   commandMapping[REQUEST_SET_BRIGHTNESSABSOLUTE] = ['Brightness'];
   commandMapping[REQUEST_SET_MODES] = ['Modes'];
   commandMapping[REQUEST_ON_OFF] = ['On'];
@@ -338,6 +344,18 @@ async function processEXECUTE(uid, reqId, input) {
           
           case REQUEST_REBOOT:
             response = await processEXECUTEReboot(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_MUTE:
+            response = await processEXECUTEMute(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SET_VOLUME:
+            response = await processEXECUTESetVolume(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SET_VOLUME_RELATIVE:
+            response = await processEXECUTESetVolumeRelative(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
           default:
@@ -618,6 +636,42 @@ async function processEXECUTESetTempearture(uid, reqId, device, temperature, fhe
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetTempearture
+
+async function processEXECUTEMute(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Mute, params.mute));
+
+  return [{
+    states: {
+      isMute: params.mute
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTEMute
+
+async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, params.volumeLevel));
+
+  return [{
+    states: {
+      currentVolume: params.volumeLevel
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetVolume
+
+async function processEXECUTESetVolumeRelative(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, params.relativeSteps));
+
+  return [{
+    states: {
+      online: true
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetVolumeRelative
 
 async function processEXECUTESetHumidity(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetRelativeHumidity, params.humidity));
@@ -924,7 +978,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
   var command = undefined;
   if (c == 'identify') {
     if (device.type == 'HUEDevice')
-      command = 'set ' + device.device + 'alert select';
+      command = 'set ' + device.device + ' alert select';
     else
       command = 'set ' + device.device + ' toggle; sleep 1; set ' + device.device + ' toggle';
 
@@ -1009,6 +1063,18 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
       else if (mapping.cmdOff !== undefined && value == 0)
         cmd = mapping.cmdOff;
 
+      else if (mapping.cmdUp !== undefined && value > 0) {
+        cmd = mapping.cmdUp;
+        for (var i=1; i<value; i++)
+          cmd = cmd + ";" + mapping.cmdUp;
+      }
+
+      else if (mapping.cmdDown !== undefined && value < 0) {
+        cmd = mapping.cmdDown;
+        for (var i=-1; i>value; i--)
+          cmd = cmd + ";" + mapping.cmdDown;
+      }
+
       else if (mapping.cmdOpen !== undefined && ((value >= 50 && !mapping.invert) || (value < 50 && mapping.invert === true)))
         cmd = mapping.cmdOpen;
 
@@ -1066,6 +1132,9 @@ module.exports = {
   handleEXECUTE,
   processEXECUTE,
   processEXECUTEOnOff,
+  processEXECUTEMute,
+  processEXECUTESetVolume,
+  processEXECUTESetVolumeRelative,
   processEXECUTESetHumidity,
   processEXECUTESetHumidityRelative,
   processEXECUTESetLockUnlock,

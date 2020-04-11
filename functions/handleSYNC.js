@@ -214,7 +214,7 @@ var processSYNC = function (uid, devices) {
         }
 
         //Brightness
-        if (device.mappings.Brightness || device.mappings.Volume) {
+        if (device.mappings.Brightness) {
           d.traits.push("action.devices.traits.Brightness");
         }
 
@@ -223,6 +223,24 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.StartStop");
           //Attributes
           d.attributes.pausable = true;
+        }
+
+        //Volume
+        if (device.mappings.Volume) {
+          d.traits.push("action.devices.traits.Volume");
+          d.attributes.volumeMaxLevel = device.mappings.Volume.volumeMaxLevel || 100;
+          if (device.mappings.Mute) {
+            d.attributes.volumeCanMuteAndUnmute = true;
+          } else {
+            d.attributes.volumeCanMuteAndUnmute = false;
+          }
+          d.attributes.volumeDefaultPercentage = device.mappings.Volume.defaultVolume || 15;
+          d.attributes.levelStepSize = device.mappings.Volume.levelStepSize || 1;
+          if (device.mappings.Volume.reading) {
+            d.attributes.commandOnlyVolume = false;
+          } else {
+            d.attributes.commandOnlyVolume = true;
+          }
         }
 
         //SensorState

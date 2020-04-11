@@ -389,116 +389,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
-  if (s.Readings.volume) {
-    if (!service_name) service_name = 'switch';
-    mappings.Brightness = {
-      reading: 'volume',
-      cmd: 'volume',
-      format: 'int',
-      minValue: 0,
-      maxValue: 100,
-      minStep: 1
-    };
-  } else if (s.Readings.Volume) {
-    if (!service_name) service_name = 'switch';
-    mappings.Brightness = {
-      reading: 'Volume',
-      cmd: 'Volume',
-      format: 'int',
-      minValue: 0,
-      maxValue: 100,
-      minStep: 1
-    };
-  }
-
-  if (s.Internals.TYPE == 'BOSEST') {
-    mappings.On = {
-      reading: 'source',
-      valueOff: 'STANDBY',
-      cmdOn: 'on',
-      cmdOff: 'off'
-    };
-
-    var channel_01 = "Sender 1";
-    var channel_02 = "Sender 2";
-    var channel_03 = "Sender 3";
-    var channel_04 = "Sender 4";
-    var channel_05 = "Sender 5";
-    var channel_06 = "Sender 6";
-    if (s.Readings.channel_01)
-      channel_01 = s.Readings.channel_01.Value;
-    if (s.Readings.channel_02)
-      channel_02 = s.Readings.channel_02.Value;
-    if (s.Readings.channel_03)
-      channel_03 = s.Readings.channel_03.Value;
-    if (s.Readings.channel_04)
-      channel_04 = s.Readings.channel_04.Value;
-    if (s.Readings.channel_05)
-      channel_05 = s.Readings.channel_05.Value;
-    if (s.Readings.channel_06)
-      channel_06 = s.Readings.channel_06.Value;
-    mappings.Modes = [{
-      reading: 'channel',
-      cmds: ['1:channel 1', '2:channel 2', '3:channel 3', '4:channel 4', '5:channel 5', '6:channel 6'],
-      values: ['1:1', '2:2', '3:3', '4:4', '5:5', '6:6'],
-      mode_attributes: {
-        name: 'Preset',
-        name_values: [{
-          name_synonym: ['Preset', 'Sender'],
-          lang: 'en'
-        },
-        {
-          name_synonym: ['Kanal', 'Preset', 'Sender'],
-          lang: 'de'
-        }
-        ],
-        settings: [{
-          setting_name: '1',
-          setting_values: [{
-            setting_synonym: ['Sender 1', 'Eins', 'Kanal 1', 'Preset 1', channel_01],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: '2',
-          setting_values: [{
-            setting_synonym: ['Sender 2', 'Zwei', 'Kanal 2', 'Preset 2', channel_02],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: '3',
-          setting_values: [{
-            setting_synonym: ['Sender 3', 'Drei', 'Kanal 3', 'Preset 3', channel_03],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: '4',
-          setting_values: [{
-            setting_synonym: ['Sender 4', 'Vier', 'Kanal 4', 'Preset 4', channel_04],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: '5',
-          setting_values: [{
-            setting_synonym: ['Sender 5', 'Fuenf', 'Kanal 5', 'Preset 5', channel_05],
-            lang: 'de'
-          }]
-        },
-        {
-          setting_name: '6',
-          setting_values: [{
-            setting_synonym: ['Sender 6', 'Sechs', 'Kanal 6', 'Preset 6', channel_06],
-            lang: 'de'
-          }]
-        }],
-        ordered: true
-      }
-    }];
-  }
-
   if (s.Internals.TYPE == 'LightScene' || (s.PossibleSets.match(/(^| )scene\b/) && service_name === "scene")) {
     //name attribut ist der name der scene
     mappings.Scene = [];
@@ -1042,6 +932,18 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
+  if (s.Readings.volume) {
+    mappings.Volume = {
+      reading: 'volume',
+      cmd: 'volume'
+    };
+  } else if (s.Readings.Volume) {
+    mappings.Volume = {
+      reading: 'Volume',
+      cmd: 'Volume'
+    };
+  }
+
   if (s.Readings.humidity) {
     mappings.CurrentRelativeHumidity = {
       reading: 'humidity'
@@ -1097,6 +999,121 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE === 'DoorBird') {
+    if (!service_name) service_name = 'door';
+    mappings.OpenClose = {
+      cmdOpen: 'Open_Door 1'
+    };
+    mappings.SimpleToggles = [{
+      cmdOn: 'Open_Door 2',
+      voicecmd: 'Licht'
+    },{
+      cmdOn: 'Live_Video on',
+      cmdOff: 'Live_Video off',
+      voicecmd: 'Videoübertragung'
+    },{
+      cmdOn: 'Live_Audio on',
+      cmdOff: 'Live_Audio off',
+      voicecmd: 'Audioübertragung'
+    }];
+    mappings.Reboot = {
+      cmd: 'Restart'
+    };
+  } else if (s.Internals.TYPE === 'BOSEST') {
+    if (!service_name) service_name = 'switch';
+    mappings.On = {
+      reading: 'source',
+      valueOff: 'STANDBY',
+      cmdOn: 'on',
+      cmdOff: 'off'
+    };
+
+    mappings.Mute = {
+      reading: 'mute',
+      valueOff: 'false',
+      format: "bool",
+      cmdOn: 'mute on',
+      cmdOff: 'mute off'
+    };
+
+    var channel_01 = "Sender 1";
+    var channel_02 = "Sender 2";
+    var channel_03 = "Sender 3";
+    var channel_04 = "Sender 4";
+    var channel_05 = "Sender 5";
+    var channel_06 = "Sender 6";
+    if (s.Readings.channel_01)
+      channel_01 = s.Readings.channel_01.Value;
+    if (s.Readings.channel_02)
+      channel_02 = s.Readings.channel_02.Value;
+    if (s.Readings.channel_03)
+      channel_03 = s.Readings.channel_03.Value;
+    if (s.Readings.channel_04)
+      channel_04 = s.Readings.channel_04.Value;
+    if (s.Readings.channel_05)
+      channel_05 = s.Readings.channel_05.Value;
+    if (s.Readings.channel_06)
+      channel_06 = s.Readings.channel_06.Value;
+    mappings.Modes = [{
+      reading: 'channel',
+      cmds: ['1:channel 1', '2:channel 2', '3:channel 3', '4:channel 4', '5:channel 5', '6:channel 6'],
+      values: ['1:1', '2:2', '3:3', '4:4', '5:5', '6:6'],
+      mode_attributes: {
+        name: 'Preset',
+        name_values: [{
+          name_synonym: ['Preset', 'Sender'],
+          lang: 'en'
+        },
+        {
+          name_synonym: ['Kanal', 'Preset', 'Sender'],
+          lang: 'de'
+        }
+        ],
+        settings: [{
+          setting_name: '1',
+          setting_values: [{
+            setting_synonym: ['Sender 1', 'Eins', 'Kanal 1', 'Preset 1', channel_01],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '2',
+          setting_values: [{
+            setting_synonym: ['Sender 2', 'Zwei', 'Kanal 2', 'Preset 2', channel_02],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '3',
+          setting_values: [{
+            setting_synonym: ['Sender 3', 'Drei', 'Kanal 3', 'Preset 3', channel_03],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '4',
+          setting_values: [{
+            setting_synonym: ['Sender 4', 'Vier', 'Kanal 4', 'Preset 4', channel_04],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '5',
+          setting_values: [{
+            setting_synonym: ['Sender 5', 'Fuenf', 'Kanal 5', 'Preset 5', channel_05],
+            lang: 'de'
+          }]
+        },
+        {
+          setting_name: '6',
+          setting_values: [{
+            setting_synonym: ['Sender 6', 'Sechs', 'Kanal 6', 'Preset 6', channel_06],
+            lang: 'de'
+          }]
+        }],
+        ordered: true
+      }
+    }];
   } else if (s.Internals.TYPE === "GFPROBT") {
     if (!service_name) service_name = "sprinkler";
     mappings.Timer = {
@@ -1556,11 +1573,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdOff: 'POWEROFF'
     };
   } else if (s.Internals.TYPE === 'SamsungAV') {
+    if (!service_name) service_name = 'tv';
+
     mappings.On = {
       reading: 'state',
       valueOff: 'absent',
       cmdOn: 'poweron',
       cmdOff: 'poweroff'
+    };
+    mappings.Volume = {
+      cmdUp: "volumeUp",
+      cmdDown: "volumeDown",
+      levelStepSize: 3
+    };
+    mappings.Mute = {
+      cmd: "mute"
     };
   } else if (s.Internals.TYPE === "XiaomiSmartHome_Device") {
     if (s.Internals.MODEL === "sensor_wleak.aq1") {
@@ -1905,6 +1932,8 @@ function formatOfName(characteristic_type) {
     return 'int';
   else if (characteristic_type == 'Volume')
     return 'int';
+  else if (characteristic_type == 'Mute')
+    return 'bool';
 
   return undefined;
 }
@@ -2071,8 +2100,8 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
   else
     devicetmp = mapping.device;
 
-  if (mapping.reading === undefined && mapping.default === undefined)
-    mapping.reading = 'state';
+  //if (mapping.reading === undefined && mapping.default === undefined)
+  //  mapping.reading = 'state';
 
   if (!mapping.format)
     mapping.format = formatOfName(characteristic_type);
@@ -2081,105 +2110,107 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
     delete mapping.format;
 
   //create reading values in realtime database
-  if (!Array.isArray(mapping.reading)) {
-    mapping.reading = [mapping.reading];
-  }
-  for (var r of mapping.reading) {
-    var orig = undefined;
-    if (s.Readings[r] && s.Readings[r].Value)
-      orig = s.Readings[r].Value;
-
-    if (orig === undefined && devicetmp == device && mapping.default !== undefined)
-      continue;
-
-    if (orig === undefined) {
-      continue;
+  if (mapping.reading !== undefined) {
+    if (!Array.isArray(mapping.reading)) {
+      mapping.reading = [mapping.reading];
     }
+    for (var r of mapping.reading) {
+      var orig = undefined;
+      if (s.Readings[r] && s.Readings[r].Value)
+        orig = s.Readings[r].Value;
 
-    if (!usedDeviceReadings[mapping.device]) {
-      usedDeviceReadings[mapping.device] = {};
-    }
+      if (orig === undefined && devicetmp == device && mapping.default !== undefined)
+        continue;
 
-    //define compare functions which are used for report state
-    var compareFunction;
-    if (characteristic_type === 'RGB' ||
-      characteristic_type === 'Hue' ||
-      characteristic_type === 'Saturation' ||
-      characteristic_type === 'Brightness') {
-      compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
-        //check if old != new
-        if (oldValue !== newValue) {
-          if ((oldDevTimestamp + 5000) > Date.now()) {
-            if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+      if (orig === undefined) {
+        continue;
+      }
+
+      if (!usedDeviceReadings[mapping.device]) {
+        usedDeviceReadings[mapping.device] = {};
+      }
+
+      //define compare functions which are used for report state
+      var compareFunction;
+      if (characteristic_type === 'RGB' ||
+        characteristic_type === 'Hue' ||
+        characteristic_type === 'Saturation' ||
+        characteristic_type === 'Brightness') {
+        compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+          //check if old != new
+          if (oldValue !== newValue) {
+            if ((oldDevTimestamp + 5000) > Date.now()) {
+              if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+            }
+            //check how old old is
+            if ((oldTimestamp + 10000) > Date.now()) {
+              //oldTimestamp is younger then 10s
+              if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+              return setTimeout(reportStateFunction.bind(null, device), 10000);
+            } else {
+              //oldTimestamp is older then 10s
+              return setTimeout(reportStateFunction.bind(null, device), 10000);
+            }
           }
-          //check how old old is
-          if ((oldTimestamp + 10000) > Date.now()) {
-            //oldTimestamp is younger then 10s
+          return undefined;
+        };
+      } else if (characteristic_type === 'CurrentTemperature') {
+        compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+          //check if old != new
+          if (Math.round(oldValue) !== Math.round(newValue)) {
+            if ((oldDevTimestamp + 5000) > Date.now()) {
+              if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+            }
+            //check how old old is
+            if ((oldTimestamp + 60000) > Date.now()) {
+              //oldTimestamp is younger then 60s
+              if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+              return setTimeout(reportStateFunction.bind(null, device), 60000);
+            } else {
+              //oldTimestamp is older then 60s
+              return setTimeout(reportStateFunction.bind(null, device), 60000);
+            }
+          }
+          return undefined;
+        };
+      } else if (characteristic_type === 'CurrentRelativeHumidity') {
+        compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+          //check if old != new
+          if (Math.round(oldValue) !== Math.round(newValue)) {
+            if ((oldDevTimestamp + 5000) > Date.now()) {
+              if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+            }
+            //check how old old is
+            if ((oldTimestamp + 60000) > Date.now()) {
+              //oldTimestamp is younger then 60s
+              if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
+              return setTimeout(reportStateFunction.bind(null, device), 60000);
+            } else {
+              //oldTimestamp is older then 60s
+              return setTimeout(reportStateFunction.bind(null, device), 60000);
+            }
+          }
+          return undefined;
+        };
+      } else {
+        compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+          if (oldValue !== newValue) {
+            if ((oldDevTimestamp + 900) > Date.now()) {
+              if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
+            }
             if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-            return setTimeout(reportStateFunction.bind(null, device), 10000);
-          } else {
-            //oldTimestamp is older then 10s
-            return setTimeout(reportStateFunction.bind(null, device), 10000);
+            return setTimeout(reportStateFunction.bind(null, device), 1000);
           }
-        }
-        return undefined;
-      };
-    } else if (characteristic_type === 'CurrentTemperature') {
-      compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
-        //check if old != new
-        if (Math.round(oldValue) !== Math.round(newValue)) {
-          if ((oldDevTimestamp + 5000) > Date.now()) {
-            if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
-          }
-          //check how old old is
-          if ((oldTimestamp + 60000) > Date.now()) {
-            //oldTimestamp is younger then 60s
-            if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-            return setTimeout(reportStateFunction.bind(null, device), 60000);
-          } else {
-            //oldTimestamp is older then 60s
-            return setTimeout(reportStateFunction.bind(null, device), 60000);
-          }
-        }
-        return undefined;
-      };
-    } else if (characteristic_type === 'CurrentRelativeHumidity') {
-      compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
-        //check if old != new
-        if (Math.round(oldValue) !== Math.round(newValue)) {
-          if ((oldDevTimestamp + 5000) > Date.now()) {
-            if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
-          }
-          //check how old old is
-          if ((oldTimestamp + 60000) > Date.now()) {
-            //oldTimestamp is younger then 60s
-            if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-            return setTimeout(reportStateFunction.bind(null, device), 60000);
-          } else {
-            //oldTimestamp is older then 60s
-            return setTimeout(reportStateFunction.bind(null, device), 60000);
-          }
-        }
-        return undefined;
-      };
-    } else {
-      compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
-        if (oldValue !== newValue) {
-          if ((oldDevTimestamp + 900) > Date.now()) {
-            if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
-          }
-          if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-          return setTimeout(reportStateFunction.bind(null, device), 1000);
-        }
-        return undefined;
+          return undefined;
+        };
+      }
+      //BACKWARD COMPATIBILITY: delete format
+      uidlog(uid, ' use reading: ' + r);
+      usedDeviceReadings[mapping.device][r] = {
+        'format': 'standard',
+        'compareFunction': compareFunction.toString()
       };
     }
-    //BACKWARD COMPATIBILITY: delete format
-    uidlog(uid, ' use reading: ' + r);
-    usedDeviceReadings[mapping.device][r] = {
-      'format': 'standard',
-      'compareFunction': compareFunction.toString()
-    };
   }
 
   if (typeof mapping.values === 'object') {

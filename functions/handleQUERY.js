@@ -193,7 +193,7 @@ async function processQUERY(uid, input, reportstate) {
       }
 
       //OpenClose
-      if (device.mappings.OpenClose) {
+      if (device.mappings.OpenClose && device.mappings.OpenClose.reading) {
         if (device.mappings.CurrentPosition) {
           devices[d.id].openPercent = await utils.cached2Format(uid, device.mappings.CurrentPosition, readings);
         } else {
@@ -335,8 +335,10 @@ async function processQUERY(uid, input, reportstate) {
       if (device.mappings.Toggles) {
         devices[d.id].currentToggleSettings = {};
         for (toggle of device.mappings.Toggles) {
-          let currentToggle = await utils.cached2Format(uid, toggle, readings);
-          devices[d.id].currentToggleSettings[toggle.toggle_attributes.name] = currentToggle == toggle.valueOn;
+          if (toggle.reading) {
+            let currentToggle = await utils.cached2Format(uid, toggle, readings);
+            devices[d.id].currentToggleSettings[toggle.toggle_attributes.name] = currentToggle == toggle.valueOn;
+          }
         }
       }
 
@@ -380,6 +382,14 @@ async function processQUERY(uid, input, reportstate) {
       }
       if (device.mappings.RotationPercent) {
         devices[d.id].RotationPercent = await utils.cached2Format(uid, device.mappings.RotationPercent, readings);
+      }
+
+      //Volume
+      if (device.mappings.Volume && device.mappings.Volume.reading) {
+        devices[d.id].currentVolume = await utils.cached2Format(uid, device.mappings.Volume, readings);
+        if (device.mappings.Mute) {
+          devices[d.id].isMuted = await utils.cached2Format(uid, device.mappings.Mute, readings);
+        }
       }
 
       //action.devices.traits.ColorSetting

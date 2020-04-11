@@ -62,6 +62,9 @@ app.get('/4.0/gethandleEXECUTE', async (req, res) => {
     'global.processEXECUTESetModes':  require('./handleEXECUTE').processEXECUTESetModes.toString(),
     'global.processEXECUTESetCharge': require('./handleEXECUTE').processEXECUTESetCharge.toString(),
     'global.processEXECUTERotationAbsolute': require('./handleEXECUTE').processEXECUTERotationAbsolute.toString(),
+    'global.processEXECUTEMute': require('./handleEXECUTE').processEXECUTEMute.toString(),
+    'global.processEXECUTESetVolume': require('./handleEXECUTE').processEXECUTESetVolume.toString(),
+    'global.processEXECUTESetVolumeRelative': require('./handleEXECUTE').processEXECUTESetVolumeRelative.toString(),
     'global.execFHEMCommand':  require('./handleEXECUTE').execFHEMCommand.toString()
   });
 });
