@@ -47,6 +47,7 @@ app.get('/4.0/gethandleEXECUTE', async (req, res) => {
     'global.processEXECUTEGetCameraStream': require('./handleEXECUTE').processEXECUTEGetCameraStream.toString(),
     'global.processEXECUTEArmDisarm':  require('./handleEXECUTE').processEXECUTEArmDisarm.toString(),
     'global.processEXECUTETimerStart':  require('./handleEXECUTE').processEXECUTETimerStart.toString(),
+    'global.processEXECUTETimerCancel':  require('./handleEXECUTE').processEXECUTETimerCancel.toString(),
     'global.processEXECUTESetOpenClose':  require('./handleEXECUTE').processEXECUTESetOpenClose.toString(),
     'global.processEXECUTEBrightnessAbsolute':  require('./handleEXECUTE').processEXECUTEBrightnessAbsolute.toString(),
     'global.processEXECUTESetTargetTemperature':  require('./handleEXECUTE').processEXECUTESetTargetTemperature.toString(),

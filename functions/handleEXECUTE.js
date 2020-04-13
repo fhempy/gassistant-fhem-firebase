@@ -318,6 +318,10 @@ async function processEXECUTE(uid, reqId, input) {
             response = await processEXECUTETimerStart(uid, reqId, device, exec.params, fhemExecCmd);
             break;
 
+          case REQUEST_TIMERCANCEL:
+            response = await processEXECUTETimerCancel(uid, reqId, device, exec.params, fhemExecCmd);
+            break;
+
           case REQUEST_SET_TEMPERATURE:
             response = await processEXECUTESetTempearture(uid, reqId, device, exec.params.temperature, fhemExecCmd);
             break;
@@ -550,6 +554,30 @@ async function processEXECUTETimerStart(uid, reqId, device, params, fhemExecCmd)
 
   return res;
 } // processEXECUTETimerStart
+
+async function processEXECUTETimerCancel(uid, reqId, device, params, fhemExecCmd) {
+  if (device.mappings.Timer.cmdTimerCancel) {
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Timer, device.mappings.Timer.cmdTimerCancel));
+  } else {
+    return [{
+      ids: [device.uuid_base],
+      status: 'ERROR',
+      errorCode: 'functionNotSupported'
+    }];
+  }
+
+  let res = [];
+
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      timerRemainingSec: 0
+    }
+  });
+
+  return res;
+} // processEXECUTETimerCancel
 
 async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCmd) {
   if (device.mappings.TargetPosition && params.openPercent !== 0 && params.openPercent !== 100) {
@@ -1147,6 +1175,7 @@ module.exports = {
   processEXECUTEGetCameraStream,
   processEXECUTEArmDisarm,
   processEXECUTETimerStart,
+  processEXECUTETimerCancel,
   processEXECUTESetOpenClose,
   processEXECUTEBrightnessAbsolute,
   processEXECUTESetTargetTemperature,
