@@ -62,21 +62,25 @@ function initFirebase() {
 
 async function refreshAllTokens() {
   if (!all_tokens.refresh) {
-    console.error('No refresh token found.');
-    console.error('Delete the token file and start the process again');
+    log.error('No refresh token found.');
+    log.error('Delete the token file and start the process again');
     process.exit(1);
   }
 
-  npmapi.getdetails('gassistant-fhem', function (data) {
-    try {
-      if (_fhem) {
-        _fhem.execute('setreading ' + _fhem.gassistant + ' gassistant-fhem-versionAvailable ' + data['dist-tags'].latest);
+  try {
+    npmapi.getdetails('gassistant-fhem', function (data) {
+      try {
+        if (_fhem) {
+          _fhem.execute('setreading ' + _fhem.gassistant + ' gassistant-fhem-versionAvailable ' + data['dist-tags'].latest);
+        }
+      } catch (err) {
+        log.error('Failed to set reading gassistant-fhem-versionAvailable: ' + err);
       }
-    } catch (err) {
-      console.error('Failed to check latest version on npmjs: ' + err);
-    }
-  });
-
+    });  
+  } catch (err) {
+    log.error('Failed to get latest version info from npmjs.org: ' + err);
+  }
+  
   auth0_tokens = await refreshToken(all_tokens.refresh);
   firebase_token = await createFirebaseCustomToken(auth0_tokens.access);
   var signin = await firebase.auth().signInWithCustomToken(firebase_token.firebase);
@@ -126,7 +130,7 @@ async function callCloudFunction(functionUrl, method, body) {
   }
 
   if (res.status != 200) {
-    console.error('ERROR: ' + functionUrl + ' => ' + res.status + ':' + JSON.stringify(res.body));
+    log.error('ERROR: ' + functionUrl + ' => ' + res.status + ':' + JSON.stringify(res.body));
     return {};
   }
 
