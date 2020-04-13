@@ -919,6 +919,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
   }
 
+  //TRAITS BASED ON POSSIBLE COMMANDS
+  if (!mappings.Timer && s.PossibleSets.match(/(^| )on-for-timer\b/)) {
+    mappings.Timer = {
+      commandOnlyTimer: true,
+      maxTimerLimitSec: 86400,
+      cmdTimerStart: "on-for-timer",
+      cmdTimerCancel: "on-for-timer 0"
+    };
+  }
+  if (match = s.PossibleSets.match(/(^| )dim:slider,0,1,100/) && s.Readings.dim) {
+    mappings.Brightness = {
+      reading: 'dim',
+      cmd: 'dim'
+    };
+  }
+
   //GENERIC MAPPINGS BASED ON READINGS
   if (s.Readings['measured-temp']) {
     mappings.CurrentTemperature = {
@@ -1118,7 +1134,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (!service_name) service_name = "sprinkler";
     mappings.Timer = {
       commandOnlyTimer: true,
-      maxTimerLimitSec: 86400,
+      maxTimerLimitSec: 7200,
       cmdTimerStart: "on"
     };
     mappings.On = {
@@ -1676,21 +1692,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
-  //TRAITS BASED ON POSSIBLE COMMANDS
-  if (!mappings.Timer && s.PossibleSets.match(/(^| )on-for-timer\b/)) {
-    mappings.Timer = {
-      commandOnlyTimer: true,
-      maxTimerLimitSec: 86400,
-      cmdTimerStart: "on-for-timer"
-    };
-  }
-  if (match = s.PossibleSets.match(/(^| )dim:slider,0,1,100/) && s.Readings.dim) {
-    mappings.Brightness = {
-      reading: 'dim',
-      cmd: 'dim'
-    };
-  }
-
   //homebridgeMapping Attribute
   try {
     var mappingsFromHb = fromHomebridgeMapping(uid, mappings, s.Attributes.homebridgeMapping);
@@ -1700,7 +1701,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     uiderror(uid, 'homebridgeMapping error for ' + s.Internals.NAME + ', please delete homebridgeMapping and try again');
   }
 
-  if (mappings.OpenClose) {
+  if (mappings.OpenClose && mappings.OpenClose.values) {
     var valuesData = [];
     for (var v of mappings.OpenClose.values) {
       valuesData.push(v.replace(":OPEN", ":EXCEPTION").replace(":CLOSED", ":OK"));
