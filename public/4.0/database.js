@@ -67,20 +67,18 @@ async function refreshAllTokens() {
     process.exit(1);
   }
 
-  try {
-    npmapi.getdetails('gassistant-fhem', function (data) {
-      try {
-        if (_fhem) {
-          _fhem.execute('setreading ' + _fhem.gassistant + ' gassistant-fhem-versionAvailable ' + data['dist-tags'].latest);
-        }
-      } catch (err) {
-        log.error('Failed to set reading gassistant-fhem-versionAvailable: ' + err);
+  npmapi.getdetails('gassistant-fhem', function (data) {
+    try {
+      if (_fhem) {
+        _fhem.execute('setreading ' + _fhem.gassistant + ' gassistant-fhem-versionAvailable ' + data['dist-tags'].latest);
       }
-    });  
-  } catch (err) {
-    log.error('Failed to get latest version info from npmjs.org: ' + err);
-  }
-  
+    } catch (err) {
+      log.error('Failed to set reading gassistant-fhem-versionAvailable: ' + err);
+    }
+  }).on('error', function(e) {
+    log.error('Failed to get latest version from npmjs.org: ' + e);
+  });
+
   auth0_tokens = await refreshToken(all_tokens.refresh);
   firebase_token = await createFirebaseCustomToken(auth0_tokens.access);
   var signin = await firebase.auth().signInWithCustomToken(firebase_token.firebase);
@@ -176,7 +174,7 @@ async function reportState(device) {
 
 async function reportStateWithData(data) {
   log.info('reportstate_v2: ' + JSON.stringify(data));
-  return await postCloudFunction(CLOUD_FUNCTIONS_BASE.replace('europe-west1', 'us-central1') + "/reportstate/singledevice_v2", JSON.stringify({deviceStatus: data}));
+  return await postCloudFunction(CLOUD_FUNCTIONS_BASE.replace('europe-west1', 'us-central1') + "/reportstate/singledevice_v2", JSON.stringify({ deviceStatus: data }));
 };
 
 async function reportStateAll() {
