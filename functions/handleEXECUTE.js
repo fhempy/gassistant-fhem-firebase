@@ -74,6 +74,18 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_MUTE = "action.devices.commands.mute";
   const REQUEST_SET_VOLUME = "action.devices.commands.setVolume";
   const REQUEST_SET_VOLUME_RELATIVE = "action.devices.commands.volumeRelative";
+  const REQUEST_MEDIA_CAPTION_ON = "action.devices.commands.mediaClosedCaptioningOn";
+  const REQUEST_MEDIA_CAPTION_OFF = "action.devices.commands.mediaClosedCaptioningOff";
+  const REQUEST_MEDIA_NEXT = "action.devices.commands.mediaNext";
+  const REQUEST_MEDIA_PAUSE = "action.devices.commands.mediaPause";
+  const REQUEST_MEDIA_PREVIOUS = "action.devices.commands.mediaPrevious";
+  const REQUEST_MEDIA_RESUME = "action.devices.commands.mediaResume";
+  const REQUEST_MEDIA_REPEAT_MODE = "action.devices.commands.mediaRepeatMode";
+  const REQUEST_MEDIA_SEEK_RELATIVE = "action.devices.commands.mediaSeekRelative";
+  const REQUEST_MEDIA_SEEK_TO_POS = "action.devices.commands.mediaSeekToPosition";
+  const REQUEST_MEDIA_SHUFFLE = "action.devices.commands.mediaShuffle";
+  const REQUEST_MEDIA_STOP = "action.devices.commands.mediaStop";
+
 
   //map commands to the mapping within the device
   const commandMapping = {};
@@ -91,7 +103,7 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_PAUSEUNPAUSE] = ['StartStop'];
   commandMapping[REQUEST_FANSPEED] = ['FanSpeed'];
   commandMapping[REQUEST_FANSPEEDREVERSE] = ['FanSpeed'];
-  commandMapping[REQUEST_COLORABSOLUTE] = ['RGB','ColorTemperature'];
+  commandMapping[REQUEST_COLORABSOLUTE] = ['RGB', 'ColorTemperature'];
   commandMapping[REQUEST_SET_TOGGLES] = ['Toggles'];
   commandMapping[REQUEST_ACTIVATE_SCENE] = ['Scene'];
   commandMapping[REQUEST_OPENCLOSE] = ['OpenClose'];
@@ -114,6 +126,17 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_EFFECT_WAKE] = ['LightEffectsWake'];
   commandMapping[REQUEST_CHARGE] = ['EnergyStorageExact', 'EnergyStorageDescriptive'];
   commandMapping[REQUEST_ROTATE_ABSOLUTE] = ['RotationDegrees', 'RotationPercent'];
+  commandMapping[REQUEST_MEDIA_CAPTION_ON] = ["mediaClosedCaptioningOn"];
+  commandMapping[REQUEST_MEDIA_CAPTION_OFF] = ["mediaClosedCaptioningOff"];
+  commandMapping[REQUEST_MEDIA_NEXT] = ["mediaNext"];
+  commandMapping[REQUEST_MEDIA_PAUSE] = ["mediaPause"];
+  commandMapping[REQUEST_MEDIA_PREVIOUS] = ["mediaPrevious"];
+  commandMapping[REQUEST_MEDIA_RESUME] = ["mediaResume"];
+  commandMapping[REQUEST_MEDIA_REPEAT_MODE] = ["mediaRepeatMode"];
+  commandMapping[REQUEST_MEDIA_SEEK_RELATIVE] = ["mediaSeekRelative"];
+  commandMapping[REQUEST_MEDIA_SEEK_TO_POS] = ["mediaSeekToPosition"];
+  commandMapping[REQUEST_MEDIA_SHUFFLE] = ["mediaShuffle"];
+  commandMapping[REQUEST_MEDIA_STOP] = ["mediaStop"];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -345,7 +368,7 @@ async function processEXECUTE(uid, reqId, input) {
           case REQUEST_SOFTWARE_UPDATE:
             response = await processEXECUTESoftwareUpdate(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
-          
+
           case REQUEST_REBOOT:
             response = await processEXECUTEReboot(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
@@ -362,12 +385,32 @@ async function processEXECUTE(uid, reqId, input) {
             response = await processEXECUTESetVolumeRelative(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
+          case REQUEST_MEDIA_NEXT:
+          case REQUEST_MEDIA_CAPTION_OFF:
+          case REQUEST_MEDIA_PAUSE:
+          case REQUEST_MEDIA_PREVIOUS:
+          case REQUEST_MEDIA_RESUME:
+          case REQUEST_MEDIA_STOP:
+          case REQUEST_MEDIA_SHUFFLE:
+            response = await processEXECUTESetTransportControlNoParams(uid, reqId, requestedName, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_MEDIA_REPEAT_MODE:
+
+          case REQUEST_MEDIA_SEEK_RELATIVE:
+
+          case REQUEST_MEDIA_SEEK_TO_POS:
+
+          case REQUEST_MEDIA_CAPTION_ON:
+
           default:
             //return unsupported operation
             uiderror(uid, "Unsupported operation" + requestedName);
-            return {
+            response = [{
+              ids: [device.uuid_base],
+              status: 'ERROR',
               errorCode: 'functionNotSupported'
-            };
+            }];
         } // switch
 
         await utils.checkExceptions(uid, device, readings, response);
@@ -677,6 +720,18 @@ async function processEXECUTEMute(uid, reqId, device, readings, params, fhemExec
   }];
 }; //processEXECUTEMute
 
+async function processEXECUTESetTransportControlNoParams(uid, reqId, command, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings[command.replace("action.devices.commands.", "")]));
+
+  return [{
+    states: {
+      online: "online"
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetTransportControlNoParams
+
 async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, params.volumeLevel));
 
@@ -940,7 +995,7 @@ async function processEXECUTESetCharge(uid, reqId, device, readings, event, fhem
   var isChargingValue = false;
   if (device.mappings.EnergyStorageCharging)
     isChargingValue = await utils.cached2Format(uid, device.mappings.EnergyStorageCharging, readings);
-  
+
   return [{
     ids: [device.uuid_base],
     status: "SUCCESS",
@@ -967,7 +1022,7 @@ async function processEXECUTERotationAbsolute(uid, reqId, device, readings, even
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.RotationPercent, event.params.rotationPercent, fhemExecCmd));
     ret[0].states.rotationPercent = event.params.rotationPercent;
   }
-  
+
   return ret;
 } //processEXECUTERotationAbsolute
 
@@ -1093,13 +1148,13 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
 
       else if (mapping.cmdUp !== undefined && value > 0) {
         cmd = mapping.cmdUp;
-        for (var i=1; i<value; i++)
+        for (var i = 1; i < value; i++)
           cmd = cmd + ";" + mapping.cmdUp;
       }
 
       else if (mapping.cmdDown !== undefined && value < 0) {
         cmd = mapping.cmdDown;
-        for (var i=-1; i>value; i--)
+        for (var i = -1; i > value; i--)
           cmd = cmd + ";" + mapping.cmdDown;
       }
 
@@ -1191,5 +1246,6 @@ module.exports = {
   processEXECUTESetCharge,
   processEXECUTEActivateScene,
   processEXECUTESetModes,
+  processEXECUTESetTransportControlNoParams,
   execFHEMCommand
 };

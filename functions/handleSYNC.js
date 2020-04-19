@@ -225,6 +225,32 @@ var processSYNC = function (uid, devices) {
           d.attributes.pausable = true;
         }
 
+        //TransportControl
+        var transportControl = {
+          mediaClosedCaptioningOn: "CAPTION_CONTROL",
+          mediaClosedCaptioningOff: "CAPTION_CONTROL",
+          mediaNext: "NEXT",
+          mediaPause: "PAUSE",
+          mediaPrevious: "PREVIOUS",
+          mediaResume: "RESUME",
+          mediaRepeatMode: "SET_REPEAT",
+          mediaSeekRelative: "SEEK_RELATIVE",
+          mediaSeekToPosition: "SEEK_TO_POSITION",
+          mediaShuffle: "SHUFFLE",
+          mediaStop: "STOP"
+        };
+        d.attributes.transportControlSupportedCommands = [];
+        for (var tc in transportControl) {
+          if (device.mappings[tc]) {
+            d.attributes.transportControlSupportedCommands.push(transportControl[tc]);
+          }
+        }
+        if (d.attributes.transportControlSupportedCommands.length) {
+          d.traits.push("action.devices.traits.TransportControl");
+        } else {
+          delete d.attributes.transportControlSupportedCommands;
+        }
+
         //Volume
         if (device.mappings.Volume) {
           d.traits.push("action.devices.traits.Volume");
