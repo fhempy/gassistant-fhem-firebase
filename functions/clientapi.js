@@ -153,7 +153,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd: 'pct'
     };
 
-  } else if (match = s.PossibleSets.match(/(^| )pct\b/)) {
+  } else if (containsCommand(uid, s, "pct")) {
     // HM dimmer
     mappings.On = {
       reading: 'pct',
@@ -203,7 +203,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
-  if (match = s.PossibleSets.match(/(^| )rgb:colorpicker/)) {
+  if (containsCommand(uid, s, 'rgb:colorpicker')) {
     //Hue RGB mode
     if (s.Readings.rgb) {
       mappings.RGB = {
@@ -250,7 +250,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
-  if (match = s.PossibleSets.match(/(^| )effect:none,colorloop\b/)) {
+  if (containsCommand(uid, s, "effect:none,colorloop")) {
     mappings.LightEffectsColorLoop = {
       reading: 'effect',
       values: ['/colorloop/:colorLoop', '/.*/:none'],
@@ -463,7 +463,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     (s.PossibleSets.match(/(^| )up\b/) && s.PossibleSets.match(/(^| )down\b/) && (genericType === 'blinds' || genericType === 'shutter')) ||
     (s.Internals.TYPE === 'SOMFY' && s.Attributes.model === 'somfyshutter') ||
     (s.Internals.SUBTYPE === 'RolloTron Standard') ||
-    (s.Internals.subType === 'blindActuator') ||
+    (s.Attributes.subType === 'blindActuator') ||
     (s.Internals.TYPE === "UNIRoll") ||
     (s.Attributes.model === 'fs20rsu') ||
     genericType === 'blinds' || genericType === 'shutter') {
@@ -678,21 +678,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
 
   } else if (s.Internals.TYPE == 'PRESENCE') {
-    service_name = 'light';
+    if (!service_name) service_name = 'light';
     mappings.OccupancyDetected = {
       reading: 'state',
       values: ['present:true', 'absent:false']
     };
 
   } else if (s.Internals.TYPE == 'ROOMMATE' || s.Internals.TYPE == 'GUEST') {
-    service_name = 'light';
+    if (!service_name) service_name = 'light';
     mappings.OccupancyDetected = {
       reading: 'presence',
       values: ['/present/:true', '/.*/:false']
     };
 
   } else if (s.Internals.TYPE == 'RESIDENTS') {
-    service_name = 'light';
+    if (!service_name) service_name = 'light';
     mappings.OccupancyDetected = {
       reading: 'state',
       values: ['/^home/:true', '/^gotosleep/:true', '/^absent/:false', '/^gone/:false']
@@ -851,6 +851,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdOff: 'pause'
     };
 
+    mappings.mediaPause = {
+      cmd: 'pause'
+    };
+    mappings.mediaNext = {
+      cmd: 'next'
+    };
+    mappings.mediaPrevious = {
+      cmd: 'previous'
+    };
+    mappings.mediaResume = {
+      cmd: 'play'
+    };
+    mappings.mediaStop = {
+      cmd: 'stop'
+    };
+
   } else if (s.Internals.TYPE == 'harmony') {
     if (s.Internals.id !== undefined) {
       if (s.Attributes.genericDeviceType)
@@ -920,7 +936,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
 
   //TRAITS BASED ON POSSIBLE COMMANDS
-  if (!mappings.Timer && s.PossibleSets.match(/(^| )on-for-timer\b/)) {
+  if (!mappings.Timer && containsCommand(uid, s, "on-for-timer")) {
     mappings.Timer = {
       commandOnlyTimer: true,
       maxTimerLimitSec: 86400,
@@ -928,7 +944,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdTimerCancel: "on-for-timer 0"
     };
   }
-  if (match = s.PossibleSets.match(/(^| )dim:slider,0,1,100/) && s.Readings.dim) {
+  if (!mappings.Brightness && containsCommand(uid, s, "dim:slider,0,1,100") && s.Readings.dim) {
     mappings.Brightness = {
       reading: 'dim',
       cmd: 'dim'
@@ -1023,11 +1039,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.SimpleToggles = [{
       cmdOn: 'Open_Door 2',
       voicecmd: 'Licht'
-    },{
+    }, {
       cmdOn: 'Live_Video on',
       cmdOff: 'Live_Video off',
       voicecmd: 'Videoübertragung'
-    },{
+    }, {
       cmdOn: 'Live_Audio on',
       cmdOff: 'Live_Audio off',
       voicecmd: 'Audioübertragung'
@@ -1042,6 +1058,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       valueOff: 'STANDBY',
       cmdOn: 'on',
       cmdOff: 'off'
+    };
+
+    mappings.mediaPause = {
+      cmd: 'pause'
+    };
+    mappings.mediaNext = {
+      cmd: 'nextTrack'
+    };
+    mappings.mediaPrevious = {
+      cmd: 'prevTrack'
+    };
+    mappings.mediaResume = {
+      cmd: 'play'
+    };
+    mappings.mediaStop = {
+      cmd: 'stop'
     };
 
     mappings.Mute = {
@@ -1597,6 +1629,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmdOn: 'poweron',
       cmdOff: 'poweroff'
     };
+    mappings.mediaPause = {
+      cmd: 'pause'
+    };
+    mappings.mediaResume = {
+      cmd: 'play'
+    };
+    mappings.mediaStop = {
+      cmd: 'stop'
+    };
     mappings.Volume = {
       cmdUp: "volumeUp",
       cmdDown: "volumeDown",
@@ -1665,8 +1706,34 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     }
   }
 
-  //SERVICENAME
-  if (service_name === 'securitysystem') {
+  //TRAITS BASED ON SERVICE_NAME / POSSIBLE COMMANDS
+  if (service_name === 'tv' || service_name === 'settop' || service_name === 'remotecontrol') {
+    if (containsCommand(uid, s, 'play')) {
+      mappings.mediaResume = {
+        cmd: 'play'
+      };
+    }
+    if (containsCommand(uid, s, 'stop')) {
+      mappings.mediaStop = {
+        cmd: 'stop'
+      };
+    }
+    if (containsCommand(uid, s, 'next')) {
+      mappings.mediaNext = {
+        cmd: 'next'
+      };
+    }
+    if (containsCommand(uid, s, 'prev')) {
+      mappings.mediaPrevious = {
+        cmd: 'prev'
+      };
+    }
+    if (containsCommand(uid, s, 'pause')) {
+      mappings.mediaPause = {
+        cmd: 'pause'
+      };
+    }
+  } else if (service_name === 'securitysystem') {
     mappings.ArmDisarm = {
       reading: 'state',
       values: ['/on/:ARMED', '/.*/:DISARMED'],
@@ -1916,6 +1983,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   return {
     device: realDBUpdateJSON
   };
+}
+
+function containsCommand(uid, device, cmd) {
+  var re = new RegExp("(^| )" + cmd + "\\b", 'g');
+  if (device.PossibleSets.match(re)) {
+    return true;
+  }
+  return false;
 }
 
 // async function setDeviceRoom(uid, device, room) {
