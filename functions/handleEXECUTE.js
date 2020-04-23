@@ -745,7 +745,15 @@ async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhe
 }; //processEXECUTESetVolume
 
 async function processEXECUTESetVolumeRelative(uid, reqId, device, readings, params, fhemExecCmd) {
-  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, params.relativeSteps));
+  var currVolume = 0;
+  var newVolume = 0;
+  if (device.mappings.Volume.reading) {
+    currVolume = await utils.cached2Format(uid, device.mappings.Volume, readings);
+    newVolume = currVolume + params.relativeSteps;
+  } else {
+    newVolume = params.relativeSteps;
+  }
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, newVolume));
 
   return [{
     states: {
