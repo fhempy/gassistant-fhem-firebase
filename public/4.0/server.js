@@ -238,6 +238,9 @@ Server.prototype.connectAll = async function () {
   for (var fhem of this.connections) {
     await fhem.connect();
   }
+
+  await localEXECUTE.FHEM_getClientFunctions();
+  await localQUERY.FHEM_getClientFunctions();
 }
 
 async function checkFeatureLevel() {
