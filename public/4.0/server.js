@@ -160,7 +160,7 @@ async function registerFirestoreListener() {
   } catch (err) {
     log.error('Failed to delete firestore2fhem messages');
   }
-  batch.commit();
+  await batch.commit();
 
   try {
     database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').onSnapshot((events) => {
