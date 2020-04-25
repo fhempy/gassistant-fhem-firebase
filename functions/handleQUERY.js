@@ -322,6 +322,24 @@ async function processQUERY(uid, input, reportstate) {
         devices[d.id].status = "SUCCESS";
       }
 
+      //MediaState
+      if (device.mapping.MediaPlaybackState) {
+        devices[d.id].playbackState = await utils.cached2Format(uid, device.mappings.MediaPlaybackState, readings);
+      }
+      if (device.mappings.MediaActivityState) {
+        deviecs[d.id].activityState = await utils.cached2Format(uid, device.mappings.MediaActivityState, readings);
+      }
+
+      //InputSelector
+      if (device.mappings.InputSelector) {
+        try {
+          devices[d.id].currentInput = await utils.cached2Format(uid, device.mappings.InputSelector, readings);
+          devices[d.id].status = "SUCCESS";
+        } catch (err) {
+          //do nothing as there is no commandOnlyInputSelector
+        }
+      }
+
       //action.devices.traits.Modes: STATES
       if (device.mappings.Modes) {
         devices[d.id].currentModeSettings = {};
@@ -495,7 +513,8 @@ async function processQUERY(uid, input, reportstate) {
         delete devices[d.id];
       }
     } catch (err) {
-      delete devices[d.id];
+      devices[d.id].errorCode = "functionNotSupported";
+      devices[d.id].status = "ERROR";
       uiderror(uid, d.customData.device + ":" + err, err);
     }
   }

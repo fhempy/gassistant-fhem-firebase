@@ -67,6 +67,7 @@ app.get('/4.0/gethandleEXECUTE', async (req, res) => {
     'global.processEXECUTESetVolume': require('./handleEXECUTE').processEXECUTESetVolume.toString(),
     'global.processEXECUTESetVolumeRelative': require('./handleEXECUTE').processEXECUTESetVolumeRelative.toString(),
     'global.processEXECUTESetTransportControlNoParams': require('./handleEXECUTE').processEXECUTESetTransportControlNoParams.toString(),
+    'global.processEXECUTESetInput': require('./handleEXECUTE').processEXECUTESetInput.toString(),
     'global.execFHEMCommand':  require('./handleEXECUTE').execFHEMCommand.toString()
   });
 });

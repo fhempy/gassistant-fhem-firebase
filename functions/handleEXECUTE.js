@@ -85,6 +85,7 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_MEDIA_SEEK_TO_POS = "action.devices.commands.mediaSeekToPosition";
   const REQUEST_MEDIA_SHUFFLE = "action.devices.commands.mediaShuffle";
   const REQUEST_MEDIA_STOP = "action.devices.commands.mediaStop";
+  const REQUEST_SET_INPUT = "action.devices.commands.SetInput";
 
 
   //map commands to the mapping within the device
@@ -137,6 +138,7 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_MEDIA_SEEK_TO_POS] = ["mediaSeekToPosition"];
   commandMapping[REQUEST_MEDIA_SHUFFLE] = ["mediaShuffle"];
   commandMapping[REQUEST_MEDIA_STOP] = ["mediaStop"];
+  commandMapping[REQUEST_SET_INPUT] = ["InputSelector"];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -371,6 +373,10 @@ async function processEXECUTE(uid, reqId, input) {
 
           case REQUEST_REBOOT:
             response = await processEXECUTEReboot(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_SET_INPUT:
+            response = await processEXECUTESetInput(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
           case REQUEST_MUTE:
@@ -731,6 +737,18 @@ async function processEXECUTESetTransportControlNoParams(uid, reqId, command, de
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetTransportControlNoParams
+
+async function processEXECUTESetInput(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.InputSelector, params.newInput));
+
+  return [{
+    states: {
+      currentInput: params.newInput
+    },
+    status: 'success',
+    ids: [device.uuid_base]
+  }];
+}; //processEXECUTESetInput
 
 async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, params.volumeLevel));
@@ -1255,5 +1273,6 @@ module.exports = {
   processEXECUTEActivateScene,
   processEXECUTESetModes,
   processEXECUTESetTransportControlNoParams,
+  processEXECUTESetInput,
   execFHEMCommand
 };

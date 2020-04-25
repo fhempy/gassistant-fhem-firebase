@@ -459,6 +459,25 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.StatusReport");
         }
 
+        //InputSelector
+        if (device.mappings.InputSelector) {
+          d.traits.push("action.devices.traits.InputSelector");
+          //Attributes
+          d.attributes.availableInputs = device.mappings.InputSelector.availableInputs;
+          d.attributes.orderedInputs = device.mappings.InputSelector.orderedInputs || true;
+        }
+
+        //MediaState
+        if (device.mappings.MediaPlaybackState || device.mappings.MediaActivityState) {
+          d.traits.push("action.devices.traits.MediaState");
+          if (device.mappings.MediaPlaybackState) {
+            d.attributes.supportPlaybackState = true;
+          }
+          if (device.mappings.MediaActivityState) {
+            d.attributes.supportActivityState = true;
+          }
+        }
+
         //Modes
         if (device.mappings.Modes) {
           d.traits.push("action.devices.traits.Modes");
