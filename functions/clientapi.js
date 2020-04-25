@@ -106,6 +106,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   //CREATE MAPPINGS
   if (genericType === 'blind')
     genericType = 'blinds';
+  else if (genericType === 'thermometer')
+    genericType = 'thermostat';
+  else if (genericType === 'contact')
+    genericType = 'door';
 
   var service_name = genericType;
   var mappings = {};
@@ -1031,6 +1035,85 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE === 'LaCrosse') {
+    if (!service_name) service_name = 'thermostat';
+  } else if (s.Internals.TYPE === 'ONKYO_AVR') {
+    mappings.mediaPause = {
+      cmd: 'pause'
+    };
+    mappings.mediaNext = {
+      cmd: 'next'
+    };
+    mappings.mediaPrevious = {
+      cmd: 'previous'
+    };
+    mappings.mediaResume = {
+      cmd: 'play'
+    };
+    mappings.mediaStop = {
+      cmd: 'stop'
+    };
+
+    mappings.On = {
+      reading: 'power',
+      valueOff: 'off',
+      cmdOn: 'on',
+      cmdOff: 'off'
+    };
+
+    mappings.Mute = {
+      reading: 'mute',
+      valueOff: 'false',
+      format: "bool",
+      cmdOn: 'mute on',
+      cmdOff: 'mute off'
+    };
+  } else if (s.Internals.TYPE === 'YAMAHA_AVR') {
+    var inputArr = getCommandParams(uid, s, "input");
+    var vc = {};
+    for (var i of inputArr) {
+      vc[i] = i;
+    }
+    mappings.SimpleInputSelector = {
+      cmd: "input",
+      voicecmds: vc
+    };
+    mappings.mediaPause = {
+      cmd: 'pause'
+    };
+    mappings.mediaNext = {
+      cmd: 'skip forward'
+    };
+    mappings.mediaPrevious = {
+      cmd: 'skip reverse'
+    };
+    mappings.mediaResume = {
+      cmd: 'play'
+    };
+    mappings.mediaStop = {
+      cmd: 'stop'
+    };
+
+    mappings.Mute = {
+      reading: 'mute',
+      valueOff: 'false',
+      format: "bool",
+      cmdOn: 'mute on',
+      cmdOff: 'mute off'
+    };
+  } else if (s.Internals.TYPE === 'CUL_HM') {
+    if (s.Attributes.model === 'HM-SEC-WDS-2') {
+      if (!service_name) service_name = 'sensor';
+      mappings.WaterLeak = {
+        reading: "state",
+        values: ["dry:no leak", "/.*/:leak"]
+      };
+      mappings.Exceptions.waterLeakDetected = {
+        reading: 'state',
+        values: ['dry:OK', '/.*/:EXCEPTION'],
+        onlyLinkedInfo: false
+      };
+    }
   } else if (s.Internals.TYPE === 'DoorBird') {
     if (!service_name) service_name = 'door';
     mappings.OpenClose = {
@@ -1053,6 +1136,17 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   } else if (s.Internals.TYPE === 'BOSEST') {
     if (!service_name) service_name = 'switch';
+
+    var inputArr = getCommandParams(uid, s, "source");
+    var vc = {};
+    for (var i of inputArr) {
+      vc[i] = i;
+    }
+    mappings.SimpleInputSelector = {
+      reading: "source",
+      cmd: "source",
+      voicecmds: vc
+    };
     mappings.On = {
       reading: 'source',
       valueOff: 'STANDBY',
@@ -1211,9 +1305,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.StartStop = {
         reading: 'state',
         cmdPause: 'pause',
-        cmdUnpause: 'on',
-        cmdOn: 'on',
-        cmdOff: 'off',
+        cmdUnpause: 'start',
+        cmdOn: 'start',
+        cmdOff: 'charge',
         values: ['/^Paused/:paused', '/^Cleaning/:running', '/.*/:other']
       };
       mappings.Modes = [{
@@ -1623,6 +1717,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE === 'SamsungAV') {
     if (!service_name) service_name = 'tv';
 
+    mappings.SimpleInputSelector = {
+      voicecmds: {
+        "HDMI 1": "hdmi1",
+        "HDMI 2": "hdmi2",
+        "TV": "tv"
+      }
+    };
     mappings.On = {
       reading: 'state',
       valueOff: 'absent',
@@ -1645,6 +1746,45 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.Mute = {
       cmd: "mute"
+    };
+  } else if (s.Internals.TYPE === 'VIERA') {
+    if (!service_name) service_name = 'tv';
+
+    mappings.SimpleInputSelector = {
+      cmd: "input",
+      voicecmds: {
+        "HDMI 1": "HDMI_1",
+        "HDMI 2": "HDMI_2",
+        "HDMI 3": "HDMI_3",
+        "HDMI 4": "HDMI_4",
+        "SD Card, SD Karte": "SD_card",
+        "TV": "TV"
+      }
+    };
+    mappings.On = {
+      reading: 'state',
+      valueOff: 'off',
+      cmdOn: 'on_off',
+      cmdOff: 'on_off'
+    };
+    mappings.mediaPause = {
+      cmd: 'remoteControl pause'
+    };
+    mappings.mediaResume = {
+      cmd: 'remoteControl play'
+    };
+    mappings.mediaStop = {
+      cmd: 'remoteControl stop'
+    };
+    mappings.Volume = {
+      reading: "volume",
+      cmd: "volume"
+    };
+    mappings.Mute = {
+      reading: "mute",
+      valueOff: "off",
+      cmdOn: "mute on",
+      cmdOff: "mute off"
     };
   } else if (s.Internals.TYPE === "XiaomiSmartHome_Device") {
     if (s.Internals.MODEL === "sensor_wleak.aq1") {
@@ -1781,6 +1921,26 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
 
   //SIMPLE MAPPINGS
+  // - SimpleInputSelector
+  if (mappings.SimpleInputSelector) {
+    mappings.InputSelector = mappings.SimpleInputSelector;
+    mappings.InputSelector.availableInputs = [];
+
+    for (var i in mappings.SimpleInputSelector.voicecmds) {
+      var mInput = {};
+      mInput.key = mappings.SimpleInputSelector.voicecmds[i];
+      mInput.names = [];
+      mInput.names.push({
+        name_synonym: i.split(','),
+        lang: mappings.SimpleInputSelector.lang || "de"
+      });
+      mappings.InputSelector.availableInputs.push(mInput);
+    }
+
+    delete mappings.InputSelector.voicecmds;
+    delete mappings.SimpleInputSelector;
+  }
+
   // - SimpleModes
   if (mappings.SimpleModes) {
     mappings.Modes = [];
@@ -1983,6 +2143,16 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   return {
     device: realDBUpdateJSON
   };
+}
+
+function getCommandParams(uid, device, cmd) {
+  var re = new RegExp("(^| )" + cmd + ":(\\S+)\\b", 'g');
+  var m = re.exec(device.PossibleSets);
+  if (m && m.length > 1) {
+    let params = m[2].split(",");
+    return params;
+  }
+  return [];
 }
 
 function containsCommand(uid, device, cmd) {
