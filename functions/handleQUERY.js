@@ -323,7 +323,7 @@ async function processQUERY(uid, input, reportstate) {
       }
 
       //MediaState
-      if (device.mapping.MediaPlaybackState) {
+      if (device.mappings.MediaPlaybackState) {
         devices[d.id].playbackState = await utils.cached2Format(uid, device.mappings.MediaPlaybackState, readings);
       }
       if (device.mappings.MediaActivityState) {
