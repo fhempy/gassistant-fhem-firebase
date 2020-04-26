@@ -331,13 +331,9 @@ async function processQUERY(uid, input, reportstate) {
       }
 
       //InputSelector
-      if (device.mappings.InputSelector) {
-        try {
-          devices[d.id].currentInput = await utils.cached2Format(uid, device.mappings.InputSelector, readings);
-          devices[d.id].status = "SUCCESS";
-        } catch (err) {
-          //do nothing as there is no commandOnlyInputSelector
-        }
+      if (device.mappings.InputSelector && device.mappings.InputSelector.reading) {
+        devices[d.id].currentInput = await utils.cached2Format(uid, device.mappings.InputSelector, readings);
+        devices[d.id].status = "SUCCESS";
       }
 
       //action.devices.traits.Modes: STATES
@@ -455,6 +451,10 @@ async function processQUERY(uid, input, reportstate) {
       if (device.mappings.StartStop) {
         devices[d.id].isPaused = await utils.cached2Format(uid, device.mappings.StartStop, readings) == 'paused' ? true : false;
         devices[d.id].isRunning = await utils.cached2Format(uid, device.mappings.StartStop, readings) == 'running' ? true : false;
+      }
+      if (device.mappings.StartStopZones && device.mappings.StartStopZones.reading) {
+        devices[d.id].activeZones = await utils.cached2Format(uid, device.mappings.StartStopZones, readings);
+        devices[d.id].activeZones = devices[d.id].activeZones.split(",");
       }
 
       //Exceptions (StatusReport)

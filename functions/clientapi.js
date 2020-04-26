@@ -409,7 +409,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
 
   if (s.Internals.TYPE == 'BOTVAC') {
-    service_name = 'vacuum';
+    if (!service_name) service_name = 'vacuum';
     mappings.On = {
       reading: 'stateId',
       valueOff: '2',
@@ -1156,6 +1156,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd: "source",
       voicecmds: vc
     };
+    mappings.MediaPlaybackState = {
+      reading: "state",
+      values: ["paused:PAUSED", "playing:PLAYING", "buffering:BUFFERING", "/.*/:STOPPED"]
+    };
+    mappings.MediaActivityState = {
+      reading: "state",
+      values: ["paused:INACTIVE", "playing:ACTIVE", "buffering:ACTIVE", "stopped:INACTIVE", "/.*/:STANDBY"]
+    };
     mappings.On = {
       reading: 'source',
       valueOff: 'STANDBY',
@@ -1286,7 +1294,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   } else if (s.Internals.TYPE == 'XiaomiDevice') {
     if (s.Attributes.subType == 'VacuumCleaner') {
-      service_name = 'vacuum';
+      if (!service_name) service_name = 'vacuum';
+      //zones
+      if (containsCommand(uid, s, "zone")) {
+        var zoneArr = getCommandParams(uid, s, "zone");
+        mappings.StartStopZones = {
+          cmd: "zone",
+          availableZones: zoneArr
+        };  
+      }
       mappings.Exceptions.binFull = {
         reading: 'event',
         values: ['/bin_full/:EXCEPTION', '/.*/:OK'],

@@ -291,7 +291,7 @@ async function processEXECUTE(uid, reqId, input) {
             break;
 
           case REQUEST_STARTSTOP:
-            response = await processEXECUTEStartStop(uid, reqId, device, exec.params.start ? 1 : 0, fhemExecCmd);
+            response = await processEXECUTEStartStop(uid, reqId, device, exec.params, fhemExecCmd);
             break;
 
           case REQUEST_PAUSEUNPAUSE:
@@ -877,9 +877,13 @@ async function processEXECUTELocate(uid, reqId, device, fhemExecCmd) {
   }];
 }; //processEXECUTELocate
 
-async function processEXECUTEStartStop(uid, reqId, device, start, fhemExecCmd) {
-  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, start));
-
+async function processEXECUTEStartStop(uid, reqId, device, params, fhemExecCmd) {
+  if (params.zone) {
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStopZone, params.zone));
+  } else {
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, params.start));
+  }
+  
   return [{
     states: {
       isRunning: start

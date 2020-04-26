@@ -222,7 +222,14 @@ var processSYNC = function (uid, devices) {
         if (device.mappings.StartStop) {
           d.traits.push("action.devices.traits.StartStop");
           //Attributes
-          d.attributes.pausable = true;
+          if (device.mappings.StartStop.cmdPause)
+            d.attributes.pausable = true;
+          else
+            d.attributes.pausable = false;
+
+          if (device.mappings.StartStopZones) {
+            d.attributes.availableZones = device.mappings.StartStopZones.availableZones;
+          }
         }
 
         //TransportControl
