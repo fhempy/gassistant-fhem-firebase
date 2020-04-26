@@ -1038,6 +1038,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE === 'LaCrosse') {
     if (!service_name) service_name = 'thermostat';
   } else if (s.Internals.TYPE === 'ONKYO_AVR') {
+    var inputArr = getCommandParams(uid, s, "input");
+    var vc = {};
+    for (var i of inputArr) {
+      vc[i] = i;
+    }
+    mappings.SimpleInputSelector = {
+      cmd: "input",
+      voicecmds: vc
+    };
     mappings.mediaPause = {
       cmd: 'pause'
     };
