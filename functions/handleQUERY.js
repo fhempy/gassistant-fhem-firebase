@@ -327,7 +327,7 @@ async function processQUERY(uid, input, reportstate) {
         devices[d.id].playbackState = await utils.cached2Format(uid, device.mappings.MediaPlaybackState, readings);
       }
       if (device.mappings.MediaActivityState) {
-        deviecs[d.id].activityState = await utils.cached2Format(uid, device.mappings.MediaActivityState, readings);
+        devices[d.id].activityState = await utils.cached2Format(uid, device.mappings.MediaActivityState, readings);
       }
 
       //InputSelector
