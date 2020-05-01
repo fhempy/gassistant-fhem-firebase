@@ -1749,6 +1749,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "TV": "tv"
       }
     };
+    mappings.MediaPlaybackState = {
+      reading: "state",
+      values: ["on:PLAYING", "/.*/:STOPPED"]
+    };
+    mappings.MediaActivityState = {
+      reading: "state",
+      values: ["on:ACTIVE", "/.*/:STANDBY"]
+    };
     mappings.On = {
       reading: 'state',
       valueOff: 'absent',
