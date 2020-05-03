@@ -86,6 +86,10 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_MEDIA_SHUFFLE = "action.devices.commands.mediaShuffle";
   const REQUEST_MEDIA_STOP = "action.devices.commands.mediaStop";
   const REQUEST_SET_INPUT = "action.devices.commands.SetInput";
+  const REQUEST_ENABLE_DISABLE_GUEST_NW = "action.devices.commands.EnableDisableGuestNetwork";
+  const REQUEST_ENABLE_DISABLE_NW_PROFILE = "action.devices.commands.EnableDisableNetworkProfile";
+  const REQUEST_GET_GUEST_NW_PWD = "action.devices.commands.GetGuestNetworkPassword";
+  const REQUEST_TEST_NW_SPEED = "action.devices.commands.TestNetworkSpeed";
 
 
   //map commands to the mapping within the device
@@ -139,6 +143,10 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_MEDIA_SHUFFLE] = ["mediaShuffle"];
   commandMapping[REQUEST_MEDIA_STOP] = ["mediaStop"];
   commandMapping[REQUEST_SET_INPUT] = ["InputSelector"];
+  commandMapping[REQUEST_ENABLE_DISABLE_GUEST_NW] = ["GuestNetwork"];
+  commandMapping[REQUEST_ENABLE_DISABLE_NW_PROFILE] = ["NetworkProfile"];
+  commandMapping[REQUEST_GET_GUEST_NW_PWD] = ["GuestNetworkPassword"];
+  commandMapping[REQUEST_TEST_NW_SPEED] = ["TestNetworkSpeed"];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -391,6 +399,20 @@ async function processEXECUTE(uid, reqId, input) {
             response = await processEXECUTESetVolumeRelative(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
+          //NetworkControl
+          case REQUEST_ENABLE_DISABLE_GUEST_NW:
+            response = await processEXECUTEEnableDisableGuestNetwork(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+          case REQUEST_ENABLE_DISABLE_NW_PROFILE:
+            response = await processEXECUTEEnableDisableNetworkProfile(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+          case REQUEST_GET_GUEST_NW_PWD:
+            response = await processEXECUTEGetGuestNetworkPassword(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+          case REQUEST_TEST_NW_SPEED:
+            response = await processEXECUTETestNetworkSpeed(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
           case REQUEST_MEDIA_NEXT:
           case REQUEST_MEDIA_CAPTION_OFF:
           case REQUEST_MEDIA_PAUSE:
@@ -465,6 +487,66 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
 
   return res;
 } // processEXECUTETurnOff
+
+async function processEXECUTEEnableDisableGuestNetwork(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.GuestNetwork, params.enable));
+
+  let res = [];
+
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      guestNetworkEnabled: params.enable
+    }
+  });
+
+  return res;
+} // processEXECUTEEnableDisableGuestNetwork
+
+async function processEXECUTEEnableDisableNetworkProfile(uid, reqId, device, readings, params, fhemExecCmd) {
+  params.enable = params.enable ? "on" : "off";
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.NetworkProfile, params.profile + "-" + params.enable));
+
+  let res = [];
+
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+    }
+  });
+
+  return res;
+} // processEXECUTEEnableDisableNetworkProfile
+
+async function processEXECUTEGetGuestNetworkPassword(uid, reqId, device, readings, params, fhemExecCmd) {
+  let res = [];
+  let pass = await utils.cached2Format(uid, device.mappings.guestNetworkPassword, readings);
+
+  res.push({
+    ids: [device.uuid_base],
+    status: 'SUCCESS',
+    states: {
+      guestNetworkPassword: pass
+    }
+  });
+
+  return res;
+}
+
+async function processEXECUTETestNetworkSpeed(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TestNetworkSpeed, ''));
+
+  let res = [];
+
+  res.push({
+    ids: [device.uuid_base],
+    status: 'PENDING'
+  });
+
+  return res;
+}
 
 async function processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffects, "colorLoop"));
@@ -883,10 +965,10 @@ async function processEXECUTEStartStop(uid, reqId, device, params, fhemExecCmd) 
   } else {
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, params.start));
   }
-  
+
   return [{
     states: {
-      isRunning: start
+      isRunning: params.start
     },
     status: 'success',
     ids: [device.uuid_base]

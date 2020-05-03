@@ -171,6 +171,30 @@ var processSYNC = function (uid, devices) {
         //Reboot
         if (device.mappings.Reboot) {
           d.traits.push("action.devices.traits.Reboot");
+          //TODO utils.sendCmd2Fhem(setreading device.device gassistantExamples "Reboot gassistant.")
+          //reference to Google Trait documentation might be useful
+          //utils.addRequestExamples(uid, device, "Starte DEVICE neu.");
+        }
+
+        //NetworkControl
+        if (device.mappings.NetworkSettings || device.mappings.GuestNetwork || device.mappings.NetworkProfile || device.mappings.TestNetworkSpeed) {
+          d.traits.push("action.devices.traits.NetworkControl");
+          if (device.mappings.GuestNetwork) {
+            d.attributes.supportsEnablingGuestNetwork = true;
+            d.attributes.supportsDisablingGuestNetwork = true;
+          }
+          if (device.mappings.NetworkProfile) {
+            d.attributes.networkProfiles = device.mappings.NetworkProfile.profiles || [];
+            d.attributes.supportsEnablingNetworkProfile = true;
+            d.attributes.supportsDisablingNetworkProfile = true;
+          }
+          if (device.mappings.TestNetworkSpeed) {
+            d.attributes.supportsNetworkDownloadSpeedTest = true;
+            d.attributes.supportsNetworkUploadSpeedTest = true;
+          }
+          if (device.mappings.GuestNetworkPassword) {
+            d.attributes.supportsGettingGuestNetworkPassword = true;
+          }
         }
 
         //Rotation

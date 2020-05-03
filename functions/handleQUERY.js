@@ -336,6 +336,34 @@ async function processQUERY(uid, input, reportstate) {
         devices[d.id].status = "SUCCESS";
       }
 
+      //NetworkControl
+      if (device.mappings.NetworkEnabled) {
+        devices[d.id].networkEnabled = await utils.cached2Format(uid, device.mappings.NetworkEnabled, readings);
+        devices[d.id].status = "SUCCESS";
+      }
+      if (device.mappings.NetworkSettings) {
+        devices[d.id].networkSettings = {};
+        devices[d.id].networkSettings.ssid = await utils.cached2Format(uid, device.mappings.NetworkSettings, readings);
+      }
+      if (device.mappings.GuestNetwork) {
+        devices[d.id].guestNetworkEnabled = await utils.cached2Format(uid, device.mappings.GuestNetwork, readings);
+      }
+      if (device.mappings.GuestNetworkSettings) {
+        devices[d.id].guestNetworkSettings = {};
+        devices[d.id].guestNetworkSettings.ssid = await utils.cached2Format(uid, device.mappings.GuestNetworkSettings, readings);
+      }
+      if (device.mappings.ConnectedDevices) {
+        devices[d.id].numConnectedDevices = await utils.cached2Format(uid, device.mappings.ConnectedDevices, readings);
+      }
+      if (device.mappings.NetworkUsageMB) {
+        devices[d.id].networkUsageMB = await utils.cached2Format(uid, device.mappings.NetworkUsageMB, readings);
+      }
+      if (device.mappings.NetworkUsageLimitMB) {
+        devices[d.id].networkUsageLimitMB = await utils.cached2Format(uid, device.mappings.NetworkUsageLimitMB, readings);
+      } else {
+        devices[d.id].networkUsageUnlimited = true;
+      }
+
       //action.devices.traits.Modes: STATES
       if (device.mappings.Modes) {
         devices[d.id].currentModeSettings = {};
