@@ -1035,6 +1035,24 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE === 'FRITZBOX') {
+    if (!service_name) service_name = 'router';
+    mappings.GuestNetwork = {
+      cmdOn: 'guestWlan on',
+      cmdOff: 'guestWlan off',
+      reading: 'box_guestWlan',
+      valueOff: 'off'
+    };
+    mappings.ConnectedDevices = {
+      reading: 'box_wlanCount'
+    };
+    mappings.NetworkEnabled = {
+      reading: 'box_wlan_2.4GHz',
+      valueOff: 'off'
+    };
+    mappings.SoftwareUpdate = {
+      cmd: 'update'
+    };
   } else if (s.Internals.TYPE === 'LaCrosse') {
     if (!service_name) service_name = 'thermostat';
   } else if (s.Internals.TYPE === 'ONKYO_AVR') {
@@ -1999,13 +2017,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           mode.mode_attributes.name_values = [{ name_synonym: [mappings.SimpleModes[m].name], lang: language }];
         } else {
           mode.mode_attributes.settings.push({
-            setting_name: synName,
+            setting_name: synName.split(',')[0],
             setting_values: [{
-              setting_synonym: [synName],
+              setting_synonym: synName.split(','),
               lang: language
             }]
           });
-          mode.cmds.push(synName + ':' + mappings.SimpleModes[m][synName]);
+          mode.cmds.push(synName.split(',')[0] + ':' + mappings.SimpleModes[m][synName]);
         }
       }
       mappings.Modes.push(mode);
@@ -2213,6 +2231,16 @@ function formatOfName(characteristic_type) {
     return 'int';
   else if (characteristic_type == 'Mute')
     return 'bool';
+  else if (characteristic_type == 'GuestNetwork')
+    return 'bool';
+  else if (characteristic_type == 'NetworkEnabled')
+    return 'bool';
+  else if (characteristic_type == 'ConnectedDevices')
+    return 'int';
+  else if (characteristic_type == 'NetworkUsageMB')
+    return 'float';
+  else if (characteristic_type == 'NetworkUsageLimitMB')
+    return 'float';
 
   return undefined;
 }
