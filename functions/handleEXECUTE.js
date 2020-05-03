@@ -7,7 +7,6 @@ var compareVersions = require('compare-versions');
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
 
-
 async function handleEXECUTE(uid, reqId, res, input) {
   try {
     var payload = await processEXECUTE(uid, reqId, input);
@@ -33,6 +32,7 @@ async function handleEXECUTE(uid, reqId, res, input) {
     }));
   }
 }
+module.exports.handleEXECUTE = handleEXECUTE;
 
 async function processEXECUTE(uid, reqId, input) {
 
@@ -464,6 +464,7 @@ async function processEXECUTE(uid, reqId, input) {
     commands: responses
   };
 }; // processEXECUTE
+module.exports.processEXECUTE = processEXECUTE;
 
 async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
   if (!device.mappings.On) {
@@ -486,7 +487,8 @@ async function processEXECUTEOnOff(uid, reqId, device, state, fhemExecCmd) {
   });
 
   return res;
-} // processEXECUTETurnOff
+} // processEXECUTEOnOff
+module.exports.processEXECUTEOnOff = processEXECUTEOnOff;
 
 async function processEXECUTEEnableDisableGuestNetwork(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.GuestNetwork, params.enable));
@@ -503,6 +505,7 @@ async function processEXECUTEEnableDisableGuestNetwork(uid, reqId, device, readi
 
   return res;
 } // processEXECUTEEnableDisableGuestNetwork
+module.exports.processEXECUTEEnableDisableGuestNetwork = processEXECUTEEnableDisableGuestNetwork;
 
 async function processEXECUTEEnableDisableNetworkProfile(uid, reqId, device, readings, params, fhemExecCmd) {
   params.enable = params.enable ? "on" : "off";
@@ -519,6 +522,7 @@ async function processEXECUTEEnableDisableNetworkProfile(uid, reqId, device, rea
 
   return res;
 } // processEXECUTEEnableDisableNetworkProfile
+module.exports.processEXECUTEEnableDisableNetworkProfile = processEXECUTEEnableDisableNetworkProfile;
 
 async function processEXECUTEGetGuestNetworkPassword(uid, reqId, device, readings, params, fhemExecCmd) {
   let res = [];
@@ -534,6 +538,7 @@ async function processEXECUTEGetGuestNetworkPassword(uid, reqId, device, reading
 
   return res;
 }
+module.exports.processEXECUTEGetGuestNetworkPassword = processEXECUTEGetGuestNetworkPassword;
 
 async function processEXECUTETestNetworkSpeed(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TestNetworkSpeed, ''));
@@ -547,6 +552,7 @@ async function processEXECUTETestNetworkSpeed(uid, reqId, device, readings, para
 
   return res;
 }
+module.exports.processEXECUTETestNetworkSpeed = processEXECUTETestNetworkSpeed;
 
 async function processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffects, "colorLoop"));
@@ -562,6 +568,7 @@ async function processEXECUTESetEffectColorLoop(uid, reqId, device, fhemExecCmd)
   });
   return res;
 } // processEXECUTESetEffectColorLoop
+module.exports.processEXECUTESetEffectColorLoop = processEXECUTESetEffectColorLoop;
 
 async function processEXECUTESetEffectSleep(uid, reqId, device, params, fhemExecCmd) {
   var duration = '';
@@ -581,6 +588,7 @@ async function processEXECUTESetEffectSleep(uid, reqId, device, params, fhemExec
   });
   return res;
 } // processEXECUTESetEffectSleep
+module.exports.processEXECUTESetEffectSleep = processEXECUTESetEffectSleep;
 
 async function processEXECUTESetEffectWake(uid, reqId, device, params, fhemExecCmd) {
   var duration = '';
@@ -599,6 +607,7 @@ async function processEXECUTESetEffectWake(uid, reqId, device, params, fhemExecC
   });
   return res;
 } // processEXECUTESetEffectWake
+module.exports.processEXECUTESetEffectWake = processEXECUTESetEffectWake;
 
 async function processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LightEffectsColorLoop, "none"));
@@ -614,6 +623,7 @@ async function processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd) {
   });
   return res;
 } // processEXECUTESetEffectStop
+module.exports.processEXECUTESetEffectStop = processEXECUTESetEffectStop; 
 
 async function processEXECUTEGetCameraStream(uid, reqId, device, readings, params, fhemExecCmd) {
   let res = [];
@@ -634,6 +644,7 @@ async function processEXECUTEGetCameraStream(uid, reqId, device, readings, param
 
   return res;
 } // processEXECUTEGetCameraStream
+module.exports.processEXECUTEGetCameraStream = processEXECUTEGetCameraStream;
 
 async function processEXECUTEArmDisarm(uid, reqId, device, params, fhemExecCmd) {
   var arm = false;
@@ -661,6 +672,7 @@ async function processEXECUTEArmDisarm(uid, reqId, device, params, fhemExecCmd) 
 
   return res;
 } // processEXECUTEArmDisarm
+module.exports.processEXECUTEArmDisarm = processEXECUTEArmDisarm;
 
 async function processEXECUTETimerStart(uid, reqId, device, params, fhemExecCmd) {
   if (device.mappings.Timer.cmdTimerStart) {
@@ -685,6 +697,7 @@ async function processEXECUTETimerStart(uid, reqId, device, params, fhemExecCmd)
 
   return res;
 } // processEXECUTETimerStart
+module.exports.processEXECUTETimerStart = processEXECUTETimerStart;
 
 async function processEXECUTETimerCancel(uid, reqId, device, params, fhemExecCmd) {
   if (device.mappings.Timer.cmdTimerCancel) {
@@ -709,6 +722,7 @@ async function processEXECUTETimerCancel(uid, reqId, device, params, fhemExecCmd
 
   return res;
 } // processEXECUTETimerCancel
+module.exports.processEXECUTETimerCancel = processEXECUTETimerCancel;
 
 async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCmd) {
   if (device.mappings.TargetPosition && params.openPercent !== 0 && params.openPercent !== 100) {
@@ -732,6 +746,7 @@ async function processEXECUTESetOpenClose(uid, reqId, device, params, fhemExecCm
 
   return res;
 } // processEXECUTESetOpenClose
+module.exports.processEXECUTESetOpenClose = processEXECUTESetOpenClose;
 
 async function processEXECUTEBrightnessAbsolute(uid, reqId, device, brightness, fhemExecCmd) {
   let mapping;
@@ -758,6 +773,7 @@ async function processEXECUTEBrightnessAbsolute(uid, reqId, device, brightness, 
     }
   }];
 }; // processEXECUTEBrightnessAbsolute
+module.exports.processEXECUTEBrightnessAbsolute = processEXECUTEBrightnessAbsolute;
 
 async function processEXECUTESetTargetTemperature(uid, reqId, device, targetTemperature, fhemExecCmd) {
   let min = parseFloat(device.mappings.TargetTemperature.minValue);
@@ -782,6 +798,7 @@ async function processEXECUTESetTargetTemperature(uid, reqId, device, targetTemp
     ids: [device.uuid_base]
   }];
 }; // processEXECUTESetTargetTemperature
+module.exports.processEXECUTESetTargetTemperature = processEXECUTESetTargetTemperature;
 
 async function processEXECUTESetTempearture(uid, reqId, device, temperature, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TemperatureControlSetCelsius, temperature));
@@ -795,6 +812,7 @@ async function processEXECUTESetTempearture(uid, reqId, device, temperature, fhe
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetTempearture
+module.exports.processEXECUTESetTempearture = processEXECUTESetTempearture;
 
 async function processEXECUTEMute(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Mute, params.mute));
@@ -807,6 +825,7 @@ async function processEXECUTEMute(uid, reqId, device, readings, params, fhemExec
     ids: [device.uuid_base]
   }];
 }; //processEXECUTEMute
+module.exports.processEXECUTEMute = processEXECUTEMute;
 
 async function processEXECUTESetTransportControlNoParams(uid, reqId, command, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings[command.replace("action.devices.commands.", "")]));
@@ -819,6 +838,7 @@ async function processEXECUTESetTransportControlNoParams(uid, reqId, command, de
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetTransportControlNoParams
+module.exports.processEXECUTESetTransportControlNoParams = processEXECUTESetTransportControlNoParams;
 
 async function processEXECUTESetInput(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.InputSelector, params.newInput));
@@ -831,6 +851,7 @@ async function processEXECUTESetInput(uid, reqId, device, readings, params, fhem
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetInput
+module.exports.processEXECUTESetInput = processEXECUTESetInput;
 
 async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Volume, params.volumeLevel));
@@ -843,6 +864,7 @@ async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhe
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetVolume
+module.exports.processEXECUTESetVolume = processEXECUTESetVolume;
 
 async function processEXECUTESetVolumeRelative(uid, reqId, device, readings, params, fhemExecCmd) {
   var currVolume = 0;
@@ -863,6 +885,7 @@ async function processEXECUTESetVolumeRelative(uid, reqId, device, readings, par
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetVolumeRelative
+module.exports.processEXECUTESetVolumeRelative = processEXECUTESetVolumeRelative;
 
 async function processEXECUTESetHumidity(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetRelativeHumidity, params.humidity));
@@ -876,6 +899,7 @@ async function processEXECUTESetHumidity(uid, reqId, device, readings, params, f
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetHumidity
+module.exports.processEXECUTESetHumidity = processEXECUTESetHumidity;
 
 async function processEXECUTESetHumidityRelative(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.TargetRelativeHumidity, params.humidity));
@@ -889,6 +913,7 @@ async function processEXECUTESetHumidityRelative(uid, reqId, device, readings, p
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetHumidityRelative
+module.exports.processEXECUTESetHumidityRelative = processEXECUTESetHumidityRelative;
 
 async function processEXECUTESetLockUnlock(uid, reqId, device, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LockTargetState, params.lock));
@@ -902,6 +927,7 @@ async function processEXECUTESetLockUnlock(uid, reqId, device, params, fhemExecC
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESetLockUnlock
+module.exports.processEXECUTESetLockUnlock = processEXECUTESetLockUnlock;
 
 async function processEXECUTESoftwareUpdate(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.SoftwareUpdate, ''));
@@ -912,6 +938,7 @@ async function processEXECUTESoftwareUpdate(uid, reqId, device, readings, params
     ids: [device.uuid_base]
   }];
 }; //processEXECUTESoftwareUpdate
+module.exports.processEXECUTESoftwareUpdate = processEXECUTESoftwareUpdate;
 
 async function processEXECUTEReboot(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Reboot, ''));
@@ -922,6 +949,7 @@ async function processEXECUTEReboot(uid, reqId, device, readings, params, fhemEx
     ids: [device.uuid_base]
   }];
 }; //processEXECUTEReboot
+module.exports.processEXECUTEReboot = processEXECUTEReboot;
 
 async function processEXECUTESetThermostatMode(uid, reqId, device, thermostatMode, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.ThermostatModes, thermostatMode));
@@ -934,6 +962,7 @@ async function processEXECUTESetThermostatMode(uid, reqId, device, thermostatMod
     ids: [device.uuid_base]
   }];
 };
+module.exports.processEXECUTESetThermostatMode = processEXECUTESetThermostatMode;
 
 async function processEXECUTEDock(uid, reqId, device, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Dock, ''));
@@ -946,6 +975,7 @@ async function processEXECUTEDock(uid, reqId, device, fhemExecCmd) {
     ids: [device.uuid_base]
   }];
 }; //processEXECUTEDock
+module.exports.processEXECUTEDock = processEXECUTEDock;
 
 async function processEXECUTELocate(uid, reqId, device, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Locate, ''));
@@ -958,6 +988,7 @@ async function processEXECUTELocate(uid, reqId, device, fhemExecCmd) {
     ids: [device.uuid_base]
   }];
 }; //processEXECUTELocate
+module.exports.processEXECUTELocate = processEXECUTELocate;
 
 async function processEXECUTEStartStop(uid, reqId, device, params, fhemExecCmd) {
   if (params.zone) {
@@ -974,6 +1005,7 @@ async function processEXECUTEStartStop(uid, reqId, device, params, fhemExecCmd) 
     ids: [device.uuid_base]
   }];
 }; //processEXECUTEStartStop
+module.exports.processEXECUTEStartStop = processEXECUTEStartStop;
 
 async function processEXECUTEPauseUnpause(uid, reqId, device, pause, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, pause, 'PauseUnpause'));
@@ -986,6 +1018,7 @@ async function processEXECUTEPauseUnpause(uid, reqId, device, pause, fhemExecCmd
     ids: [device.uuid_base]
   }];
 }; //processEXECUTEPauseUnpause
+module.exports.processEXECUTEPauseUnpause = processEXECUTEPauseUnpause;
 
 async function processEXECUTESetFanSpeed(uid, reqId, device, speedname, fhemExecCmd) {
   fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.FanSpeed, device.mappings.FanSpeed.speeds[speedname].cmd));
@@ -998,6 +1031,7 @@ async function processEXECUTESetFanSpeed(uid, reqId, device, speedname, fhemExec
     ids: [device.uuid_base]
   }];
 }; //processEXECUTEPauseUnpause
+module.exports.processEXECUTESetFanSpeed = processEXECUTESetFanSpeed;
 
 async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExecCmd) {
   let ret = [];
@@ -1051,6 +1085,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExe
 
   return ret;
 }; // processEXECUTESetColorAbsolute
+module.exports.processEXECUTESetColorAbsolute = processEXECUTESetColorAbsolute;
 
 async function processEXECUTESetToggles(uid, reqId, device, toggleSettings, fhemExecCmd) {
   let retArr = [];
@@ -1076,6 +1111,7 @@ async function processEXECUTESetToggles(uid, reqId, device, toggleSettings, fhem
 
   return retArr;
 } //processEXECUTESetToggles
+module.exports.processEXECUTESetToggles = processEXECUTESetToggles;
 
 async function processEXECUTEActivateScene(uid, reqId, device, scenename, deactivate, fhemExecCmd) {
   for (s of device.mappings.Scene) {
@@ -1090,6 +1126,7 @@ async function processEXECUTEActivateScene(uid, reqId, device, scenename, deacti
     ids: [device.uuid_base.replace(/[^\w_\-=#;:?@&]/g, '_') + '-' + scenename]
   }];
 }; //processEXECUTEActivateScene
+module.exports.processEXECUTEActivateScene = processEXECUTEActivateScene;
 
 async function processEXECUTESetCharge(uid, reqId, device, readings, event, fhemExecCmd) {
   var es;
@@ -1118,6 +1155,7 @@ async function processEXECUTESetCharge(uid, reqId, device, readings, event, fhem
     }
   }];
 } //processEXECUTESetCharge
+module.exports.processEXECUTESetCharge = processEXECUTESetCharge;
 
 async function processEXECUTERotationAbsolute(uid, reqId, device, readings, event, fhemExecCmd) {
   var ret = [{
@@ -1137,6 +1175,7 @@ async function processEXECUTERotationAbsolute(uid, reqId, device, readings, even
 
   return ret;
 } //processEXECUTERotationAbsolute
+module.exports.processEXECUTERotationAbsolute = processEXECUTERotationAbsolute;
 
 async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
   let retArr = [];
@@ -1161,6 +1200,7 @@ async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
 
   return retArr;
 } //processEXECUTESetModes
+module.exports.processEXECUTESetModes = processEXECUTESetModes;
 
 async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand) {
   var c = mapping;
@@ -1322,43 +1362,4 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
     connection: device.connection
   };
 }
-
-module.exports = {
-  handleEXECUTE,
-  processEXECUTE,
-  processEXECUTEOnOff,
-  processEXECUTEMute,
-  processEXECUTESetVolume,
-  processEXECUTESetVolumeRelative,
-  processEXECUTESetHumidity,
-  processEXECUTESetHumidityRelative,
-  processEXECUTESetLockUnlock,
-  processEXECUTESoftwareUpdate,
-  processEXECUTEReboot,
-  processEXECUTESetEffectColorLoop,
-  processEXECUTESetEffectSleep,
-  processEXECUTESetEffectWake,
-  processEXECUTESetEffectStop,
-  processEXECUTEGetCameraStream,
-  processEXECUTEArmDisarm,
-  processEXECUTETimerStart,
-  processEXECUTETimerCancel,
-  processEXECUTESetOpenClose,
-  processEXECUTEBrightnessAbsolute,
-  processEXECUTESetTargetTemperature,
-  processEXECUTESetThermostatMode,
-  processEXECUTEDock,
-  processEXECUTELocate,
-  processEXECUTEStartStop,
-  processEXECUTEPauseUnpause,
-  processEXECUTESetFanSpeed,
-  processEXECUTESetColorAbsolute,
-  processEXECUTERotationAbsolute,
-  processEXECUTESetToggles,
-  processEXECUTESetCharge,
-  processEXECUTEActivateScene,
-  processEXECUTESetModes,
-  processEXECUTESetTransportControlNoParams,
-  processEXECUTESetInput,
-  execFHEMCommand
-};
+module.exports.execFHEMCommand = execFHEMCommand;

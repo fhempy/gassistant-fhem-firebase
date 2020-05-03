@@ -25,51 +25,21 @@ app.use(function (req, res, next) {
 });
 
 app.get('/3.0/gethandleEXECUTE', async (req, res) => {
-//FIXME BACKWARD COMPATIBILITY
+  //FIXME BACKWARD COMPATIBILITY
   res.send({});
 });
 
 app.get('/4.0/gethandleEXECUTE', async (req, res) => {
+  var resp = {};
+  for (var fct of Object.keys(require('./handleEXECUTE'))) {
+    if (fct === "handleEXECUTE") {
+      resp['exports.' + fct] = require('./handleEXECUTE')[fct].toString();
+    } else {
+      resp['global.' + fct] = require('./handleEXECUTE')[fct].toString();
+    }
+  }
 
-  res.send({
-    'exports.handleEXECUTE': require('./handleEXECUTE').handleEXECUTE.toString(),
-    'global.processEXECUTE': require('./handleEXECUTE').processEXECUTE.toString(),
-    'global.processEXECUTEOnOff':  require('./handleEXECUTE').processEXECUTEOnOff.toString(),
-    'global.processEXECUTESetHumidity': require('./handleEXECUTE').processEXECUTESetHumidity.toString(),
-    'global.processEXECUTESetHumidityRelative': require('./handleEXECUTE').processEXECUTESetHumidityRelative.toString(),
-    'global.processEXECUTESetLockUnlock': require('./handleEXECUTE').processEXECUTESetLockUnlock.toString(),
-    'global.processEXECUTESoftwareUpdate': require('./handleEXECUTE').processEXECUTESoftwareUpdate.toString(),
-    'global.processEXECUTEReboot': require('./handleEXECUTE').processEXECUTEReboot.toString(),
-    'global.processEXECUTESetEffectColorLoop': require('./handleEXECUTE').processEXECUTESetEffectColorLoop.toString(),
-    'global.processEXECUTESetEffectSleep': require('./handleEXECUTE').processEXECUTESetEffectSleep.toString(),
-    'global.processEXECUTESetEffectWake': require('./handleEXECUTE').processEXECUTESetEffectWake.toString(),
-    'global.processEXECUTESetEffectStop': require('./handleEXECUTE').processEXECUTESetEffectStop.toString(),
-    'global.processEXECUTEGetCameraStream': require('./handleEXECUTE').processEXECUTEGetCameraStream.toString(),
-    'global.processEXECUTEArmDisarm':  require('./handleEXECUTE').processEXECUTEArmDisarm.toString(),
-    'global.processEXECUTETimerStart':  require('./handleEXECUTE').processEXECUTETimerStart.toString(),
-    'global.processEXECUTETimerCancel':  require('./handleEXECUTE').processEXECUTETimerCancel.toString(),
-    'global.processEXECUTESetOpenClose':  require('./handleEXECUTE').processEXECUTESetOpenClose.toString(),
-    'global.processEXECUTEBrightnessAbsolute':  require('./handleEXECUTE').processEXECUTEBrightnessAbsolute.toString(),
-    'global.processEXECUTESetTargetTemperature':  require('./handleEXECUTE').processEXECUTESetTargetTemperature.toString(),
-    'global.processEXECUTESetThermostatMode':  require('./handleEXECUTE').processEXECUTESetThermostatMode.toString(),
-    'global.processEXECUTEDock':  require('./handleEXECUTE').processEXECUTEDock.toString(),
-    'global.processEXECUTELocate':  require('./handleEXECUTE').processEXECUTELocate.toString(),
-    'global.processEXECUTEStartStop':  require('./handleEXECUTE').processEXECUTEStartStop.toString(),
-    'global.processEXECUTEPauseUnpause':  require('./handleEXECUTE').processEXECUTEPauseUnpause.toString(),
-    'global.processEXECUTESetFanSpeed':  require('./handleEXECUTE').processEXECUTESetFanSpeed.toString(),
-    'global.processEXECUTESetColorAbsolute':  require('./handleEXECUTE').processEXECUTESetColorAbsolute.toString(),
-    'global.processEXECUTESetToggles':  require('./handleEXECUTE').processEXECUTESetToggles.toString(),
-    'global.processEXECUTEActivateScene':  require('./handleEXECUTE').processEXECUTEActivateScene.toString(),
-    'global.processEXECUTESetModes':  require('./handleEXECUTE').processEXECUTESetModes.toString(),
-    'global.processEXECUTESetCharge': require('./handleEXECUTE').processEXECUTESetCharge.toString(),
-    'global.processEXECUTERotationAbsolute': require('./handleEXECUTE').processEXECUTERotationAbsolute.toString(),
-    'global.processEXECUTEMute': require('./handleEXECUTE').processEXECUTEMute.toString(),
-    'global.processEXECUTESetVolume': require('./handleEXECUTE').processEXECUTESetVolume.toString(),
-    'global.processEXECUTESetVolumeRelative': require('./handleEXECUTE').processEXECUTESetVolumeRelative.toString(),
-    'global.processEXECUTESetTransportControlNoParams': require('./handleEXECUTE').processEXECUTESetTransportControlNoParams.toString(),
-    'global.processEXECUTESetInput': require('./handleEXECUTE').processEXECUTESetInput.toString(),
-    'global.execFHEMCommand':  require('./handleEXECUTE').execFHEMCommand.toString()
-  });
+  res.send(resp);
 });
 
 app.get('/4.0/gethandleQUERY', async (req, res) => {
@@ -247,7 +217,7 @@ app.get('/getdynamicfunctions', async (req, res) => {
   }
 
   async function
-  FHEM_update(device, reading, readingSetting, orig, reportState) {
+    FHEM_update(device, reading, readingSetting, orig, reportState) {
     if (orig === undefined)
       return;
 
