@@ -1775,12 +1775,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       reading: "state",
       values: ["on:ACTIVE", "/.*/:STANDBY"]
     };
-    mappings.On = {
-      reading: 'state',
-      valueOff: 'absent',
-      cmdOn: 'poweron',
-      cmdOff: 'poweroff'
-    };
+    if (s.Internals.Port === '55000') {
+      mappings.On = {
+        reading: 'state',
+        valueOff: 'absent',
+        cmdOn: 'poweron',
+        cmdOff: 'poweroff'
+      };
+    } else {
+      mappings.On = {
+        reading: 'state',
+        valueOff: 'absent',
+        cmdOn: 'power',
+        cmdOff: 'power'
+      };
+    }
     mappings.mediaPause = {
       cmd: 'pause'
     };
