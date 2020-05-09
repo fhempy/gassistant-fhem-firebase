@@ -992,7 +992,7 @@ module.exports.processEXECUTELocate = processEXECUTELocate;
 
 async function processEXECUTEStartStop(uid, reqId, device, params, fhemExecCmd) {
   if (params.zone) {
-    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStopZone, params.zone));
+    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStopZones, params.zone));
   } else {
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.StartStop, params.start));
   }
