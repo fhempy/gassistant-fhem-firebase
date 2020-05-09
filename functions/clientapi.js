@@ -1319,7 +1319,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         mappings.StartStopZones = {
           cmd: "zone",
           availableZones: zoneArr
-        };  
+        };
       }
       mappings.Exceptions.binFull = {
         reading: 'event',
@@ -1893,6 +1893,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   } else if (s.Internals.TYPE === "Shelly") {
     if (s.Attributes.model === "shellydimmer") {
+      if (!service_name) service_name = "light";
       mappings.On = {
         reading: 'state',
         valueOff: 'off',
@@ -1902,6 +1903,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.Brightness = {
         reading: 'pct',
         cmd: 'pct'
+      };
+    }
+    if (containsCommand(uid, s, "x_update")) {
+      mappings.SoftwareUpdate = {
+        cmd: 'x_update'
       };
     }
   }
