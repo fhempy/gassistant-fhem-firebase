@@ -31,7 +31,7 @@ User.storagePath = function () {
 }
 
 User.configPath = function () {
-  return configPath ? configPath : path.join(User.storagePath(), "config.json");
+  return configPath ? configPath : path.join(User.storagePath(), "gassistant-fhem.cfg");
 }
 
 User.persistPath = function () {

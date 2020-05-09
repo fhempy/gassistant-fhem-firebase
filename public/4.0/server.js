@@ -44,6 +44,7 @@ Server.prototype._loadConfig = function () {
         "filter": "room=GoogleAssistant"
       }]
     };
+    fs.writeFileSync(configPath, JSON.stringify(config));
   } else {
     try {
       config = JSON.parse(fs.readFileSync(configPath));
