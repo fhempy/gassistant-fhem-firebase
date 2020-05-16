@@ -712,7 +712,7 @@ function FHEM_reading2homekit_(uid, mapping, readings) {
       if (typeof mapping.value2homekit_re === 'object')
         for (var entry of mapping.value2homekit_re) {
           if (entry.reading) {
-            value = readings[entry.reading];
+            value = readings[entry.reading.replace(/\.|\#|\[|\]|\$/g, '_')];
             if (!value)
               throw new Error('reading ' + entry.reading + ' not found in reading array: ' + JSON.stringify(readings));
           }

@@ -357,11 +357,11 @@ async function processQUERY(uid, input, reportstate) {
       }
       if (device.mappings.NetworkUsageMB) {
         devices[d.id].networkUsageMB = await utils.cached2Format(uid, device.mappings.NetworkUsageMB, readings);
-      }
-      if (device.mappings.NetworkUsageLimitMB) {
-        devices[d.id].networkUsageLimitMB = await utils.cached2Format(uid, device.mappings.NetworkUsageLimitMB, readings);
-      } else {
-        devices[d.id].networkUsageUnlimited = true;
+        if (device.mappings.NetworkUsageLimitMB) {
+          devices[d.id].networkUsageLimitMB = await utils.cached2Format(uid, device.mappings.NetworkUsageLimitMB, readings);
+        } else {
+          devices[d.id].networkUsageUnlimited = true;
+        }
       }
 
       //action.devices.traits.Modes: STATES

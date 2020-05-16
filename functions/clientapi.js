@@ -771,6 +771,16 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd: 'desiredTemperature'
     };
 
+    if (s.Readings.valvePosition) {
+      mappings.OpenClose = {
+        reading: 'valvePosition',
+        values: ['0:CLOSED', '/.*/:OPEN']
+      };
+      mappings.CurrentPosition = {
+        reading: 'valvePosition'
+      };
+    }
+
     if (match[3]) {
       var values = match[3].split(',');
       mappings.TargetTemperature.minValue = parseFloat(values[0]);
@@ -1593,7 +1603,41 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
     }
   } else if (s.Internals.TYPE === "HMCCUDEV") {
-    if (s.Internals.ccutype === "HM-CC-RT-DN") {
+    if (s.Internals.ccutype === "HmIP-BWTH") {
+      if (!service_name) service_name = 'thermostat';
+      mappings.OpenClose = {
+        reading: '10.STATE',
+        values: ['0:CLOSED', '1:OPEN']
+      };
+      mappings.TargetTemperature = {
+        reading: '1.SET_POINT_TEMPERATURE',
+        cmd: 'datapoint 1.SET_POINT_TEMPERATURE',
+        minThresholdCelsius: 5.0,
+        maxThresholdCelsius: 30.5
+      };
+      mappings.CurrentTemperature = {
+        reading: '1.ACTUAL_TEMPERATURE'
+      };
+      mappings.CurrentRelativeHumidity = {
+        reading: '1.HUMIDITY'
+      };
+      mappings.ThermostatModes = {
+        reading: ['1.SET_POINT_MODE', '1.SET_POINT_TEMPERATURE'],
+        cmds: ['off:off', 'heat:Manual', 'auto:Auto'],
+        values: ['1.SET_POINT_TEMPERATURE=5.0:off', '1.SET_POINT_MODE=/0/:auto', '1.SET_POINT_MODE=/1/:heat', '/.*/:heat']
+      };
+      mappings.SimpleToggles = [{
+        reading: '1.BOOST_MODE',
+        valueOn: '1',
+        cmdOn: 'datapoint 1.BOOST_MODE true',
+        cmdOff: 'datapoint 1.BOOST_MODE false',
+        voicecmd: 'Boost'
+      }];
+      mappings.Errors.deviceOffline = {
+        reading: '0.UNREACH',
+        valueError: '1'
+      };
+    } else if (s.Internals.ccutype === "HM-CC-RT-DN") {
       mappings.TargetTemperature = {
         reading: '4.SET_TEMPERATURE',
         cmd: 'control',

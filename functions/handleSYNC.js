@@ -33,12 +33,13 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   var payload = await createSYNCResponse(uid);
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
-  await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
-    msg: 'REPORTSTATEALL',
-    id: reqId,
-    delay: 40,
-    ts: Date.now()
-  });
+  // Based on last comment from Google this is not required any more
+  // await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
+  //   msg: 'REPORTSTATEALL',
+  //   id: reqId,
+  //   delay: 40,
+  //   ts: Date.now()
+  // });
   res.send(response);
 }
 
@@ -519,6 +520,8 @@ var processSYNC = function (uid, devices) {
           });
 
           d.attributes.availableModes = availableModesList;
+          if (!device.mappings.Modes.reading)
+            d.attributes.commandOnlyModes = true;
         }
 
         //TemperatureSetting
