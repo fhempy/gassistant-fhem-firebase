@@ -2,6 +2,7 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const merge = require('deepmerge')
 const utils = require('./utils');
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
@@ -14,9 +15,10 @@ const settings = require('./settings.json');
 
 var deviceRooms = {};
 
-async function generateAttributes(uid, realDBUpdateJSON, devicesJSON) {
+async function generateAttributes(uid, attr) {
   //generate traits
   var usedDeviceReadings = {};
+  var devicesJSON = attr.devicesJSON;
   if (devicesJSON) {
     for (var d in devicesJSON) {
       try {
@@ -24,7 +26,10 @@ async function generateAttributes(uid, realDBUpdateJSON, devicesJSON) {
         var dbDev = devicesJSON[d].json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
         var resTraits = await generateTraits(uid, devicesJSON[d], usedDeviceReadings);
         if (resTraits) {
-          realDBUpdateJSON[dbDev] = resTraits.device;
+          if (resTraits.device)
+            attr.realDBUpdateJSON[dbDev] = merge(attr.realDBUpdateJSON[dbDev], resTraits.device);
+          if (resTraits.virtualdevices)
+            attr.realDBUpdateJSON = merge(attr.realDBUpdateJSON, resTraits.virtualdevices);
           uidlog(uid, 'finished generateTraits for ' + devicesJSON[d].json.Internals.NAME);
         } else {
           uidlog(uid, 'no mappings for device ' + devicesJSON[d].json.Internals.NAME);
@@ -42,7 +47,7 @@ async function generateAttributes(uid, realDBUpdateJSON, devicesJSON) {
         var dbDev = device.data().json.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_');
         var resTraits = await generateTraits(uid, device.data(), usedDeviceReadings);
         if (resTraits) {
-          realDBUpdateJSON[dbDev] = resTraits.device;
+          attr.realDBUpdateJSON[dbDev] = resTraits.device;
           uidlog(uid, 'finished generateTraits for ' + device.data().json.Internals.NAME);
         } else {
           uidlog(uid, 'no mappings for device ' + device.data().json.Internals.NAME);
@@ -882,32 +887,54 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
 
   } else if (s.Internals.TYPE == 'harmony') {
-    if (s.Internals.id !== undefined) {
-      if (s.Attributes.genericDeviceType)
-        mappings.On = {
-          reading: 'power',
-          cmdOn: 'on',
+    if (!service_name) service_name = 'switch';
+
+    var match;
+    if (match = s.PossibleSets.match(/(^| )activity:([^\s]*)/)) {
+      mappings.On = [];
+      mappings.Volume = [];
+      mappings.Mute = [];
+      mappings.mediaPause = [];
+      mappings.mediaNext = [];
+      mappings.mediaPrevious = [];
+      mappings.mediaResumse = [];
+      mappings.mediaStop = [];
+
+      for (var activity of match[2].split(',')) {
+        mappings.On.push({
+          virtualdevice: activity,
+          cmdOn: 'activity ' + activity,
           cmdOff: 'off'
-        };
-      else
-        return;
-
-    } else if (!s.Attributes.homebridgeMapping) {
-      if (!service_name) service_name = 'switch';
-
-      var match;
-      if (match = s.PossibleSets.match(/(^| )activity:([^\s]*)/)) {
-        mappings.On = [];
-
-        for (var activity of match[2].split(',')) {
-          mappings.On.push({
-            reading: 'activity',
-            subtype: activity,
-            valueOn: activity,
-            cmdOn: 'activity+' + activity,
-            cmdOff: 'off'
-          });
-        }
+        });
+        mappings.Volume.push({
+          virtualdevice: activity,
+          cmdUp: "command volumeUp",
+          cmdDown: "command volumeDown"
+        });
+        mappings.Mute.push({
+          virtualdevice: activity,
+          cmd: "command mute"
+        });
+        mappings.mediaPause.push({
+          virtualdevice: activity,
+          cmd: 'command Pause'
+        });
+        mappings.mediaNext.push({
+          virtualdevice: activity,
+          cmd: 'command SkipForward'
+        });
+        mappings.mediaPrevious.push({
+          virtualdevice: activity,
+          cmd: 'command SkipBackward'
+        });
+        mappings.mediaResume.push({
+          virtualdevice: activity,
+          cmd: 'command Play'
+        });
+        mappings.mediaStop.push({
+          virtualdevice: activity,
+          cmd: 'command Stop'
+        });
       }
     }
 
@@ -2135,61 +2162,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     return undefined;
   }
 
-  /* Disabled log messages...
-  uidlog(uid, s.Internals.NAME + ' has');
-  for (characteristic_type in mappings) {
-      mappingsChar = mappings[characteristic_type];
-      if (!Array.isArray(mappingsChar))
-          mappingsChar = [mappingsChar];
- 
-      for (mapping of mappingsChar) {
-          if (characteristic_type === 'On')
-              uidlog(uid, '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ';' + mapping.cmdOn + ',' + mapping.cmdOff + ']');
-          else if (characteristic_type === 'Hue' || characteristic_type === 'Saturation')
-              uidlog(uid, '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ';' + mapping.cmd + ';0-' + mapping.max + ']');
-          else if (mapping.name) {
-              if (characteristic_type === 'Volume')
-                  uidlog(uid, '  Custom ' + mapping.name + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ';' + (mapping.nocache ? 'not cached' : 'cached' ) + ']');
-              else
-                  uidlog(uid, '  Custom ' + mapping.name + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ']');
-          } else
-              uidlog(uid, '  ' + characteristic_type + ' [' + (mapping.device ? mapping.device + '.' : '') + mapping.reading + ']');
-      }
-  }*/
-
-  //log( JSON.stringify(s) );
-
   // device info
   var device = s.Internals.NAME;
 
-  /*if (s.Internals.TYPE == 'CUL_HM') {
-      setDeviceAttribute(uid, serial, s.Internals.TYPE + '.' + s.Internals.DEF);
-      if (s.Attributes.serialNr)
-          this.serial = s.Attributes.serialNr;
-      else if (s.Readings['D-serialNr'] && s.Readings['D-serialNr'].Value)
-          this.serial = s.Readings['D-serialNr'].Value;
-  } else if (this.type == 'CUL_WS')
-      this.serial = this.type + '.' + s.Internals.DEF;
-  else if (this.type == 'FS20')
-      this.serial = this.type + '.' + s.Internals.DEF;
-  else if (this.type == 'IT')
-      this.serial = this.type + '.' + s.Internals.DEF;
-  else if (this.type == 'HUEDevice') {
-      if (s.Internals.uniqueid && s.Internals.uniqueid != 'ff:ff:ff:ff:ff:ff:ff:ff-0b')
-          this.serial = s.Internals.uniqueid;
-  } else if (this.type == 'SONOSPLAYER')
-      this.serial = s.Internals.UDN;
-  else if (this.type == 'EnOcean')
-      this.serial = this.type + '.' + s.Internals.DEF;
-  else if (this.type == 'MAX') {
-      this.model = s.Internals.type;
-      this.serial = this.type + '.' + s.Internals.addr;
-  } else if (this.type == 'DUOFERN') {
-      this.model = s.Internals.SUBTYPE;
-      this.serial = this.type + '.' + s.Internals.DEF;
-  }*/
-
   // prepare mapping internals
+  var virtualDevicesJSON = {};
   for (characteristic_type in mappings) {
     let mappingChar = mappings[characteristic_type];
     //mappingChar = Modes array
@@ -2207,52 +2184,77 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (!Array.isArray(mappingChar))
       mappingChar = [mappingChar];
 
-    let mappingRoot;
-    for (mappingRoot in mappingChar) {
-      mappingRoot = mappingChar[mappingRoot];
-      //mappingRoot = first element of Modes array
-      if (!Array.isArray(mappingRoot))
-        mappingRoot = [mappingRoot];
+    for (var i=0; i<mappingChar.length; i++) {
+      mapping = mappingChar[i];
+      //mapping = Modes[0]
 
-      for (mappingElement in mappingRoot) {
-        mapping = mappingRoot[mappingElement];
-        //mapping = Modes[0]
+      prepare(uid, characteristic_type, s, device, mapping, usedDeviceReadings);
 
-        prepare(uid, characteristic_type, s, device, mapping, usedDeviceReadings);
+      if (mapping.virtualdevice) {
+        var virtualDevName = s.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_') + "_" + mapping.virtualdevice.replace(/\.|\#|\[|\]|\$/g, '_');
+        if (!virtualDevicesJSON[virtualDevName]) {
+          virtualDevicesJSON[virtualDevName] = {};
+          virtualDevicesJSON[virtualDevName]['XXXDEVICEDEFXXX'] = {};
+        }
+        // refer from virtual device to main device
+        mapping.device = s.Internals.NAME;
+        var vMapping = {};
+        vMapping[characteristic_type] = mapping;
+        var virtualDev = createDeviceJson(s, vMapping, connection, uid, service_name, { virtualname: virtualDevName, alias: mapping.virtualdevice });
+        virtualDevicesJSON[virtualDevName]['XXXDEVICEDEFXXX'] = merge(virtualDevicesJSON[virtualDevName]['XXXDEVICEDEFXXX'], virtualDev);
+        if (Array.isArray(mappings[characteristic_type])) {
+          mappings[characteristic_type].splice(i, 1);
+          i--;
+          if (mappings[characteristic_type].length == 0)
+            delete mappings[characteristic_type];
+        } else {
+          delete mappings[characteristic_type];
+        }
       }
     }
   }
 
+  if (Object.keys(mappings).length === 0) {
+    return {
+      device: undefined,
+      virtualdevices: virtualDevicesJSON
+    }
+  }
+
+  var deviceAttributes = createDeviceJson(s, mappings, connection, uid, service_name);
+
+  //await setDeviceAttributeJSON(uid, device, deviceAttributes);
+  var realDBUpdateJSON = {};
+  realDBUpdateJSON['XXXDEVICEDEFXXX'] = deviceAttributes;
+  return {
+    device: realDBUpdateJSON,
+    virtualdevices: virtualDevicesJSON,
+  };
+}
+
+function createDeviceJson(s, mappings, connection, uid, service_name, virtual) {
   var deviceAttributes = {
-    'name': s.Internals.NAME,
+    'name': virtual ? virtual.virtualname : s.Internals.NAME,
     // get ghomeName using this priority: gassistantName -> assistantName -> alias -> NAME
-    'ghomeName': s.Attributes.gassistantName ? s.Attributes.gassistantName : s.Attributes.assistantName ? s.Attributes.assistantName : s.Attributes.alias ? s.Attributes.alias : s.Internals.NAME,
+    'ghomeName': virtual ? virtual.alias : s.Attributes.gassistantName ? s.Attributes.gassistantName : s.Attributes.assistantName ? s.Attributes.assistantName : s.Attributes.alias ? s.Attributes.alias : s.Internals.NAME,
     'alias': s.Attributes.alias ? s.Attributes.alias : '',
-    'device': s.Internals.NAME,
+    'device': virtual ? virtual.virtualname : s.Internals.NAME,
     'type': s.Internals.TYPE,
     'model': s.Readings.model ? s.Readings.model.Value : (s.Attributes.model ? s.Attributes.model :
       (s.Internals.model ? s.Internals.model : '<unknown>')),
     'PossibleSets': s.PossibleSets,
     'room': s.Attributes.room ? s.Attributes.room : '',
     'ghomeRoom': s.Attributes.realRoom ? s.Attributes.realRoom : '',
-    'uuid_base': s.Internals.NAME,
+    'uuid_base': virtual ? virtual.virtualname : s.Internals.NAME,
     'mappings': mappings,
     'connection': connection
   };
-
   if (!s.Attributes.realRoom) {
-    deviceRooms[uid][s.Internals.NAME] = deviceAttributes.room;
+    deviceRooms[uid][deviceAttributes.name] = deviceAttributes.room;
   }
-
   if (service_name)
     deviceAttributes.service_name = service_name;
-
-  //await setDeviceAttributeJSON(uid, device, deviceAttributes);
-  var realDBUpdateJSON = {};
-  realDBUpdateJSON['XXXDEVICEDEFXXX'] = deviceAttributes;
-  return {
-    device: realDBUpdateJSON
-  };
+  return deviceAttributes;
 }
 
 function getCommandParams(uid, device, cmd) {
@@ -2757,11 +2759,11 @@ function registerClientApi(app) {
       sub: uid
     } = req.user;
     deviceRooms[uid] = {};
-    var realDBUpdateJSON = {};
-    var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON);
-    await generateRoomHint(uid, realDBUpdateJSON);
+    var attr = {realDBUpdateJSON: {}};
+    var usedDeviceReadings = await generateAttributes(uid, attr);
+    await generateRoomHint(uid, attr.realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');
-    await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+    await utils.getRealDB().ref('/users/' + uid + '/devices').set(attr.realDBUpdateJSON);
     uidlog(uid, 'Done');
 
     uidlog(uid, 'MAPPING CREATION FINISHED');
@@ -2776,10 +2778,11 @@ function registerClientApi(app) {
 
     deviceRooms[uid] = {};
     var realDBUpdateJSON = {};
-    var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON, devicesJSON);
-    await generateRoomHint(uid, realDBUpdateJSON);
+    var attr = {realDBUpdateJSON: {}, devicesJSON: devicesJSON};
+    var usedDeviceReadings = await generateAttributes(uid, attr);
+    await generateRoomHint(uid, attr.realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');
-    await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+    await utils.getRealDB().ref('/users/' + uid + '/devices').set(attr.realDBUpdateJSON);
     uidlog(uid, 'Done');
 
     uidlog(uid, 'MAPPING CREATION FINISHED');
@@ -2794,16 +2797,17 @@ function registerClientApi(app) {
 
     deviceRooms[uid] = {};
     var realDBUpdateJSON = {};
-    var usedDeviceReadings = await generateAttributes(uid, realDBUpdateJSON, devicesJSON);
-    await generateRoomHint(uid, realDBUpdateJSON);
+    var attr = {realDBUpdateJSON: realDBUpdateJSON, devicesJSON: devicesJSON};
+    var usedDeviceReadings = await generateAttributes(uid, attr);
+    await generateRoomHint(uid, attr.realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');
-    await utils.getRealDB().ref('/users/' + uid + '/devices').set(realDBUpdateJSON);
+    await utils.getRealDB().ref('/users/' + uid + '/devices').set(attr.realDBUpdateJSON);
     uidlog(uid, 'Done');
 
     uidlog(uid, 'MAPPING CREATION FINISHED');
     res.send({
       readings: usedDeviceReadings,
-      mappings: realDBUpdateJSON
+      mappings: attr.realDBUpdateJSON
     });
   });
 
