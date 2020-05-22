@@ -901,6 +901,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.mediaStop = [];
 
       for (var activity of match[2].split(',')) {
+        if (activity == "PowerOff")
+          continue;
+
         mappings.On.push({
           virtualdevice: activity,
           cmdOn: 'activity ' + activity,
