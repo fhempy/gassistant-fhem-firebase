@@ -259,7 +259,7 @@ function FHEM_startLongpoll(connection) {
               try {
                 connection.fhem.execute('setreading ' + connection.fhem.gassistant + ' gassistant-fhem-connection connecting...');
                 await database.handleAuthCode(d[1]);
-                connection.fhem.serverprocess.startConnection();
+                await connection.fhem.serverprocess.startConnection();
               } catch (err) {
                 setLoginFailed(connection.fhem, err);
               }
