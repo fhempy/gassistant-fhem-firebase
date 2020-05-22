@@ -60,7 +60,7 @@ var processSYNC = function (uid, devices) {
         let d = {
           id: device.uuid_base,
           deviceInfo: {
-            manufacturer: 'FHEM_' + device.type,
+            manufacturer: device.type,
             model: (device.model ? device.model : '<unknown>')
           },
           name: {
@@ -114,8 +114,13 @@ var processSYNC = function (uid, devices) {
         }
 
         //TRAITS
+        //OnOff
         if (device.mappings.On || device.mappings.OccupancyDetected) {
           d.traits.push("action.devices.traits.OnOff");
+          if (device.mappings.On && !device.mappings.On.reading)
+            d.attributes.commandOnlyOnOff = true;
+          if (device.mappings.OccupancyDetected && !device.mappings.OccupancyDetected.reading)
+            d.attributes.commandOnlyOnOff = true;
         }
 
         //Toggles
