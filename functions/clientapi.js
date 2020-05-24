@@ -897,7 +897,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.mediaPause = [];
       mappings.mediaNext = [];
       mappings.mediaPrevious = [];
-      mappings.mediaResumse = [];
+      mappings.mediaResume = [];
       mappings.mediaStop = [];
 
       for (var activity of match[2].split(',')) {
@@ -916,7 +916,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         });
         mappings.Mute.push({
           virtualdevice: activity,
-          cmd: "command mute"
+          cmdOn: "command mute",
+          cmdOff: "command mute"
         });
         mappings.mediaPause.push({
           virtualdevice: activity,
@@ -1011,12 +1012,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   if (s.Readings.volume) {
     mappings.Volume = {
       reading: 'volume',
-      cmd: 'volume'
+      cmd: 'volume',
+      levelStepSize: 3
     };
   } else if (s.Readings.Volume) {
     mappings.Volume = {
       reading: 'Volume',
-      cmd: 'Volume'
+      cmd: 'Volume',
+      levelStepSize: 3
     };
   }
 
@@ -1289,42 +1292,42 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         settings: [{
           setting_name: '1',
           setting_values: [{
-            setting_synonym: ['Sender 1', 'Eins', 'Kanal 1', 'Preset 1', channel_01],
+            setting_synonym: [channel_01, 'Sender 1', 'Eins', 'Kanal 1', 'Preset 1'],
             lang: 'de'
           }]
         },
         {
           setting_name: '2',
           setting_values: [{
-            setting_synonym: ['Sender 2', 'Zwei', 'Kanal 2', 'Preset 2', channel_02],
+            setting_synonym: [channel_02, 'Sender 2', 'Zwei', 'Kanal 2', 'Preset 2'],
             lang: 'de'
           }]
         },
         {
           setting_name: '3',
           setting_values: [{
-            setting_synonym: ['Sender 3', 'Drei', 'Kanal 3', 'Preset 3', channel_03],
+            setting_synonym: [channel_03, 'Sender 3', 'Drei', 'Kanal 3', 'Preset 3'],
             lang: 'de'
           }]
         },
         {
           setting_name: '4',
           setting_values: [{
-            setting_synonym: ['Sender 4', 'Vier', 'Kanal 4', 'Preset 4', channel_04],
+            setting_synonym: [channel_04, 'Sender 4', 'Vier', 'Kanal 4', 'Preset 4'],
             lang: 'de'
           }]
         },
         {
           setting_name: '5',
           setting_values: [{
-            setting_synonym: ['Sender 5', 'Fuenf', 'Kanal 5', 'Preset 5', channel_05],
+            setting_synonym: [channel_05, 'Sender 5', 'Fuenf', 'Kanal 5', 'Preset 5'],
             lang: 'de'
           }]
         },
         {
           setting_name: '6',
           setting_values: [{
-            setting_synonym: ['Sender 6', 'Sechs', 'Kanal 6', 'Preset 6', channel_06],
+            setting_synonym: [channel_06, 'Sender 6', 'Sechs', 'Kanal 6', 'Preset 6'],
             lang: 'de'
           }]
         }],
@@ -1614,6 +1617,24 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
     }
   } else if (s.Internals.TYPE === 'ZWave') {
+    if (s.Readings.modelId && s.Readings.modelId.Value === "010f-0303-1000") {
+      if (!service_name) service_name = "blinds";
+      // FIBARO Controller 3
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/^off/:OPEN', '/.*/:CLOSED'],
+        cmdOpen: 'off',
+        cmdClose: 'on'
+      };
+      mappings.TargetPosition = {
+        cmd: 'dim',
+        max: 99
+      };
+      mappings.CurrentPosition = {
+        reading: 'state',
+        part: 2
+      };
+    }
     if (s.Attributes['classes'].match(/(^| )THERMOSTAT_SETPOINT\b/)) {
       mappings.TargetTemperature = {
         reading: 'setpointTemp',
@@ -1735,6 +1756,19 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.RGB.homekit2reading = function (mapping, orig) {
         return ("000000" + orig.toString(16)).substr(-6);
       };
+    } else if (s.Attributes.model === "shelly2rgbw_color") {
+      if (s.Readings.rgb) {
+        mappings.RGB = {
+          reading: 'rgb',
+          cmd: 'rgb'
+        };
+        mappings.RGB.reading2homekit = function (mapping, orig) {
+          return parseInt('0x' + orig);
+        };
+        mappings.RGB.homekit2reading = function (mapping, orig) {
+          return ("000000" + orig.toString(16)).substr(-6);
+        };
+      }
     } else {
       if (s.PossibleSets.match(/(^| )on\b/))
         mappings.On = {
@@ -1912,7 +1946,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
     mappings.Volume = {
       reading: "volume",
-      cmd: "volume"
+      cmd: "volume",
+      levelStepSize: 3
     };
     mappings.Mute = {
       reading: "mute",
@@ -2187,7 +2222,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (!Array.isArray(mappingChar))
       mappingChar = [mappingChar];
 
-    for (var i=0; i<mappingChar.length; i++) {
+    for (var i = 0; i < mappingChar.length; i++) {
       mapping = mappingChar[i];
       //mapping = Modes[0]
 
@@ -2762,7 +2797,7 @@ function registerClientApi(app) {
       sub: uid
     } = req.user;
     deviceRooms[uid] = {};
-    var attr = {realDBUpdateJSON: {}};
+    var attr = { realDBUpdateJSON: {} };
     var usedDeviceReadings = await generateAttributes(uid, attr);
     await generateRoomHint(uid, attr.realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');
@@ -2781,7 +2816,7 @@ function registerClientApi(app) {
 
     deviceRooms[uid] = {};
     var realDBUpdateJSON = {};
-    var attr = {realDBUpdateJSON: {}, devicesJSON: devicesJSON};
+    var attr = { realDBUpdateJSON: {}, devicesJSON: devicesJSON };
     var usedDeviceReadings = await generateAttributes(uid, attr);
     await generateRoomHint(uid, attr.realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');
@@ -2800,7 +2835,7 @@ function registerClientApi(app) {
 
     deviceRooms[uid] = {};
     var realDBUpdateJSON = {};
-    var attr = {realDBUpdateJSON: realDBUpdateJSON, devicesJSON: devicesJSON};
+    var attr = { realDBUpdateJSON: realDBUpdateJSON, devicesJSON: devicesJSON };
     var usedDeviceReadings = await generateAttributes(uid, attr);
     await generateRoomHint(uid, attr.realDBUpdateJSON);
     uidlog(uid, 'Write to real DB');

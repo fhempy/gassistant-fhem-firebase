@@ -141,7 +141,7 @@ async function processQUERY(uid, input, reportstate) {
       }
 
       //OnOff
-      if (device.mappings.On) {
+      if (device.mappings.On && device.mappings.On.reading) {
         var reachable = 1;
         const turnedOn = await utils.cached2Format(uid, device.mappings.On, allDevices[device.mappings.On.device].readings);
         if (device.mappings.Reachable) {
@@ -195,7 +195,11 @@ async function processQUERY(uid, input, reportstate) {
       //OpenClose
       if (device.mappings.OpenClose && device.mappings.OpenClose.reading) {
         if (device.mappings.CurrentPosition) {
-          devices[d.id].openPercent = await utils.cached2Format(uid, device.mappings.CurrentPosition, readings);
+          try {
+            devices[d.id].openPercent = await utils.cached2Format(uid, device.mappings.CurrentPosition, readings);
+          } catch (err) {
+            devices[d.id].openPercent = await utils.cached2Format(uid, device.mappings.OpenClose, readings) === 'CLOSED' ? 0 : 100;
+          }
         } else {
           //queryonly
           devices[d.id].openPercent = await utils.cached2Format(uid, device.mappings.OpenClose, readings) === 'CLOSED' ? 0 : 100;

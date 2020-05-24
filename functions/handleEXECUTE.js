@@ -226,9 +226,10 @@ async function processEXECUTE(uid, reqId, input) {
           }
         }
 
-        if (device.mappings.On && device.mappings.On.device !== device.name && requestedName !== REQUEST_ON_OFF) {
+        //this is required for Hue Devices with SonOff switches, it allows users to say "dim to 100%" when light is off
+        if (device.mappings.On && device.mappings.On.device !== device.name && requestedName !== REQUEST_ON_OFF && device.mappings.On.delayAfter) {
           //prevent error check if there is another device which activates the device (e.g. shelly + Hue)
-          if (await utils.cached2Format(uid, device.mappings.On, allDevices[device.mappings.On.device].readings) === false) {
+          if (!allDevices[device.mappings.On.device].readings || await utils.cached2Format(uid, device.mappings.On, allDevices[device.mappings.On.device].readings) === false) {
             //only if device is OFF
             response = await processEXECUTEOnOff(uid, reqId, device, 1, fhemExecCmd);
             responses.push(...response);
@@ -623,7 +624,7 @@ async function processEXECUTESetEffectStop(uid, reqId, device, fhemExecCmd) {
   });
   return res;
 } // processEXECUTESetEffectStop
-module.exports.processEXECUTESetEffectStop = processEXECUTESetEffectStop; 
+module.exports.processEXECUTESetEffectStop = processEXECUTESetEffectStop;
 
 async function processEXECUTEGetCameraStream(uid, reqId, device, readings, params, fhemExecCmd) {
   let res = [];
@@ -869,6 +870,9 @@ module.exports.processEXECUTESetVolume = processEXECUTESetVolume;
 async function processEXECUTESetVolumeRelative(uid, reqId, device, readings, params, fhemExecCmd) {
   var currVolume = 0;
   var newVolume = 0;
+  if (device.mappings.Volume.levelStepSize)
+      params.relativeSteps = params.relativeSteps < 0 ? -device.mappings.Volume.levelStepSize : device.mappings.Volume.levelStepSize;
+
   if (device.mappings.Volume.reading) {
     currVolume = await utils.cached2Format(uid, device.mappings.Volume, readings);
     newVolume = currVolume + params.relativeSteps;
@@ -1317,7 +1321,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
         cmd = mapping.cmdClose;
 
       else if (typeof mapping.homekit2cmd === 'object' && mapping.homekit2cmd[value] !== undefined)
-        cmd = mapping.homekit2cmd[value].replace(/;/gi, ';set ' + mapping.device + ' ');
+        cmd = mapping.homekit2cmd[value];
 
       else if (typeof mapping.homekit2cmd_re === 'object') {
         for (var entry of mapping.homekit2cmd_re) {
@@ -1334,6 +1338,7 @@ async function execFHEMCommand(uid, reqId, device, mapping, value, traitCommand)
       return;
     }
 
+    cmd = cmd.replace(/;/gi, ';set ' + mapping.device + ' ');
     command = 'set ' + mapping.device + ' ' + cmd;
 
   }

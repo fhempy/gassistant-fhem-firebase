@@ -483,6 +483,11 @@ var processSYNC = function (uid, devices) {
         if (device.mappings.OpenClose) {
           d.traits.push("action.devices.traits.OpenClose");
           //Attributes
+          if (device.mappings.TargetPosition) {
+            d.attributes.discreteOnlyOpenClose = false;
+          } else {
+            d.attributes.discreteOnlyOpenClose = true;
+          }
           d.attributes.queryOnlyOpenClose = device.mappings.OpenClose.cmdOpen ? false : true;
         }
 

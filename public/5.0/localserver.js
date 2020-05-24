@@ -70,7 +70,7 @@ function startLocalHome(serverInstance) {
 
         res.send(resp);
       } else if (req.body.inputs[0].intent == "action.devices.EXECUTE") {
-        logger.info('LOCALHOME received: ' + req.body.inputs[0].intent);
+        logger.info('LOCALHOME received: ' + JSON.stringify(req.body));
         localEXECUTE.handleEXECUTE(database.getUid(), req.body.requestId, res, req.body.inputs[0]);
       } else {
         //FIXME
