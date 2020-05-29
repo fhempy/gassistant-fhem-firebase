@@ -48,7 +48,7 @@ function startLocalHome(serverInstance) {
           await serverInstance.updateLocalHomeState('active');
           activeReadingSet = 1;
         }
-        inactiveTimer = setTimeout(async function() { activeReadingSet = 0; await serverInstance.updateLocalHomeState('inactive'); }, 300000);
+        inactiveTimer = setTimeout(async function () { activeReadingSet = 0; await serverInstance.updateLocalHomeState('inactive'); }, 300000);
 
         //create response for reachable_devices
         var verifiedDevices = [];
@@ -111,7 +111,17 @@ function startBonjour(serverPort) {
       httpPort: serverPort,
       version: '1.0'
     }
+  }).on("error", function (err) {
+    logger.error("Can't start bonjour service: " + err);
+    logger.error("===> LOCAL HOME WON'T WORK <===");
+    logger.error("Retry in 5 minutes...");
+    setTimeout(function () { startBonjour(serverPort) }, 300000);
+    return undefined;
+  }).on("up", function() {
+    logger.info("Bonjour successfully published");
+    logger.info("Local Home ready");
   });
+
   srv.start();
 }
 
