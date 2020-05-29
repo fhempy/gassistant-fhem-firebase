@@ -912,7 +912,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         mappings.Volume.push({
           virtualdevice: activity,
           cmdUp: "command volumeUp",
-          cmdDown: "command volumeDown"
+          cmdDown: "command volumeDown",
+          levelStepSize: 3
         });
         mappings.Mute.push({
           virtualdevice: activity,
