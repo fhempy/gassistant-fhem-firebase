@@ -1073,6 +1073,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE === "KLF200Node") {
+    if (!service_name) service_name = 'blinds';
+    mappings.OpenClose = {
+      reading: 'state',
+      values: ['/^off/:CLOSED', '/^on/:OPEN'],
+      cmdOpen: 'on',
+      cmdClose: 'off'
+    };
+    mappings.CurrentPosition = {
+      reading: 'pct'
+    };
+    mappings.TargetPosition = {
+      reading: 'pct',
+      cmd: 'pct'
+    };
   } else if (s.Internals.TYPE === 'FRITZBOX') {
     if (!service_name) service_name = 'router';
     mappings.GuestNetwork = {
