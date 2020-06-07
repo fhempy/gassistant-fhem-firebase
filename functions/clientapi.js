@@ -648,12 +648,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
 
   } else if (s.Attributes.model && s.Attributes.model.match(/^HM-SEC-KEY/)) {
     if (!service_name) service_name = 'lock';
-    mappings.TargetDoorState = {
-      reading: '',
-      default: 'CLOSED',
-      timeout: 500,
-      cmds: ['OPEN:open']
-    };
     mappings.LockCurrentState = {
       reading: 'lock',
       values: ['/uncertain/:JAMMED', '/^locked/:SECURED', '/.*/:UNSECURED']

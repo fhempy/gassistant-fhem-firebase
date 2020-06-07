@@ -124,7 +124,7 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_EFFECT_STOP] = ['LightEffectsColorLoop'];
   commandMapping[REQUEST_SET_HUMIDITY] = ['TargetRelativeHumidity'];
   commandMapping[REQUEST_SET_HUMIDITY_RELATIVE] = ['TargetRelativeHumidity'];
-  commandMapping[REQUEST_SET_LOCKUNLOCK] = ['LockUnlock'];
+  commandMapping[REQUEST_SET_LOCKUNLOCK] = ['LockTargetState'];
   commandMapping[REQUEST_SOFTWARE_UPDATE] = ['SoftwareUpdate'];
   commandMapping[REQUEST_REBOOT] = ['Reboot'];
   commandMapping[REQUEST_EFFECT_SLEEP] = ['LightEffectsSleep'];
