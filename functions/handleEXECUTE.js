@@ -373,7 +373,7 @@ async function processEXECUTE(uid, reqId, input) {
             break;
 
           case REQUEST_SET_LOCKUNLOCK:
-            response = await processEXECUTELockUnlock(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            response = await processEXECUTESetLockUnlock(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
           case REQUEST_SOFTWARE_UPDATE:
