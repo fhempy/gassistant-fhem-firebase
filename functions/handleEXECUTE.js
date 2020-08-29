@@ -919,8 +919,14 @@ async function processEXECUTESetHumidityRelative(uid, reqId, device, readings, p
 }; //processEXECUTESetHumidityRelative
 module.exports.processEXECUTESetHumidityRelative = processEXECUTESetHumidityRelative;
 
-async function processEXECUTESetLockUnlock(uid, reqId, device, params, fhemExecCmd) {
-  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LockTargetState, params.lock));
+async function processEXECUTESetLockUnlock(uid, reqId, device, readings, params, fhemExecCmd) {
+  var targetState = "SECURED";
+  if (params.lock) {
+    targetState = "SECURED";
+  } else {
+    targetState = "UNSECURED";
+  }
+  fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.LockTargetState, targetState));
 
   return [{
     states: {
