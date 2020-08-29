@@ -1739,6 +1739,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           ]
         }
       }];
+    } else if (s.Internals.ccutype === "HM-Sec-SCo" || s.Internals.ccutype === "HMIP-SWDO") {
+      if (!service_name) service_name = 'window';
+      mappings.OpenClose = {
+        reading: 'hmstate',
+        values: ['/^closed/:CLOSED', '/.*/:OPEN']
+      };
     }
   } else if (s.Internals.TYPE === 'MQTT2_DEVICE') {
     if (s.Attributes.model === "zigbee2mqtt_light_rgb_hex") {
