@@ -178,6 +178,55 @@ async function processQUERY(uid, input, reportstate) {
         devices.status = "SUCCESS";
       }
 
+      //Dispense
+      if (device.mappings.Dispense) {
+        devices[d.id].dispenseItems = [];
+        for (var item of device.mappings.Dispense.supportedDispenseItems) {
+          var dispItem = {};
+          var itemName = item.item_name;
+          dispItem.itemName = itemName;
+          if (device.mappings.DispenseAmountRemaining) {
+            dispItem.amountRemaining = {};
+            for (var dar of device.mappings.DispenseAmountRemaining) {
+              if (itemName == dar["itemName"]) {
+                dispItem.amountRemaining.amount = await utils.cached2Format(uid, dar, readings);
+                dispItem.amountRemaining.unit = dar["unit"];
+              }
+            }
+          }
+          if (device.mappings.DispenseAmountLastDispensed) {
+            dispItem.amountLastDispensed = {};
+            for (var dald of device.mappings.DispenseAmountLastDispensed) {
+              if (itemName == dald["itemName"]) {
+                dispItem.amountLastDispensed.amount = await utils.cached2Format(uid, dald, readings);
+                dispItem.amountLastDispensed.unit = dald["unit"];
+              }
+            }
+          }
+          if (device.mappings.DispenseIsCurrentlyDispensing) {
+            for (var dicd of device.mappings.DispenseIsCurrentlyDispensing) {
+              if (itemName == dicd["itemName"]) {
+                dispItem.isCurrentlyDispensing = await utils.cached2Format(uid, dicd, readings);
+              }
+            }
+          }
+          devices[d.id].dispenseItems.push(dispItem);
+        }
+        devices[d.id].status = "SUCCESS";
+      }
+
+      //Cook
+      if (device.mappings.Cook) {
+        devices[d.id].currentCookingMode = await utils.cached2Format(uid, device.mappings.CookCurrentCookingMode, readings);
+        if (device.mappings.CookCurrentFoodPreset)
+          devices[d.id].currentFoodPreset = await utils.cached2Format(uid, device.mappings.CookCurrentFoodPreset, readings);
+        if (device.mappings.CookCurrentFoodQuantity)
+          devices[d.id].currentFoodQuantity = await utils.cached2Format(uid, device.mappings.CookCurrentFoodQuantity, readings);
+        if (device.mappings.CookCurrentFoodUnit)
+          devices[d.id].currentFoodUnit = await utils.cached2Format(uid, device.mappings.CookCurrentFoodUnit, readings);
+        devices[d.id].status = "SUCCESS";
+      }
+
       //LockUnlock
       if (device.mappings.LockCurrentState || device.mappings.LockTargetState) {
         //isLocked

@@ -35,6 +35,9 @@ function prepareDevice(uid, dev) {
         if (mapping.homekit2reading) {
           eval('mapping.homekit2reading = ' + mapping.homekit2reading);
         }
+        if (mapping.cmdFunction) {
+          eval('mapping.cmdFunction = ' + mapping.cmdFunction);
+        }
       }
     }
   }
@@ -427,6 +430,9 @@ async function checkLinkedDevices(uid, device) {
 }
 
 function FHEM_reading2homekit(uid, mapping, readings) {
+  if (mapping.fixedValue)
+    return mapping.fixedValue;
+
   var value = undefined;
   //BACKWARD COMPATIBILITY
   if (typeof mapping.reading === 'string') {

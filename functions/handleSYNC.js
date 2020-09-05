@@ -628,6 +628,20 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.ColorSetting");
         }
 
+        //Dispense
+        if (device.mappings.Dispense) {
+          d.attributes.supportedDispenseItems = device.mappings.Dispense.supportedDispenseItems;
+          d.attributes.supportedDispensePresets = device.mappings.Dispense.supportedDispensePresets;
+          d.traits.push("action.devices.traits.Dispense");
+        }
+
+        //Cook
+        if (device.mappings.Cook) {
+          d.attributes.supportedCookingModes = device.mappings.Cook.supportedCookingModes;
+          d.attributes.foodPresets = device.mappings.Cook.foodPresets;
+          d.traits.push("action.devices.traits.Cook");
+        }
+
         //LightEffects
         if (device.mappings.LightEffectsColorLoop || device.mappings.LightEffectsSleep || device.mappings.LightEffectsWake) {
           d.attributes.supportedEffects = [];
