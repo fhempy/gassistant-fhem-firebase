@@ -1651,6 +1651,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmd: 'desired-temp',
         part: 0
       };
+    } else if (s.Readings.modelId && (s.Readings.modelId.Value === "008a-0004-0101" ||
+               s.Readings.modelId.Value === "0109-2001-0106")) {
+      if (!service_name) service_name = 'window';
+      mappings.OpenClose = {
+        reading: 'basicSet',
+        values: ['/^0/:CLOSED', '/.*/:OPEN']
+      };
     }
     if (s.Attributes['classes'].match(/(^| )THERMOSTAT_MODE\b/) && mappings.TargetTemperature) {
       mappings.ThermostatModes = {
@@ -1739,10 +1746,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           ]
         }
       }];
-    } else if (s.Internals.ccutype === "HM-Sec-SCo" || s.Internals.ccutype === "HMIP-SWDO") {
+    } else if (s.Internals.ccutype === "HM-Sec-SCo" || s.Internals.ccutype === "HMIP-SWDO"
+              || s.Internals.ccutype === "HM-Sec-RHS") {
       if (!service_name) service_name = 'window';
       mappings.OpenClose = {
-        reading: 'hmstate',
+        reading: 'state',
         values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
     }
@@ -2194,6 +2202,61 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     delete mappings.SimpleToggles;
   }
 
+  // - SimpleDispense
+  if (mappings.SimpleDispense) {
+    mappings.Dispense = JSON.parse(JSON.stringify(mappings.SimpleDispense));
+    mappings.Dispense.supportedDispenseItems = [];
+    mappings.Dispense.supportedDispensePresets = [];
+
+    for (var sdi of mappings.SimpleDispense.supportedDispenseItems) {
+      var supportedDispenseItem = {
+        "item_name": sdi["itemName"][0],
+        "item_name_synonyms": [{
+          "lang": "de",
+          "synonyms": sdi["itemName"]
+        }],
+        "supported_units": sdi["units"],
+        "default_portion": {
+          "amount": sdi["defaultAmount"],
+          "unit": sdi["defaultUnit"]
+        }
+      };
+      mappings.Dispense.supportedDispenseItems.push(supportedDispenseItem);
+    }
+    for (var sdp of mappings.SimpleDispense.supportedDispensePresets) {
+      var supportedDispensePreset = {
+        "preset_name": sdp.split(",")[0],
+        "preset_name_synonyms": [{
+          "lang": "de",
+          "synonyms": sdp.split(",")
+        }]
+      };
+      mappings.Dispense.supportedDispensePresets.push(supportedDispensePreset);
+    }
+
+    delete mappings.SimpleDispense;
+  }
+
+  // - SimpleCook
+  if (mappings.SimpleCook) {
+    mappings.Cook = JSON.parse(JSON.stringify(mappings.SimpleCook));
+    mappings.Cook.supportedCookingModes = mappings.SimpleCook.supportedCookingModes;
+    mappings.Cook.foodPresets = [];
+
+    for (var fp of mappings.SimpleCook.foodPresets) {
+      var tmp_fp = {};
+      tmp_fp.food_preset_name = fp["food_preset_name"][0];
+      tmp_fp.supported_units = fp["supported_units"];
+      tmp_fp.food_synonyms = [{
+        "lang": "de",
+        "synonym": fp["food_preset_name"]
+      }];
+      mappings.Cook.foodPresets.push(tmp_fp);
+    }
+
+    delete mappings.SimpleCook;
+  }
+
   uidlog(uid, 'mappings for ' + s.Internals.NAME + ': ' + JSON.stringify(mappings));
 
   if (service_name !== undefined) {
@@ -2243,6 +2306,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       //mapping = Modes[0]
 
       prepare(uid, characteristic_type, s, device, mapping, usedDeviceReadings);
+
+      if (mapping.params) {
+        for (var param in mapping.params) {
+          prepare(uid, characteristic_type, s, device, mapping.params[param], usedDeviceReadings);
+        }
+      }
 
       if (mapping.virtualdevice) {
         var virtualDevName = s.Internals.NAME.replace(/\.|\#|\[|\]|\$/g, '_') + "_" + mapping.virtualdevice.replace(/\.|\#|\[|\]|\$/g, '_');
@@ -2761,6 +2830,9 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
 
   if (typeof mapping.homekit2reading === 'function')
     mapping.homekit2reading = mapping.homekit2reading.toString();
+
+  if (typeof mapping.cmdFunction === 'function')
+    mapping.cmdFunction = mapping.cmdFunction.toString();
 };
 
 
