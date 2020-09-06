@@ -1625,6 +1625,64 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         cmdOn: 'startProgram',
         cmdOff: 'stopProgram'
       };
+    } else if (s.Internals.type === 'CoffeeMaker') {
+      if (!service_name) service_name = 'coffee_maker';
+      mappings.On = {
+        reading: "BSH.Common.Setting.PowerState",
+        valueOff: 'BSH.Common.EnumType.PowerState.Off',
+        cmdOn: 'BSH.Common.Setting.PowerState BSH.Common.Setting.PowerState BSH.Common.EnumType.PowerState.On',
+        cmdOff: 'BSH.Common.Setting.PowerState BSH.Common.Setting.PowerState BSH.Common.EnumType.PowerState.Off'
+      };
+      // Cook
+      mappings.CookCurrentCookingMode = {
+        "fixedValue": "BREW"
+      };
+      mappings.CookCurrentFoodQuantity = {
+        "fixedValue": 1
+      };
+      mappings.CookCurrentFoodUnit = {
+        "fixedValue": "NO_UNITS"
+      };
+      mappings.CookCurrentFoodPreset = {
+        "reading": "BSH.Common.Root.SelectedProgram",
+        "values": ["-:NONE"]
+      };
+      for (var prgr of s.Internals.program.split(",")) {
+        mappings.CookCurrentFoodPreset.values.push(prgr + ":" + prgr.split(".").slice(-1)[0]);
+      }
+      mappings.SimpleCook = {
+        "supportedCookingModes": ["BREW"],
+        "foodPresets": [],
+        "params": {
+          "foodPreset": {
+            "cmds": []
+          }
+        }
+      };
+      for (var prgr of s.Internals.program.split(",")) {
+        // prgr = Beverage.EspressoDoppio
+        // preset_name = EspressoDoppio
+        // cmd = selectProgram Beverage.EspressoDoppio
+        var preset_name = prgr.split(".").slice(-1)[0];
+        var cmd = "selectProgram " + prgr;
+        // Beverage.EspressoDoppio:EspressoDoppio
+        mappings.CookCurrentFoodPreset.values.push(prgr + ":" + preset_name);
+        // EspressoDoppio
+        mappings.SimpleCook.foodPresets.push(preset_name);
+        // Espresso Doppio
+        mappings.SimpleCook.foodPresets.push(preset_name.replace(/([a-z0-9])([A-Z])/g, '$1 $2'));
+        // EspressoDoppio:selectProgram Beverage.EspressoDoppio
+        mappings.SimpleCook.params.foodPreset.cmds.push(preset_name + ":" + cmd);
+      }
+      mappings.SimpleCook.cmdFunction = function (mapping, params) {
+        var cmds = [];
+        if (params.start) {
+          cmds.push("startProgram");
+        } else {
+          cmds.push("stopProgram");
+        }
+        return cmds;
+      }
     }
   } else if (s.Internals.TYPE === 'ZWave') {
     if (s.Readings.modelId && s.Readings.modelId.Value === "010f-0303-1000") {
