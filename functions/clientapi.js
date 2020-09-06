@@ -1647,9 +1647,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "reading": "BSH.Common.Root.SelectedProgram",
         "values": ["-:NONE"]
       };
-      for (var prgr of s.Internals.program.split(",")) {
-        mappings.CookCurrentFoodPreset.values.push(prgr + ":" + prgr.split(".").slice(-1)[0]);
-      }
       mappings.SimpleCook = {
         "supportedCookingModes": ["BREW"],
         "foodPresets": [],
