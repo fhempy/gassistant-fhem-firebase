@@ -1630,8 +1630,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.On = {
         reading: "BSH.Common.Setting.PowerState",
         valueOff: 'BSH.Common.EnumType.PowerState.Off',
-        cmdOn: 'BSH.Common.Setting.PowerState BSH.Common.Setting.PowerState BSH.Common.EnumType.PowerState.On',
-        cmdOff: 'BSH.Common.Setting.PowerState BSH.Common.Setting.PowerState BSH.Common.EnumType.PowerState.Off'
+        cmdOn: 'BSH.Common.Setting.PowerState BSH.Common.EnumType.PowerState.On',
+        cmdOff: 'BSH.Common.Setting.PowerState BSH.Common.EnumType.PowerState.Off'
       };
       // Cook
       mappings.CookCurrentCookingMode = {
@@ -1645,28 +1645,29 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.CookCurrentFoodPreset = {
         "reading": "BSH.Common.Root.SelectedProgram",
-        "values": ["-:NONE"]
+        "values": ["/^-$/:NONE"]
       };
       mappings.SimpleCook = {
         "supportedCookingModes": ["BREW"],
         "foodPresets": [],
         "params": {
           "foodPreset": {
-            "cmds": []
+            "cmds": [],
+            "delayAfter": 3
           }
         }
       };
       var supported_units = ["CUPS", "NO_UNITS"];
-      for (var prgr of s.Internals.program.split(",")) {
+      for (var prgr of s.Internals.programs.split(",")) {
         // prgr = Beverage.EspressoDoppio
         // preset_name = EspressoDoppio
         // cmd = selectProgram Beverage.EspressoDoppio
         var preset_name = prgr.split(".").slice(-1)[0];
         // Espresso Doppio
         var preset_name_sep = preset_name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-        var cmd = "selectProgram " + prgr;
+        var cmd = "BSH.Common.Root.SelectedProgram " + prgr;
         // Beverage.EspressoDoppio:EspressoDoppio
-        mappings.CookCurrentFoodPreset.values.push(prgr + ":" + preset_name);
+        mappings.CookCurrentFoodPreset.values.push("/^" + prgr + "$/:" + preset_name);
         // EspressoDoppio, Espresso Doppio
         mappings.SimpleCook.foodPresets.push({
           "food_preset_name": [preset_name, preset_name_sep],
@@ -1675,6 +1676,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         // EspressoDoppio:selectProgram Beverage.EspressoDoppio
         mappings.SimpleCook.params.foodPreset.cmds.push(preset_name + ":" + cmd);
       }
+      // toString needed because auf SimpleCook
       mappings.SimpleCook.cmdFunction = function (mapping, params) {
         var cmds = [];
         if (params.start) {
@@ -1683,7 +1685,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           cmds.push("stopProgram");
         }
         return cmds;
-      }
+      }.toString();
     }
   } else if (s.Internals.TYPE === 'ZWave') {
     if (s.Readings.modelId && s.Readings.modelId.Value === "010f-0303-1000") {
@@ -2890,7 +2892,7 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
   if (typeof mapping.homekit2reading === 'function')
     mapping.homekit2reading = mapping.homekit2reading.toString();
 
-  if (typeof mapping.cmdFunction === 'function')
+  if (mapping.cmdFunction)
     mapping.cmdFunction = mapping.cmdFunction.toString();
 };
 
