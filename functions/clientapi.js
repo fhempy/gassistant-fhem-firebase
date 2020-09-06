@@ -1659,18 +1659,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           }
         }
       };
+      var supported_units = ["CUPS", "NO_UNITS"];
       for (var prgr of s.Internals.program.split(",")) {
         // prgr = Beverage.EspressoDoppio
         // preset_name = EspressoDoppio
         // cmd = selectProgram Beverage.EspressoDoppio
         var preset_name = prgr.split(".").slice(-1)[0];
+        // Espresso Doppio
+        var preset_name_sep = preset_name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
         var cmd = "selectProgram " + prgr;
         // Beverage.EspressoDoppio:EspressoDoppio
         mappings.CookCurrentFoodPreset.values.push(prgr + ":" + preset_name);
-        // EspressoDoppio
-        mappings.SimpleCook.foodPresets.push(preset_name);
-        // Espresso Doppio
-        mappings.SimpleCook.foodPresets.push(preset_name.replace(/([a-z0-9])([A-Z])/g, '$1 $2'));
+        // EspressoDoppio, Espresso Doppio
+        mappings.SimpleCook.foodPresets.push({
+          "food_preset_name": [preset_name, preset_name_sep],
+          "supported_units": supported_units
+        });
         // EspressoDoppio:selectProgram Beverage.EspressoDoppio
         mappings.SimpleCook.params.foodPreset.cmds.push(preset_name + ":" + cmd);
       }
