@@ -1974,7 +1974,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       "params": {
         "relativeChannelChange": {
           "cmdUp": "channelUp",
-          "cmdDown": "channelDOwn"
+          "cmdDown": "channelDown"
         }
       }
     };

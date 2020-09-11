@@ -1417,7 +1417,7 @@ async function generateFHEMCommands(uid, reqId, device, mapping, mainparam, para
       if (params[param]) {
         // only generate command if parameter was received from google
         var cmd = await generateFHEMCommand(uid, reqId, device, mapping.params[param], params[param], params, traitCommand);
-        if (cmd != params[param] || "cmd" in mapping.params[param])
+        if (typeof cmd === 'object' && (cmd != params[param] || "cmd" in mapping.params[param]))
           cmds.push(cmd);
         if (mapping.params.lastCmd) {
           return cmds;
@@ -1427,7 +1427,9 @@ async function generateFHEMCommands(uid, reqId, device, mapping, mainparam, para
   }
 
   // generate fhem command for all params
-  cmds.push(await generateFHEMCommand(uid, reqId, device, mapping, mainparam, params, traitCommand));
+  var cmd = await generateFHEMCommand(uid, reqId, device, mapping, mainparam, params, traitCommand);
+  if (typeof cmd === 'object')
+    cmds.push(cmd);
   return cmds;
 }
 module.exports.generateFHEMCommands = generateFHEMCommands;
@@ -1487,7 +1489,7 @@ async function generateFHEMCommand(uid, reqId, device, mapping, mainparam, param
     var cmd;
     if (mapping.cmd) {
       cmd = mapping.cmd + ' ' + value;
-    } else {
+    } else if (typeof value === "string") {
       cmd = value;
     }
 
@@ -1535,7 +1537,7 @@ async function generateFHEMCommand(uid, reqId, device, mapping, mainparam, param
     }
 
     if (cmd === undefined) {
-      uiderror(uid, device.name + ' no cmd for ' + c + ', value ' + value);
+      uidlog(uid, device.name + ': no cmd for ' + c + ', value ' + value);
       return;
     }
 
