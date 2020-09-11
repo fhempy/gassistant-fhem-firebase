@@ -92,6 +92,9 @@ async function processEXECUTE(uid, reqId, input) {
   const REQUEST_TEST_NW_SPEED = "action.devices.commands.TestNetworkSpeed";
   const REQUEST_DISPENSE = "action.devices.commands.Dispense";
   const REQUEST_COOK = "action.devices.commands.Cook";
+  const REQUEST_SELECT_CHANNEL = "action.devices.commands.selectChannel";
+  const REQUEST_RELATIVE_CHANNEL = "action.devices.commands.relativeChannel";
+  const REQUEST_RETURN_CHANNEL = "action.devices.commands.returnChannel";
 
   //map commands to the mapping within the device
   const commandMapping = {};
@@ -150,6 +153,9 @@ async function processEXECUTE(uid, reqId, input) {
   commandMapping[REQUEST_TEST_NW_SPEED] = ["TestNetworkSpeed"];
   commandMapping[REQUEST_DISPENSE] = ["Dispense"];
   commandMapping[REQUEST_COOK] = ["Cook"];
+  commandMapping[REQUEST_SELECT_CHANNEL] = ["Channel"];
+  commandMapping[REQUEST_RELATIVE_CHANNEL] = ["ChannelRelativeChannel"];
+  commandMapping[REQUEST_RETURN_CHANNEL] = ["ChannelReturnChannel"];
 
   let responses = [];
   let fhemExecCmd = [];
@@ -425,6 +431,19 @@ async function processEXECUTE(uid, reqId, input) {
             response = await processEXECUTECook(uid, reqId, device, readings, exec.params, fhemExecCmd);
             break;
 
+          case REQUEST_SELECT_CHANNEL:
+            response = await processEXECUTESelectChannel(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_RELATIVE_CHANNEL:
+            response = await processEXECUTERelativeChannel(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          case REQUEST_RETURN_CHANNEL:
+            response = await processEXECUTEReturnChannel(uid, reqId, device, readings, exec.params, fhemExecCmd);
+            break;
+
+          // this block uses the same function
           case REQUEST_MEDIA_NEXT:
           case REQUEST_MEDIA_CAPTION_OFF:
           case REQUEST_MEDIA_PAUSE:
@@ -553,7 +572,7 @@ async function processEXECUTEGetGuestNetworkPassword(uid, reqId, device, reading
 module.exports.processEXECUTEGetGuestNetworkPassword = processEXECUTEGetGuestNetworkPassword;
 
 async function processEXECUTETestNetworkSpeed(uid, reqId, device, readings, params, fhemExecCmd) {
-  fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.TestNetworkSpeed, ''));
+  fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.TestNetworkSpeed));
 
   let res = [];
 
@@ -897,6 +916,52 @@ async function processEXECUTESetInput(uid, reqId, device, readings, params, fhem
   }];
 }; //processEXECUTESetInput
 module.exports.processEXECUTESetInput = processEXECUTESetInput;
+
+async function processEXECUTESelectChannel(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.Channel, params.channelCode, params));
+
+  res = {
+    states: {},
+    status: 'success',
+    ids: [device.uuid_base]
+  };
+
+  if (params.channelName)
+    res.states.channelName = params.channelName;
+  if (params.channelNumber)
+    res.states.channelNumber = params.channelNumber;
+  if (params.channelCode)
+    res.states.channelCode = params.channelCode;
+
+  return [res];
+}
+module.exports.processEXECUTESelectChannel = processEXECUTESelectChannel;
+
+async function processEXECUTERelativeChannel(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.ChannelRelativeChannel, params.relativeChannelChange, params));
+
+  res = {
+    states: {},
+    status: 'success',
+    ids: [device.uuid_base]
+  };
+
+  return [res];
+}
+module.exports.processEXECUTERelativeChannel = processEXECUTERelativeChannel;
+
+async function processEXECUTEReturnChannel(uid, reqId, device, readings, params, fhemExecCmd) {
+  fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.ChannelRelativeChannel));
+
+  res = {
+    states: {},
+    status: 'success',
+    ids: [device.uuid_base]
+  };
+
+  return [res];
+}
+module.exports.processEXECUTEReturnChannel = processEXECUTEReturnChannel;
 
 async function processEXECUTESetVolume(uid, reqId, device, readings, params, fhemExecCmd) {
   fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.Volume, params.volumeLevel, params));
@@ -1340,7 +1405,10 @@ async function generateFHEMCommands(uid, reqId, device, mapping, mainparam, para
   // convert values to FHEM
   if (params)
     await paramValues2FHEM(uid, mapping, params);
-  mainparam = await value2FHEM(uid, mapping, mainparam);
+  if (mainparam)
+    mainparam = await value2FHEM(uid, mapping, mainparam);
+  else
+    mainparam = "";
 
   // generate fhem command per param
   var cmds = [];
@@ -1351,6 +1419,9 @@ async function generateFHEMCommands(uid, reqId, device, mapping, mainparam, para
         var cmd = await generateFHEMCommand(uid, reqId, device, mapping.params[param], params[param], params, traitCommand);
         if (cmd != params[param] || "cmd" in mapping.params[param])
           cmds.push(cmd);
+        if (mapping.params.lastCmd) {
+          return cmds;
+        }
       }
     }
   }
@@ -1372,6 +1443,7 @@ async function generateFHEMCommand(uid, reqId, device, mapping, mainparam, param
     for (var cmd of cmds) {
       joinedCmds += "set " + mapping.device + " " + cmd + ";";
     }
+    uidlog(uid, 'EXECUTE: ' + JSON.stringify(joinedCmds) + ',' + JSON.stringify(device.connection));
     return {
       id: reqId,
       cmd: joinedCmds,

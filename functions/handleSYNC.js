@@ -635,6 +635,12 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.Dispense");
         }
 
+        //Channel
+        if (device.mappings.Channel) {
+          d.attributes.availableChannels = device.mappings.Channel.availableChannels;
+          d.traits.push("action.devices.traits.Channel");
+        }
+
         //Cook
         if (device.mappings.Cook) {
           d.attributes.supportedCookingModes = device.mappings.Cook.supportedCookingModes;

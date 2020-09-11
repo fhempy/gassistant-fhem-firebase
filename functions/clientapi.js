@@ -1366,8 +1366,18 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE == 'XiaomiDevice') {
     if (s.Attributes.subType == 'VacuumCleaner') {
       if (!service_name) service_name = 'vacuum';
+      //segments
+      if (containsCommand(uid, s, "segment")) {
+        var segmentArr = getCommandParams(uid, s, "segment");
+        if (segmentArr.length > 0) {
+          mappings.StartStopZones = {
+            cmd: "segment",
+            availableZones: segmentArr
+          };
+        }
+      }
       //zones
-      if (containsCommand(uid, s, "zone")) {
+      if (containsCommand(uid, s, "zone") && !mappings.StartStopZones) {
         var zoneArr = getCommandParams(uid, s, "zone");
         mappings.StartStopZones = {
           cmd: "zone",
@@ -1653,7 +1663,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "params": {
           "foodPreset": {
             "cmds": [],
-            "delayAfter": 3
+            "delayAfter": 2
           }
         }
       };
@@ -1960,6 +1970,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "TV": "tv"
       }
     };
+    mappings.ChannelRelativeChannel = {
+      "params": {
+        "relativeChannelChange": {
+          "cmdUp": "channelUp",
+          "cmdDown": "channelDOwn"
+        }
+      }
+    };
     mappings.MediaPlaybackState = {
       reading: "state",
       values: ["on:PLAYING", "/.*/:STOPPED"]
@@ -2240,6 +2258,19 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     delete mappings.SimpleModes;
   }
 
+  // - SimpleChannel
+  if (mappings.SimpleChannel) {
+    mappings.Channel = {};
+    mappings.Channel.availableChannels = [];
+    mappings.Channel.cmds = [];
+    for (var chDef in mappings.SimpleChannel) {
+      var gChDef = { "key": chDef.split(",")[0], "names": chDef.split(",")};
+      mappings.Channel.availableChannels.push(gChDef);
+      mappings.Channel.cmds.push(chDef.split(",")[0] + ":" + mappings.SimpleChannel[chDef]);
+    }
+    delete mappings.SimpleChannel;
+  }
+
   // - SimpleToggles
   if (mappings.SimpleToggles) {
     mappings.Toggles = [];
@@ -2312,9 +2343,15 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "lang": "de",
         "synonym": fp["food_preset_name"]
       }];
+      if (mappings.SimpleCookSynonyms && mappings.SimpleCookSynonyms[tmp_fp.food_preset_name]) {
+        tmp_fp.food_synonyms[0].synonym.push(...mappings.SimpleCookSynonyms[tmp_fp.food_preset_name]);
+      }
       mappings.Cook.foodPresets.push(tmp_fp);
     }
 
+    if (mappings.SimpleCookSynonyms) {
+      delete mappings.SimpleCookSynonyms;
+    }
     delete mappings.SimpleCook;
   }
 
