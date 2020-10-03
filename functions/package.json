@@ -21,7 +21,7 @@
     "express-session": "^1.17.0",
     "firebase": "^7.6.0",
     "firebase-admin": "^8.8.0",
-    "firebase-functions": "^3.3.0",
+    "firebase-functions": "^3.11.0",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.6.0",
     "lint": "^1.1.2",
@@ -32,7 +32,7 @@
     "url": "^0.11.0"
   },
   "engines": {
-    "node": "8"
+    "node": "10"
   },
   "private": true
 }

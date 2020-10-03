@@ -33,11 +33,11 @@ var sess = {
 
 // Configure Passport to use Auth0
 var strategy = new Auth0Strategy({
-    domain: settings.AUTH0_LOGIN_DOMAIN,
-    clientID: settings.AUTH0_WEB_CLIENTID,
-    clientSecret: settings.AUTH0_WEB_CLIENTSECRET,
-    callbackURL: settings.AUTH0_CALLBACK_URL
-  },
+  domain: settings.AUTH0_LOGIN_DOMAIN,
+  clientID: settings.AUTH0_WEB_CLIENTID,
+  clientSecret: settings.AUTH0_WEB_CLIENTSECRET,
+  callbackURL: settings.AUTH0_CALLBACK_URL
+},
   function (accessToken, refreshToken, extraParams, profile, done) {
     // accessToken is the token to call Auth0 API (not needed in the most cases)
     // extraParams.id_token has the JSON Web Token
@@ -100,7 +100,7 @@ var secured = function () {
   };
 };
 
-app.get('/listversions', secured(), async (req, res) => {
+app.get('deleteinactive', secured(), async (req, res) => {
   const {
     id: uid
   } = req.user;
@@ -113,8 +113,8 @@ app.get('/listversions', secured(), async (req, res) => {
       docRefs.push(col.doc('client'));
     }
     var allDocs = await utils.getFirestoreDB().getAll(...docRefs);
-    
-    var i=0;
+
+    var i = 0;
     for (let col of colRefs) {
       result = result + col.id + ":";
       const doc = allDocs[i];
@@ -124,10 +124,37 @@ app.get('/listversions', secured(), async (req, res) => {
       if (allHbRef.val()[col.id] && allHbRef.val()[col.id].heartbeat) {
         const hbRef = allHbRef.val()[col.id].heartbeat;
         if (hbRef.time) {
-          if (hbRef.time > (Date.now() - 600000)) {
+          if (hbRef.time > (Date.now() - 86400000)) { //1 day
             result = result + ":ACTIVE";
           } else {
-            result = result + ":-";
+            //TODO delete realdb
+            //TODO delete firestoredb
+            //TODO delete auth0? or at least list it
+            result = result + ":DELETED";
+          }
+        }
+      }
+      result = result + "<br>";
+    }
+  }
+});
+
+app.get('/listversions', secured(), async (req, res) => {
+  const {
+    id: uid
+  } = req.user;
+  if (uid === settings.ADMIN_UID) {
+    var result = '';
+    const allHbRef = await utils.getRealDB().ref('/users/').once('value');
+    for (let userVal in allHbRef.val()) {
+      result = result + userVal + ":";
+      if (allHbRef.val()[userVal] && allHbRef.val()[userVal].heartbeat) {
+        const hbRef = allHbRef.val()[userVal].heartbeat;
+        if (hbRef.time) {
+          if (hbRef.time > (Date.now() - 86400000)) {
+            result = result + "ACTIVE";
+          } else {
+            result = result + "-";
           }
         }
       }
