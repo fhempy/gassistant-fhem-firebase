@@ -24,10 +24,13 @@ const firestoredb = admin.firestore();
 var ratePerUser = {};
 
 const GOOGLE_DEVICE_TYPES = {
-  'ac_unit': 'action.devices.types.AC_UNIT',
   'aircondition': 'action.devices.types.AC_UNIT', //backward compatibility
+  'coffeemaker': 'action.devices.types.COFFEE_MAKER', //backward compatibility
+  'ac_unit': 'action.devices.types.AC_UNIT',
+  'aircooler': 'action.devices.types.AIRCOOLER',
   'airfreshener': 'action.devices.types.AIRFRESHENER',
   'airpurifier': 'action.devices.types.AIRPURIFIER',
+  'audio_video_receiver': 'action.devices.types.AUDIO_VIDEO_RECEIVER',
   'awning': 'action.devices.types.AWNING',
   'bathtub': 'action.devices.types.BATHTUB',
   'bed': 'action.devices.types.BED',
@@ -39,7 +42,6 @@ const GOOGLE_DEVICE_TYPES = {
   'charger': 'action.devices.types.CHARGER',
   'closet': 'action.devices.types.CLOSET',
   'coffee_maker': 'action.devices.types.COFFEE_MAKER',
-  'coffeemaker': 'action.devices.types.COFFEE_MAKER', //backward compatibility
   'cooktop': 'action.devices.types.COOKTOP',
   'curtain': 'action.devices.types.CURTAIN',
   'dehumidifier': 'action.devices.types.DEHUMIDIFIER',
@@ -51,6 +53,7 @@ const GOOGLE_DEVICE_TYPES = {
   'fan': 'action.devices.types.FAN',
   'faucet': 'action.devices.types.FAUCET',
   'fireplace': 'action.devices.types.FIREPLACE',
+  'freezer': 'action.devices.types.FREEZER',
   'fryer': 'action.devices.types.FRYER',
   'garage': 'action.devices.types.GARAGE',
   'gate': 'action.devices.types.GATE',
@@ -76,13 +79,18 @@ const GOOGLE_DEVICE_TYPES = {
   'refrigerator': 'action.devices.types.REFRIGERATOR',
   'router': 'action.devices.types.ROUTER',
   'scene': 'action.devices.types.SCENE',
+  'sensor': 'action.devices.types.SENSOR',
   'securitysystem': 'action.devices.types.SECURITYSYSTEM',
   'settop': 'action.devices.types.SETTOP',
-  'sensor': 'action.devices.types.SENSOR',
   'shutter': 'action.devices.types.SHUTTER',
   'shower': 'action.devices.types.SHOWER',
   'smoke_detector': 'action.devices.types.SMOKE_DETECTOR',
   'sousvide': 'action.devices.types.SOUSVIDE',
+  'speaker': 'action.devices.types.SPEAKER',
+  'streaming_box': 'action.devices.types.STREAMING_BOX',
+  'streaming_stick': 'action.devices.types.STREAMING_STICK',
+  'streaming_soundbar': 'action.devices.types.STREAMING_SOUNDBAR',
+  'soundbar': 'action.devices.types.SOUNDBAR',
   'sprinkler': 'action.devices.types.SPRINKLER',
   'standmixer': 'action.devices.types.STANDMIXER',
   'switch': 'action.devices.types.SWITCH',
