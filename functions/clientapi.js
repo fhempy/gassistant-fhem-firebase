@@ -1096,13 +1096,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     //rate:silent,lowest,medium,high,auto,highest,low
     mappings.FanSpeed = {
       reading: 'rate', speeds: {
-        'S1': { 'cmd': 'rate silent', 'synonyms': { 'de': ['leise'] } },
-        'S2': { 'cmd': 'rate lowest', 'synonyms': { 'de': ['sehr schwach'] } },
-        'S3': { 'cmd': 'rate low','synonyms': { 'de': ['schwach'] } },
-        'S4': { 'cmd': 'rate medium', 'synonyms': { 'de': ['mittel'] } },
-        'S5': { 'cmd': 'rate high', 'synonyms': { 'de': ['stark'] } },
-        'S6': { 'cmd': 'rate highest','synonyms': { 'de': ['sehr stark'] } },
-        'S7': { 'cmd': 'rate auto','synonyms': { 'de': ['auto'] } }
+        'S1': { 'cmd': 'rate silent', value: 'silent', 'synonyms': { 'de': ['leise'] } },
+        'S2': { 'cmd': 'rate lowest', value: 'lowest', 'synonyms': { 'de': ['sehr schwach'] } },
+        'S3': { 'cmd': 'rate low', value: 'low', 'synonyms': { 'de': ['schwach'] } },
+        'S4': { 'cmd': 'rate medium', value: 'medium', 'synonyms': { 'de': ['mittel'] } },
+        'S5': { 'cmd': 'rate high', value: 'high', 'synonyms': { 'de': ['stark'] } },
+        'S6': { 'cmd': 'rate highest',value: 'highest', 'synonyms': { 'de': ['sehr stark'] } },
+        'S7': { 'cmd': 'rate auto',value: 'auto', 'synonyms': { 'de': ['auto'] } }
       }, ordered: true, reversible: false
     };
     //powerful:on,off
