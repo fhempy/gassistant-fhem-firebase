@@ -1062,9 +1062,11 @@ async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExe
     //Hue
     fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Hue, color.spectrumHSV.hue));
     //Brightness
-    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.HSVBrightness, color.spectrumHSV.value));
+    if (device.mappings.HSVBrightness)
+      fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.HSVBrightness, color.spectrumHSV.value));
     //Saturation
-    fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Saturation, color.spectrumHSV.saturation));
+    if (device.mappings.Saturation)
+      fhemExecCmd.push(await execFHEMCommand(uid, reqId, device, device.mappings.Saturation, color.spectrumHSV.saturation));
     ret.push({
       states: {
         color: {

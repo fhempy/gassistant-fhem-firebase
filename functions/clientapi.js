@@ -1073,6 +1073,126 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYPE === "HVAC_DaikinAC") {
+    if (!service_name) service_name = 'ac_unit';
+    //mode:vent,auto,cool,dehumidify,heat,auto
+    //swing:horizontal,vertical,3d,none
+    mappings.SimpleModes = [{
+      reading: "mode",
+      name: "Modus",
+      "auto,automatisch": "mode auto",
+      "entlüften,lüftern": "mode vent",
+      "cool,kühlen": "mode cool",
+      "entfeuchten": "mode dehumidify",
+      "heizen,wärmen": "mode heat"
+    },{
+      reading: "swing",
+      name: "Schwenken",
+      "horizontal": "swing horizontal",
+      "vertikal": "swing vertical",
+      "3d": "swing 3d",
+      "aus": "swing none"
+    }];
+    //rate:silent,lowest,medium,high,auto,highest,low
+    mappings.FanSpeed = {
+      reading: 'rate', speeds: {
+        'S1': { 'cmd': 'rate silent', 'synonyms': { 'de': ['leise'] } },
+        'S2': { 'cmd': 'rate lowest', 'synonyms': { 'de': ['sehr schwach'] } },
+        'S3': { 'cmd': 'rate low','synonyms': { 'de': ['schwach'] } },
+        'S4': { 'cmd': 'rate medium', 'synonyms': { 'de': ['mittel'] } },
+        'S5': { 'cmd': 'rate high', 'synonyms': { 'de': ['stark'] } },
+        'S6': { 'cmd': 'rate highest','synonyms': { 'de': ['sehr stark'] } },
+        'S7': { 'cmd': 'rate auto','synonyms': { 'de': ['auto'] } }
+      }, ordered: true, reversible: false
+    };
+    //powerful:on,off
+    //econo:on,off
+    //streamer:on,off
+    mappings.SimpleToggles = [{
+      cmdOn: 'powerful on',
+      cmdOff: 'powerful off',
+      voicecmd: 'Power Modus'
+    }, {
+      cmdOn: 'econo off',
+      cmdOff: 'econo on',
+      voicecmd: 'ECO Modus'
+    }, {
+      cmdOn: 'streamer on',
+      cmdOff: 'streamer off',
+      voicecmd: 'Luftreinigung'
+    }];
+    //stemp:slider,18,0.5,30
+    mappings.TargetTemperature = {
+      reading: 'stemp',
+      cmd: 'stemp',
+      minValue: 10,
+      maxValue: 30,
+      minStep: 0.5
+    };
+    mappings.CurrentTemperature = {
+      reading: 'htemp'
+    };
+  } else if (s.Internals.TYPE === "PythonModule") {
+    if (s.Internals.PYTHONTYPE === "eq3bt") {
+      if (!service_name) service_name = "thermostat";
+      mappings.TargetTemperature = {
+        reading: 'desiredTemperature',
+        cmd: 'desiredTemperature'
+      };
+      mappings.TargetTemperature.minValue = 4.5;
+      mappings.TargetTemperature.maxValue = 30;
+      mappings.TargetTemperature.minStep = 0.5;
+      
+      mappings.OpenClose = {
+        reading: 'valvePosition',
+        values: ['0:CLOSED', '/.*/:OPEN']
+      };
+      mappings.CurrentPosition = {
+        reading: 'valvePosition'
+      };
+  
+      
+      mappings.ThermostatModes = {
+        reading: ['desiredTemperature', 'ecoTemperature', 'mode'],
+        cmds: ['auto:mode automatic', 'off:mode manual;desiredTemperature 4.5', 'heat:mode manual;comfort', 'eco:eco', 'on:comfort'],
+        values: ['mode=/auto/:auto', 'desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
+      };
+      mappings.Toggles = [{
+        reading: 'boost', valueOn: '1', cmdOn: 'boost on', cmdOff: 'boost off',
+        toggle_attributes: {
+          name: 'Boost',
+          name_values: [
+            {
+              name_synonym: ['boost', 'boost mode'],
+              lang: 'en'
+            },
+            {
+              name_synonym: ['boost', 'boost modus', 'aufheizen', 'schnell heiz modus', 'schnellheizmodus'],
+              lang: 'de'
+            }
+          ]
+        }
+      }];
+    } else if (s.Internals.PYTHONTYPE === "xiaomi_gateway3_device") {
+      if (s.Readings.model && s.Readings.model.Value === "lumi.sensor_magnet.v2") {
+        if (!service_name) service_name = 'door';
+        mappings.OpenClose = {
+          reading: 'state',
+          values: ['/^closed/:CLOSED', '/.*/:OPEN']
+        };
+      } else if (s.Readings.model && s.Readings.model.Value === "sensor_wleak.aq1") {
+        if (!service_name) service_name = 'sensor';
+        mappings.WaterLeak = {
+          reading: "state",
+          values: ["leak:leak", "no_leak:no leak", "/.*/:unknown"]
+        };
+        mappings.Exceptions.waterLeakDetected = {
+          reading: 'state',
+          values: ['leak:EXCEPTION', '/.*/:OK'],
+          onlyLinkedInfo: false
+        };
+      }
+    }
   } else if (s.Internals.TYPE === "KLF200Node") {
     if (!service_name) service_name = 'blinds';
     mappings.OpenClose = {
@@ -1633,8 +1753,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.OpenClose = {
         reading: 'state',
         values: ['/^off/:OPEN', '/.*/:CLOSED'],
-        cmdOpen: 'off',
-        cmdClose: 'on'
+        cmdOpen: 'on',
+        cmdClose: 'off'
       };
       mappings.TargetPosition = {
         cmd: 'dim',
