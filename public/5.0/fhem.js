@@ -641,8 +641,8 @@ FHEM.prototype.connect = async function (callback, filter) {
         }
       }.bind(this));
 
-      if (firstRun)
-        await database.initiateSync();
+      //if (firstRun): removed to init sync on every start
+      await database.initiateSync();
     }
     this.execute('setreading ' + this.gassistant + ' gassistant-fhem-connection connected');
 
