@@ -1074,7 +1074,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
-  } else if (s.Internals.TYEP === "SIRD") {
+  } else if (s.Internals.TYPE === "SIRD") {
     mappings.Volume = {
       reading: "volume",
       cmd: "volume",
