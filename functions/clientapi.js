@@ -992,25 +992,26 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   }
 
   //GENERIC MAPPINGS BASED ON READINGS
-  if (s.Readings['measured-temp']) {
+  //only set when mapping was not set before
+  if (s.Readings['measured-temp'] && !mappings.CurrentTemperature) {
     mappings.CurrentTemperature = {
       reading: 'measured-temp',
       minValue: -30
     };
-  } else if (s.Readings.temperature) {
+  } else if (s.Readings.temperature && !mappings.CurrentTemperature) {
     mappings.CurrentTemperature = {
       reading: 'temperature',
       minValue: -30
     };
   }
 
-  if (s.Readings.volume) {
+  if (s.Readings.volume && !mappings.Volume) {
     mappings.Volume = {
       reading: 'volume',
       cmd: 'volume',
       levelStepSize: 3
     };
-  } else if (s.Readings.Volume) {
+  } else if (s.Readings.Volume && !mappings.Volume) {
     mappings.Volume = {
       reading: 'Volume',
       cmd: 'Volume',
@@ -1018,7 +1019,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     };
   }
 
-  if (s.Readings.humidity) {
+  if (s.Readings.humidity && !mappings.CurrentRelativeHumidity) {
     mappings.CurrentRelativeHumidity = {
       reading: 'humidity'
     };
