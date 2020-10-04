@@ -1073,6 +1073,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Reboot = {
       cmd: 'restart'
     };
+  } else if (s.Internals.TYEP === "SIRD") {
+    mappings.Volume = {
+      reading: "volume",
+      cmd: "volume",
+      levelStepSize: 5
+    };
   } else if (s.Internals.TYPE === "HVAC_DaikinAC") {
     if (!service_name) service_name = 'ac_unit';
     //mode:vent,auto,cool,dehumidify,heat,auto
