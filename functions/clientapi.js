@@ -2006,11 +2006,23 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           maxValue: 100
         };
       //mappings.ColorMode = {reading: 'colormode', valueCt: 'ct'};
-      if (s.PossibleSets.match(/(^| )color_temp\b/))
+      if (s.PossibleSets.match(/(^| )color_temp\b/)) {
         mappings.ColorTemperature = {
           reading: 'color_temp',
           cmd: 'color_temp'
         };
+        mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
+          var match;
+          if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
+            return parseInt(match[2]);
+          }
+          return 0;
+        };
+        mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
+          //kelvin to mired
+          return parseInt(1000000 / orig);
+        };
+      }
       if (s.PossibleSets.match(/(^| )color\b/)) {
         mappings.RGB = {
           reading: 'color',
