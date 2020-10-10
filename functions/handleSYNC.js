@@ -565,12 +565,16 @@ var processSYNC = function (uid, devices) {
 
         //TemperatureControl
         if (device.mappings.TemperatureControlSetCelsius || device.mappings.TemperatureControlAmbientCelsius) {
-          d.attributes.temperatureRange = {
-            minThresholdCelsius: device.mappings.TemperatureControlSetCelsius.minCelsius ? device.mappings.TemperatureControlSetCelsius.minCelsius : 0,
-            maxThresholdCelsius: device.mappings.TemperatureControlSetCelsius.maxCelsius ? device.mappings.TemperatureControlSetCelsius.maxCelsius : 300
-          };
-          d.attributes.temperatureStepCelsius = device.mappings.TemperatureControlSetCelsius.stepCelsius ? device.mappings.TemperatureControlSetCelsius.stepCelsius : 1;
-          d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlSetCelsius.formatUx ? device.mappings.TemperatureControlSetCelsius.formatUx : "C";
+          if (device.mappings.TemperatureControlSetCelsius) {
+            d.attributes.temperatureRange = {
+              minThresholdCelsius: device.mappings.TemperatureControlSetCelsius.minCelsius ? device.mappings.TemperatureControlSetCelsius.minCelsius : 0,
+              maxThresholdCelsius: device.mappings.TemperatureControlSetCelsius.maxCelsius ? device.mappings.TemperatureControlSetCelsius.maxCelsius : 300
+            };
+            d.attributes.temperatureStepCelsius = device.mappings.TemperatureControlSetCelsius.stepCelsius ? device.mappings.TemperatureControlSetCelsius.stepCelsius : 1;
+            d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlSetCelsius.formatUx ? device.mappings.TemperatureControlSetCelsius.formatUx : "C";
+          } else {
+            d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlAmbientCelsius.formatUx ? "C";
+          }
           if (device.mappings.TemperatureControlSetCelsius && device.mappings.TemperatureControlAmbientCelsius) {
             d.attributes.queryOnlyTempeartureControl = false;
             d.attributes.commandOnlyTemperatureControl = false;
