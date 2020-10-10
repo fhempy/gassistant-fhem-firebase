@@ -1158,7 +1158,6 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'valvePosition'
       };
   
-      
       mappings.ThermostatModes = {
         reading: ['desiredTemperature', 'ecoTemperature', 'mode'],
         cmds: ['auto:mode automatic', 'off:mode manual;desiredTemperature 4.5', 'heat:mode manual;comfort', 'eco:eco', 'on:comfort'],
@@ -2382,6 +2381,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'state',
         values: ['/^on/:OPEN', '/.*/:CLOSED']
       };
+    }
+  } else if (service_name === 'sensor') {
+    if (mappings.CurrentTemperature && mappings.CurrentTemperature.reading) {
+      mappings.TemperatureControlAmbientCelsius = {
+        reading: mappings.CurrentTemperature.reading
+      };
+      delete mappings.CurrentTemperature;
     }
   }
 
