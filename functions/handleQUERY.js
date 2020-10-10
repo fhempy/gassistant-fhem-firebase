@@ -138,6 +138,7 @@ async function processQUERY(uid, input, reportstate) {
           const temperatureAmbientCelsius = await utils.cached2Format(uid, device.mappings.TemperatureControlAmbientCelsius, readings);
           devices[d.id].temperatureAmbientCelsius = temperatureAmbientCelsius;
         }
+        devices[d.id].status = "SUCCESS";
       }
 
       //OnOff
