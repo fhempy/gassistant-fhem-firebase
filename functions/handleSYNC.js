@@ -573,7 +573,7 @@ var processSYNC = function (uid, devices) {
             d.attributes.temperatureStepCelsius = device.mappings.TemperatureControlSetCelsius.stepCelsius ? device.mappings.TemperatureControlSetCelsius.stepCelsius : 1;
             d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlSetCelsius.formatUx ? device.mappings.TemperatureControlSetCelsius.formatUx : "C";
           } else {
-            d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlAmbientCelsius.formatUx ? "C";
+            d.attributes.temperatureUnitForUX = device.mappings.TemperatureControlAmbientCelsius.formatUx ? device.mappings.TemperatureControlAmbientCelsius.formatUx: "C";
           }
           if (device.mappings.TemperatureControlSetCelsius && device.mappings.TemperatureControlAmbientCelsius) {
             d.attributes.queryOnlyTempeartureControl = false;
