@@ -2277,6 +2277,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'state',
         values: ['/^close/:CLOSED', '/.*/:OPEN']
       };
+    } else if (s.Internals.MODEL === 'weather.v1' || s.Internals.MODEL === 'sensor_ht') {
+      if (!service_name) service_name = 'sensor';
+      if (mappings.CurrentTemperature) {
+        delete mappings.CurrentTemperature;
+      }
+      mappings.TemperatureControlAmbientCelsius = { "reading": "temperature" };
+      mappings.CurrentRelativeHumidity = { "reading": "humidity" };
     }
   } else if (s.Internals.TYPE === "BDKM") {
     if (!service_name) service_name = 'thermostat';
