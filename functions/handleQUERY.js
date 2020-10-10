@@ -540,9 +540,9 @@ async function processQUERY(uid, input, reportstate) {
       }
 
       //Exceptions (StatusReport)
-      devices[d.id].status = 'SUCCESS';
       devices[d.id].currentStatusReport = [];
       if (device.mappings.Exceptions) {
+        devices[d.id].status = 'SUCCESS';
         for (var exception_name in device.mappings.Exceptions) {
           //FIXME support exceptions for multiple responses
           if (device.mappings.Exceptions[exception_name].onlyLinkedInfo === false) {
@@ -562,6 +562,8 @@ async function processQUERY(uid, input, reportstate) {
 
       //LinkedDevices (StatusReport)
       if (device.mappings.LinkedDevices) {
+        if (!device.mappings.Exceptions)
+          devices[d.id].status = 'SUCCESS';
         for (var ld of device.mappings.LinkedDevices.devices) {
           //devicename: ld.id
           //blocking: ld.blocking
@@ -584,7 +586,6 @@ async function processQUERY(uid, input, reportstate) {
         }
       }
       if (devices[d.id].currentStatusReport.length == 0) {
-        delete devices[d.id].status;
         delete devices[d.id].currentStatusReport;
       }
 
