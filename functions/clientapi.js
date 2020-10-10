@@ -1903,6 +1903,52 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: '0.UNREACH',
         valueError: '1'
       };
+    } else if (s.Internals.ccutype === "HmIP-eTRV-2") {
+      if (!service_name) service_name = "thermostat";
+      mappings.TargetTemperature = {
+        reading: '1.SET_POINT_TEMPERATURE',
+        cmd: 'control'
+      };
+      mappings.TargetTemperature.minValue = 4.5;
+      mappings.TargetTemperature.maxValue = 30;
+      mappings.TargetTemperature.minStep = 0.5;
+      
+      mappings.OpenClose = {
+        reading: '1.VALVE_STATE',
+        values: ['0:CLOSED', '/.*/:OPEN']
+      };
+      mappings.CurrentPosition = {
+        reading: '1.VALVE_STATE'
+      };
+  
+      
+      mappings.ThermostatModes = {
+        reading: ['1.SET_POINT_MODE'],
+        cmds: ['auto:Auto', 'off:off', 'heat:Manual','on:on'],
+        values: ['mode=/auto/:auto', 'desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
+      };
+      mappings.Toggles = [{
+        reading: '1.BOOST_MODE', valueOn: '1', cmdOn: 'Boost', cmdOff: 'Manual',
+        toggle_attributes: {
+          name: 'Boost',
+          name_values: [
+            {
+              name_synonym: ['boost', 'boost mode'],
+              lang: 'en'
+            },
+            {
+              name_synonym: ['boost', 'boost modus', 'aufheizen', 'schnell heiz modus', 'schnellheizmodus'],
+              lang: 'de'
+            }
+          ]
+        }
+      }];
+    } else if (s.Internals.ccutype === "HmIP-STHO") {
+      if (!service_name) service_name = 'sensor';
+      mappings.TemperatureControlAmbientCelsius = { "reading": "1.ACTUAL_TEMPERATURE" };
+      mappings.CurrentRelativeHumidity = {
+        reading: '1.HUMIDITY'
+      };
     } else if (s.Internals.ccutype === "HM-CC-RT-DN") {
       mappings.TargetTemperature = {
         reading: '4.SET_TEMPERATURE',
@@ -2041,6 +2087,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       }
     }
   } else if (s.Internals.TYPE === 'HUEDevice') {
+    if (s.Internals.type === 'LightGroup') {
+      mappings.RGB = {
+        commandOnlyColorSetting: true,
+        cmd: 'rgb'
+      };
+      mappings.RGB.homekit2reading = function (mapping, orig) {
+        return ("000000" + orig.toString(16)).substr(-6);
+      };
+      mappings.ColorTemperature = {
+        cmd: 'ct'
+      };
+      mappings.ColorTemperature.homekit2reading = function (mapping, orig) {
+        //kelvin to mired
+        return parseInt(1000000 / orig);
+      };
+    }
     if (s.Attributes.subType === "ctdimmer") {
       if (!service_name) service_name = 'light';
       //Hue CT mode
