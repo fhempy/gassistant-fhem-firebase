@@ -475,6 +475,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     (s.Attributes.subType === 'blindActuator') ||
     (s.Internals.TYPE === "UNIRoll") ||
     (s.Attributes.model === 'fs20rsu') ||
+    (s.Internals.ccutype === 'HmIP-FROLL') ||
     genericType === 'blinds' || genericType === 'shutter') {
     if (!service_name) service_name = 'blinds';
     delete mappings.On;
@@ -1919,12 +1920,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.CurrentPosition = {
         reading: '1.VALVE_STATE'
       };
-  
-      
       mappings.ThermostatModes = {
-        reading: ['1.SET_POINT_MODE'],
-        cmds: ['auto:Auto', 'off:off', 'heat:Manual','on:on'],
-        values: ['mode=/auto/:auto', 'desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
+        reading: ['1.SET_POINT_MODE', '1.SET_POINT_TEMPERATURE'],
+        cmds: ['off:off', 'heat:Manual', 'auto:Auto'],
+        values: ['1.SET_POINT_TEMPERATURE=4.5:off', '1.SET_POINT_MODE=/0/:auto', '1.SET_POINT_MODE=/1/:heat', '/.*/:heat']
       };
       mappings.Toggles = [{
         reading: '1.BOOST_MODE', valueOn: '1', cmdOn: 'Boost', cmdOff: 'Manual',
@@ -2094,6 +2093,13 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.RGB.homekit2reading = function (mapping, orig) {
         return ("000000" + orig.toString(16)).substr(-6);
       };
+      if (s.Readings.rgb) {
+        mappings.RGB.reading = "rgb";
+        mappings.RGB.commandOnlyColorSetting = false;
+        mappings.RGB.reading2homekit = function (mapping, orig) {
+          return parseInt('0x' + orig);
+        };
+      }
       mappings.ColorTemperature = {
         cmd: 'ct'
       };
@@ -2101,6 +2107,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         //kelvin to mired
         return parseInt(1000000 / orig);
       };
+      if (s.Readings.ct) {
+        mappings.ColorTemperature.reading = "ct";
+        mappings.ColorTemperature.reading2homekit = function (mapping, orig) {
+          var match;
+          if (match = orig.match(/^(\d+) \((\d+)K\)/)) {
+            return parseInt(match[2]);
+          }
+          return 0;
+        };
+      }
+      if (s.Readings.colormode) {
+        mappings.ColorMode = {
+          reading: 'colormode',
+          valueCt: 'ct'
+        };
+      }
     }
     if (s.Attributes.subType === "ctdimmer") {
       if (!service_name) service_name = 'light';
