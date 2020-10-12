@@ -1926,7 +1926,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.ThermostatModes = {
         reading: ['1.SET_POINT_MODE', '1.SET_POINT_TEMPERATURE'],
         cmds: ['off:off', 'heat:Manual', 'auto:Auto'],
-        values: ['1.SET_POINT_TEMPERATURE=4.5:off', '1.SET_POINT_MODE=/0/:auto', '1.SET_POINT_MODE=/1/:heat', '/.*/:heat']
+        values: ['1.SET_POINT_TEMPERATURE=/off/:off', '1.SET_POINT_MODE=/0/:auto', '1.SET_POINT_MODE=/1/:heat', '/.*/:heat']
       };
       mappings.Toggles = [{
         reading: '1.BOOST_MODE', valueOn: '1', cmdOn: 'Boost', cmdOff: 'Manual',
