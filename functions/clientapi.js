@@ -1234,7 +1234,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       cmd: 'update'
     };
   } else if (s.Internals.TYPE === 'LaCrosse') {
-    if (!service_name) service_name = 'thermostat';
+    if (!service_name) service_name = 'sensor';
   } else if (s.Internals.TYPE === 'ONKYO_AVR') {
     var inputArr = getCommandParams(uid, s, "input");
     var vc = {};
@@ -1912,6 +1912,9 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.TargetTemperature.minValue = 4.5;
       mappings.TargetTemperature.maxValue = 30;
       mappings.TargetTemperature.minStep = 0.5;
+      mappings.CurrentTemperature = {
+        reading: '1.ACTUAL_TEMPERATURE'
+      };
       
       mappings.OpenClose = {
         reading: '1.VALVE_STATE',
