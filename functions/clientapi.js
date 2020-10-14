@@ -1906,7 +1906,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     } else if (s.Internals.ccutype === "HmIP-eTRV-2") {
       if (!service_name) service_name = "thermostat";
       mappings.TargetTemperature = {
-        reading: '1.SET_POINT_TEMPERATURE',
+        reading: 'control',
         cmd: 'control'
       };
       mappings.TargetTemperature.minValue = 4.5;
