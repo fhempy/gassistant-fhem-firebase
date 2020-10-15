@@ -1925,7 +1925,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.ThermostatModes = {
         reading: ['1.SET_POINT_MODE', '1.SET_POINT_TEMPERATURE'],
-        cmds: ['off:off', 'heat:Manual', 'auto:Auto'],
+        cmds: ['off:off', 'heat:Manual', 'auto:Auto', 'on:on'],
         values: ['1.SET_POINT_TEMPERATURE=/off/:off', '1.SET_POINT_MODE=/0/:auto', '1.SET_POINT_MODE=/1/:heat', '/.*/:heat']
       };
       mappings.Toggles = [{
@@ -1938,7 +1938,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
               lang: 'en'
             },
             {
-              name_synonym: ['boost', 'boost modus', 'aufheizen', 'schnell heiz modus', 'schnellheizmodus'],
+              name_synonym: ['boost', 'boost modus'],
               lang: 'de'
             }
           ]
