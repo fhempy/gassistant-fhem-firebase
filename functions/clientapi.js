@@ -701,12 +701,19 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       reading: 'state',
       values: ['/^home/:true', '/^gotosleep/:true', '/^absent/:false', '/^gone/:false']
     }
-  } else if (s.Internals.TYPE === 'FBDECT' && s.Internals.DEF && s.Internals.DEF.match(/HANFUN2,alarmSensor/)) {
-    if (!service_name) service_name = 'door';
-    mappings.OpenClose = {
-      reading: 'state',
-      values: ['/off/:CLOSED', '/.*/:OPEN']
-    };
+  } else if (s.Internals.TYPE === 'FBDECT') {
+    if (s.Internals.DEF && s.Internals.DEF.match(/HANFUN2,alarmSensor/)) {
+      if (!service_name) service_name = 'door';
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/off/:CLOSED', '/.*/:OPEN']
+      };
+    } else if (s.Internals.DEF && s.Internals.DEF.match(/actuator,tempSensor/)) {
+      if (!service_name) service_name = 'thermostat';
+      if (mappings.TargetTemperature) {
+        mappings.TargetTemperature.part = 0;
+      }
+    }
   }
 
   if (match = s.PossibleSets.match(/(^| )desired-temp(:[^\d]*([^\$ ]*))?/)) {
