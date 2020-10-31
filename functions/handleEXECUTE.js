@@ -918,7 +918,11 @@ async function processEXECUTESetInput(uid, reqId, device, readings, params, fhem
 module.exports.processEXECUTESetInput = processEXECUTESetInput;
 
 async function processEXECUTESelectChannel(uid, reqId, device, readings, params, fhemExecCmd) {
-  fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.Channel, params.channelCode, params));
+  if (params.channelCode) {
+    fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.Channel, params.channelCode, params));
+  } else {
+    fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.Channel, params.channelNumber, params));
+  }
 
   res = {
     states: {},
