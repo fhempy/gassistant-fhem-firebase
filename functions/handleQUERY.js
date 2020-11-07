@@ -146,12 +146,12 @@ async function processQUERY(uid, input, reportstate) {
 
       //RunCycle
       if (device.mappings.RunCycleCurrentCycle) {
-        devices[d.id].currentRunCycle = {
+        devices[d.id].currentRunCycle = [{
           "currentCycle": await utils.cached2Format(uid, device.mappings.RunCycleCurrentCycle, readings),
           "lang": await utils.cached2Format(uid, device.mappings.RunCycleLang, readings)
-        };
+        }];
         if (device.mappings.RunCycleNextCycle) {
-          devices[d.id].nextCycle = await utils.cached2Format(uid, device.mappings.RunCycleNextCycle, readings);
+          devices[d.id].currentRunCycle[0].nextCycle = await utils.cached2Format(uid, device.mappings.RunCycleNextCycle, readings);
         }
         devices[d.id].currentTotalRemainingTime = await utils.cached2Format(uid, device.mappings.RunCycleCurrentTotalRemainingTime, readings);
         devices[d.id].currentCycleRemainingTime = await utils.cached2Format(uid, device.mappings.RunCycleCurrentCycleRemainingTime, readings);
