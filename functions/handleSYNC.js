@@ -588,6 +588,11 @@ var processSYNC = function (uid, devices) {
           d.traits.push("action.devices.traits.TemperatureControl");
         }
 
+        //RunCycle
+        if (device.mappings.RunCycleCurrentCycle) {
+          d.traits.push("action.devices.traits.RunCycle");
+        }
+
         //CameraStream
         if (device.mappings.CameraStream) {
           d.attributes.cameraStreamSupportedProtocols = device.mappings.CameraStream.supportedProtocols ? device.mappings.CameraStream.supportedProtocols : ['hls', 'dash', 'smooth_stream', 'progressive_mp4'];

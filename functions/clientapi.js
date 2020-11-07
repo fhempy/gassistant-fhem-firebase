@@ -1760,6 +1760,32 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         invert: true
       };
     }
+  } else if (s.Internals.TYPE === 'MieleAtHome') {
+    if (s.Readings.deviceType && s.Readings.deviceType.Value === "Waschmaschine") {
+      if (!service_name) service_name = 'washer';
+      mappings.RunCycleCurrentCycle = {
+        "reading": "programPhase"
+      };
+      mappings.RunCycleLang = {
+        "fixedValue": "de"
+      };
+      mappings.RunCycleCurrentTotalRemainingTime = {
+        "reading": "remainingTime"
+      };
+      mappings.RunCycleCurrentTotalRemainingTime.reading2homekit = function (mapping, orig) {
+        var a = orig.split(":")
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        return seconds;
+      };
+      mappings.RunCycleCurrentCycleRemainingTime = {
+        "reading": "remainingTime"
+      };
+      mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
+        var a = orig.split(":")
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        return seconds;
+      };
+    }
   } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
       if (!service_name) service_name = 'washer';
