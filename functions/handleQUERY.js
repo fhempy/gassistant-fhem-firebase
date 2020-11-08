@@ -153,8 +153,10 @@ async function processQUERY(uid, input, reportstate) {
         if (device.mappings.RunCycleNextCycle) {
           devices[d.id].currentRunCycle[0].nextCycle = await utils.cached2Format(uid, device.mappings.RunCycleNextCycle, readings);
         }
-        devices[d.id].currentTotalRemainingTime = await utils.cached2Format(uid, device.mappings.RunCycleCurrentTotalRemainingTime, readings);
-        devices[d.id].currentCycleRemainingTime = await utils.cached2Format(uid, device.mappings.RunCycleCurrentCycleRemainingTime, readings);
+        if (device.mappings.RunCycleCurrentTotalRemainingTime)
+          devices[d.id].currentTotalRemainingTime = await utils.cached2Format(uid, device.mappings.RunCycleCurrentTotalRemainingTime, readings);
+        if (device.mappings.RunCycleCurrentCycleRemainingTime)
+          devices[d.id].currentCycleRemainingTime = await utils.cached2Format(uid, device.mappings.RunCycleCurrentCycleRemainingTime, readings);
       }
 
       //OnOff
