@@ -121,6 +121,8 @@ var processSYNC = function (uid, devices) {
             d.attributes.commandOnlyOnOff = true;
           if (device.mappings.OccupancyDetected && !device.mappings.OccupancyDetected.reading)
             d.attributes.commandOnlyOnOff = true;
+          if (device.mappings.On && device.mappings.On.queryOnlyOnOff)
+            d.attributes.queryOnlyOnOff = device.mappings.On.queryOnlyOnOff;
         }
 
         //Toggles
