@@ -1761,15 +1761,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
     }
   } else if (s.Internals.TYPE === 'MieleAtHome') {
-    var useRunCycle = false
+    var detected = false
     if (s.Readings.deviceType && s.Readings.deviceType.Value === "Waschmaschine") {
-      useRunCycle = true
+      detected = true
       if (!service_name) service_name = 'washer';
     } else if (s.Readings.deviceType && s.Readings.deviceType.Value === "Trockner") {
-      useRunCycle = true
+      detected = true
       if (!service_name) service_name = 'dryer';
     }
-    if (useRunCycle) {
+    if (detected) {
+      mappings.TemperatureControlAmbientCelsius = {
+        "reading": "temperature"
+      };
+      if (mappings.CurrentTemperature)
+        delete mappings.CurrentTemperature;
+      if (mappings.TargetTemperature)
+        delete mappings.TargetTemperature;
       mappings.RunCycleCurrentCycle = {
         "reading": "programPhase"
       };
