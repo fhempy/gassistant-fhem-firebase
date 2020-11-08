@@ -1770,6 +1770,11 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (!service_name) service_name = 'dryer';
     }
     if (detected) {
+      mappings.On = {
+        "reading": "state",
+        "values": ["/Off/:off", "/Aus/:off", "/.*/:on"],
+        "queryOnlyOnOff": true
+      };
       mappings.TemperatureControlAmbientCelsius = {
         "reading": "temperature"
       };
@@ -1791,14 +1796,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
         return seconds;
       };
-      mappings.RunCycleCurrentCycleRemainingTime = {
-        "reading": "remainingTime"
-      };
-      mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
-        var a = orig.split(":")
-        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
-        return seconds;
-      };
+      // mappings.RunCycleCurrentCycleRemainingTime = {
+      //   "reading": "remainingTime"
+      // };
+      // mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
+      //   var a = orig.split(":")
+      //   var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+      //   return seconds;
+      // };
     }
   } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
