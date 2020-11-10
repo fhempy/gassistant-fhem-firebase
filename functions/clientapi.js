@@ -1783,7 +1783,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       if (mappings.TargetTemperature)
         delete mappings.TargetTemperature;
       mappings.RunCycleCurrentCycle = {
-        "reading": "programPhase"
+        "reading": ["programPhase", "programID", "targetTemperature"]
+      };
+      mappings.RunCycleCurrentCycle.reading2homekit = function (mapping, readings) {
+        return readings['programID'] + " " + readings['targetTemperature'] + " Grad " + readings['programPhase'];
       };
       mappings.RunCycleLang = {
         "fixedValue": "de"
@@ -1796,14 +1799,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
         return seconds;
       };
-      // mappings.RunCycleCurrentCycleRemainingTime = {
-      //   "reading": "remainingTime"
-      // };
-      // mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
-      //   var a = orig.split(":")
-      //   var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
-      //   return seconds;
-      // };
+      mappings.RunCycleCurrentCycleRemainingTime = {
+        "reading": "remainingTime"
+      };
+      mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
+        var a = orig.split(":")
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        return seconds;
+      };
     }
   } else if (s.Internals.TYPE === 'HomeConnect') {
     if (s.Internals.type === 'Washer') {
