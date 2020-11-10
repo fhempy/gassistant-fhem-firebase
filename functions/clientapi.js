@@ -2217,12 +2217,17 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'state',
         values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
-    }
-    if (s.Internals.modelid === "SPZB0001") {
+    } else if (s.Internals.modelid === "SPZB0001") {
       if (!service_name) service_name = 'thermostat';
       mappings.TargetTemperature = {
         reading: 'heatsetpoint',
         cmd: 'heatsetpoint'
+      };
+    }
+    if (s.Readings.reachable) {
+      mappings.Errors.deviceOffline = {
+        reading: 'reachable',
+        valueError: '0'
       };
     }
   } else if (s.Internals.TYPE === 'EnOcean') {
