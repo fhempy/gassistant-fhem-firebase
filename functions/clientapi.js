@@ -2232,6 +2232,12 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'state',
         values: ['/^closed/:CLOSED', '/.*/:OPEN']
       };
+    } else if (s.Attributes.subType === 'windowHandle') {
+      if (!service_name) service_name = 'window';
+      mappings.OpenClose = {
+        reading: 'state',
+        values: ['/^closed/:CLOSED', '/.*/:OPEN']
+      };
     }
   } else if (s.Internals.TYPE === 'STV') {
     mappings.On = {
