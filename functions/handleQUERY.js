@@ -507,7 +507,7 @@ async function processQUERY(uid, input, reportstate) {
       }
 
       //action.devices.traits.ColorSetting
-      if (device.mappings.RGB) {
+      if (device.mappings.RGB && device.mappings.RGB.reading) {
         devices[d.id].color = {};
         const rgb = await utils.cached2Format(uid, device.mappings.RGB, readings);
         if (device.mappings.ColorMode) {
