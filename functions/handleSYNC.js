@@ -139,8 +139,8 @@ var processSYNC = function (uid, devices) {
 
         //HumiditySetting
         if (device.mappings.CurrentRelativeHumidity || device.mappings.TargetRelativeHumidity) {
-          if (!device.mappings.TargetTemperature && device.mappings.TargetRelativeHumidity) {
-            d.traits.push("action.devices.traits.HumiditySetting");
+          d.traits.push("action.devices.traits.HumiditySetting");
+          if (device.mappings.TargetRelativeHumidity) {
             //default values
             var minHumidity = 0;
             var maxHumidity = 100;
@@ -157,12 +157,12 @@ var processSYNC = function (uid, devices) {
                 maxPercent: maxHumidity
               };
             }
-            if (!device.mappings.TargetRelativeHumidity) {
-              d.attributes.queryOnlyHumiditySetting = true;
-            }
-            if (!device.mappings.CurrentRelativeHumidity) {
-              d.attributes.commandOnlyHumiditySetting = true;
-            }
+          }
+          if (!device.mappings.TargetRelativeHumidity) {
+            d.attributes.queryOnlyHumiditySetting = true;
+          }
+          if (!device.mappings.CurrentRelativeHumidity) {
+            d.attributes.commandOnlyHumiditySetting = true;
           }
         }
 
