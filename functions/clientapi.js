@@ -950,7 +950,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     s.PossibleSets.match(/(^| )off\b/)) {
     mappings.On = {
       reading: 'state',
-      valueOff: '/off|A0|000000/',
+      valueOff: '/off|OFF|A0|000000/',
       cmdOn: 'on',
       cmdOff: 'off'
     };
@@ -962,7 +962,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     s.PossibleSets.match(/(^| )OFF\b/)) {
     mappings.On = {
       reading: 'state',
-      valueOff: '/OFF/off/',
+      valueOff: '/OFF|off/',
       cmdOn: 'ON',
       cmdOff: 'OFF'
     };
