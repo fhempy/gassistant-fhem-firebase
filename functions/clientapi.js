@@ -1763,13 +1763,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
   } else if (s.Internals.TYPE === 'MieleAtHome') {
     var detected = false
     if (s.Readings.deviceType && s.Readings.deviceType.Value === "Waschmaschine") {
-      detected = true
       if (!service_name) service_name = 'washer';
-    } else if (s.Readings.deviceType && s.Readings.deviceType.Value === "Trockner") {
-      detected = true
-      if (!service_name) service_name = 'dryer';
-    }
-    if (detected) {
       mappings.On = {
         "reading": "state",
         "values": ["/Off/:off", "/Aus/:off", "/.*/:on"],
@@ -1787,6 +1781,35 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.RunCycleCurrentCycle.reading2homekit = function (mapping, readings) {
         return readings['programID'] + " " + readings['targetTemperature'] + " Grad " + readings['programPhase'];
+      };
+      mappings.RunCycleLang = {
+        "fixedValue": "de"
+      };
+      mappings.RunCycleCurrentTotalRemainingTime = {
+        "reading": "remainingTime"
+      };
+      mappings.RunCycleCurrentTotalRemainingTime.reading2homekit = function (mapping, orig) {
+        var a = orig.split(":")
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        return seconds;
+      };
+      mappings.RunCycleCurrentCycleRemainingTime = {
+        "reading": "remainingTime"
+      };
+      mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
+        var a = orig.split(":")
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        return seconds;
+      };
+    } else if (s.Readings.deviceType && s.Readings.deviceType.Value === "Trockner") {
+      if (!service_name) service_name = 'dryer';
+      mappings.On = {
+        "reading": "state",
+        "values": ["/Off/:off", "/Aus/:off", "/.*/:on"],
+        "queryOnlyOnOff": true
+      };
+      mappings.RunCycleCurrentCycle = {
+        "reading": "dryingStep"
       };
       mappings.RunCycleLang = {
         "fixedValue": "de"
