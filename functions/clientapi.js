@@ -2772,6 +2772,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     if (characteristic_type === 'LinkedDevices')
       continue;
 
+    if (characteristic_type === 'GoogleMapping') {
+      for (var trait in mappingChar) {
+        if (mappingChar[trait].states) {
+          for (var statemapping in mappingChar[trait].states) {
+            prepare(uid, trait, s, device, mappingChar[trait].states[statemapping], usedDeviceReadings);
+          }
+        }
+        if (mappingChar[trait].commands) {
+          for (var cmdmapping in mappingChar[trait].commands) {
+            prepare(uid, trait, s, device, mappingChar[trait].commands[cmdmapping], usedDeviceReadings);
+          }
+        }
+      }
+      continue;
+    }
+
     if (characteristic_type === 'Exceptions' || characteristic_type === 'Errors') {
       for (var exception_type in mappingChar) {
         prepare(uid, characteristic_type, s, device, mappingChar[exception_type], usedDeviceReadings);
