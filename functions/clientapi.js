@@ -1206,6 +1206,44 @@ async function generateTraits(uid, device, usedDeviceReadings) {
           onlyLinkedInfo: false
         };
       }
+    } else if (s.Internals.PYTHONTYPE === "nespresso_ble") {
+      if (!service_name) service_name = 'coffee_maker';
+      mappings.CookCurrentCookingMode = {
+        "fixedValue": "BREW"
+      };
+      mappings.CookCurrentFoodPreset = {
+        "fixedValue": "Kaffee"
+      };
+      mappings.CookCurrentFoodQuantity = {
+        "fixedValue": 1
+      };
+      mappings.CookCurrentFoodUnit = {
+        "fixedValue": "NO_UNITS"
+      };
+      mappings.SimpleCook = {
+        "supportedCookingModes": ["BREW"],
+        "foodPresets": [{
+          "food_preset_name": ["ristretto"],
+          "supported_units": ["NO_UNITS"]
+        },{
+          "food_preset_name": ["espresso"],
+          "supported_units": ["NO_UNITS"]
+        },{
+          "food_preset_name": ["lungo", "kaffee"],
+          "supported_units": ["NO_UNITS"]
+        },{
+          "food_preset_name": ["americano"],
+          "supported_units": ["NO_UNITS"]
+        },{
+          "food_preset_name": ["hotwater", "tee"],
+          "supported_units": ["NO_UNITS"]
+        }],
+        "params": {
+          "foodPreset": {
+            "cmds": ["ristretto:brew ristretto medium","espresso:brew espresso medium","lungo:brew lungo medium","americano:brew americano medium","hotwater:brew hotwater high"]
+          }
+        }
+      }
     }
   } else if (s.Internals.TYPE === "KLF200Node") {
     if (!service_name) service_name = 'blinds';
@@ -2437,6 +2475,23 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         reading: 'pct',
         cmd: 'pct'
       };
+    } else if (s.Attributes.model === "shelly2.5") {
+      if (s.Attributes.mode === "roller") {
+        if (!service_name) service_name = "blinds";
+        mappings.OpenClose = {
+          reading: 'pct',
+          values: ['0:CLOSED', '/.*/:OPEN'],
+          cmdOpen: 'open',
+          cmdClose: 'closed'
+        };
+        mappings.CurrentPosition = {
+          reading: 'pct'
+        };
+        mappings.TargetPosition = {
+          reading: 'pct',
+          cmd: 'pct'
+        };
+      }
     }
     if (containsCommand(uid, s, "x_update")) {
       mappings.SoftwareUpdate = {

@@ -1,0 +1,38 @@
+{
+  "GoogleMapping": {
+    "ArmDisarm": {
+      "attributes": {
+        "availableArmLevels": {}
+      },
+      "states": {
+        "isArmed": {
+          "reading": "armed",
+          "type": "Boolean"
+        },
+        "currentArmLevel": {
+          "reading": "level"
+        },
+        "exitAllowance": {
+          "reading": "allowance",
+          "type": "Integer"
+        }
+      },
+      "commands": {
+        "ArmDisarm": {
+          "params": {
+            "arm": {
+              "cmdOn": "arm",
+              "cmdOff": "disarm"
+              "lastCmd": true
+            },
+            "cancel": {
+              "cmdOn": "cancel {arm}"
+              "lastCmd": true
+            }
+          },
+          "cmd": function(params) { if (params['arm'] && params['cancel']) return "disarm" }
+        }
+      }
+    }
+  }
+}
