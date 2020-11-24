@@ -91,6 +91,17 @@ async function processQUERY(uid, input, reportstate) {
         }
       }
 
+      // GoogleMapping
+      if (device.mappings.GoogleMapping) {
+        for (var trait in device.mappings.GoogleMapping) {
+          if (device.mappings.GoogleMapping[trait].states) {
+            for (var statevar in device.mappings.GoogleMapping[trait].states) {
+              devices[d.id][statevar] = await utils.cached2Format(uid, device.mappings.GoogleMapping[trait].states[statevar], readings);
+            }
+          }
+        }
+      }
+
       // If there is a current or a target temperature, we probably have a thermostat
       if (device.mappings.CurrentTemperature || device.mappings.TargetTemperature) {
         if (device.mappings.TargetTemperature) {

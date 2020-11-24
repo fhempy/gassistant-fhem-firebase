@@ -266,6 +266,32 @@ async function processEXECUTE(uid, reqId, input) {
           }
         }
 
+        // GoogleMapping
+        if (device.mappings.GoogleMapping) {
+          var cmdName = requestedName.substring(requestedName.lastIndexOf(".")+1);
+          for (var trait in device.mappings.GoogleMapping) {
+            if (device.mappings.GoogleMapping[trait].commands && device.mappings.GoogleMapping[trait].commands[cmdName]) {
+              fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.GoogleMapping[trait].commands[cmdName], params));
+
+              res = {
+                ids: [device.uuid_base],
+                status: 'SUCCESS',
+                states: {
+                  online: true
+                }
+              };
+
+              if (device.mappings.GoogleMapping[trait].states) {
+                for (var statevar in device.mappings.GoogleMapping[trait].states) {
+                  res.states[statevar] = await utils.cached2Format(uid, device.mappings.GoogleMapping[trait].states[statevar], readings);
+                }
+              }
+
+              responses.push(res);
+            }
+          }
+        }
+
         switch (requestedName) {
 
           case REQUEST_ON_OFF:

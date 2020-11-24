@@ -114,6 +114,18 @@ var processSYNC = function (uid, devices) {
         }
 
         //TRAITS
+        // GoogleMapping
+        if (device.mappings.GoogleMapping) {
+          for (var trait in device.mappings.GoogleMapping) {
+            d.traits.push("action.devices.traits." + trait);
+            if (device.mappings.GoogleMapping[trait].attributes) {
+              for (var attr in device.mappings.GoogleMapping[trait].attributes) {
+                d.attributes[attr] = device.mappings.GoogleMapping[trait].attributes[attr];
+              }
+            }
+          }
+        }
+
         //OnOff
         if (device.mappings.On || device.mappings.OccupancyDetected) {
           d.traits.push("action.devices.traits.OnOff");
