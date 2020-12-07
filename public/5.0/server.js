@@ -152,16 +152,24 @@ async function registerFirestoreListener() {
     return undefined;
 
   //delete old messages
-  var batch = database.getDB().batch();
-  try {
-    var ref = await database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').get();
-    for (var r of ref.docs) {
-      batch.delete(r.ref);
+  var i = 1;
+  while (i > 0) {
+    i = 0;
+    var batch = database.getDB().batch();
+    try {
+      var ref = await database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').get();
+      for (var r of ref.docs) {
+        i++;
+        batch.delete(r.ref);
+        if (i > 400) {
+          break;
+        }
+      }
+    } catch (err) {
+      log.error('Failed to delete firestore2fhem messages');
     }
-  } catch (err) {
-    log.error('Failed to delete firestore2fhem messages');
+    await batch.commit();
   }
-  await batch.commit();
 
   try {
     database.getDB().collection(database.getUid()).doc('msgs').collection('firestore2fhem').onSnapshot((events) => {

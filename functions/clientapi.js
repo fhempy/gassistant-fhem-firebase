@@ -1100,7 +1100,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       "cool,kühlen": "mode cool",
       "entfeuchten": "mode dehumidify",
       "heizen,wärmen": "mode heat"
-    },{
+    }, {
       reading: "swing",
       name: "Schwenken",
       "horizontal": "swing horizontal",
@@ -1116,8 +1116,8 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         'S3': { 'cmd': 'rate low', value: 'low', 'synonyms': { 'de': ['schwach'] } },
         'S4': { 'cmd': 'rate medium', value: 'medium', 'synonyms': { 'de': ['mittel'] } },
         'S5': { 'cmd': 'rate high', value: 'high', 'synonyms': { 'de': ['stark'] } },
-        'S6': { 'cmd': 'rate highest',value: 'highest', 'synonyms': { 'de': ['sehr stark'] } },
-        'S7': { 'cmd': 'rate auto',value: 'auto', 'synonyms': { 'de': ['auto'] } }
+        'S6': { 'cmd': 'rate highest', value: 'highest', 'synonyms': { 'de': ['sehr stark'] } },
+        'S7': { 'cmd': 'rate auto', value: 'auto', 'synonyms': { 'de': ['auto'] } }
       }, ordered: true, reversible: false
     };
     //powerful:on,off
@@ -1157,7 +1157,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.TargetTemperature.minValue = 4.5;
       mappings.TargetTemperature.maxValue = 30;
       mappings.TargetTemperature.minStep = 0.5;
-      
+
       mappings.OpenClose = {
         reading: 'valvePosition',
         values: ['0:CLOSED', '/.*/:OPEN']
@@ -1165,10 +1165,10 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.CurrentPosition = {
         reading: 'valvePosition'
       };
-  
+
       mappings.ThermostatModes = {
         reading: ['desiredTemperature', 'ecoTemperature', 'mode'],
-        cmds: ['auto:mode automatic', 'off:mode manual;desiredTemperature 4.5', 'heat:mode manual;comfort', 'eco:eco', 'on:comfort'],
+        cmds: ['auto:mode automatic', 'off:desiredTemperature 4.5', 'heat:comfort', 'eco:eco', 'on:comfort'],
         values: ['mode=/auto/:auto', 'desiredTemperature=/^4.5/:off', 'desiredTemperature=/.*/:heat']
       };
       mappings.Toggles = [{
@@ -1225,22 +1225,22 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         "foodPresets": [{
           "food_preset_name": ["ristretto"],
           "supported_units": ["NO_UNITS"]
-        },{
+        }, {
           "food_preset_name": ["espresso"],
           "supported_units": ["NO_UNITS"]
-        },{
+        }, {
           "food_preset_name": ["lungo", "kaffee"],
           "supported_units": ["NO_UNITS"]
-        },{
+        }, {
           "food_preset_name": ["americano"],
           "supported_units": ["NO_UNITS"]
-        },{
+        }, {
           "food_preset_name": ["hotwater", "tee"],
           "supported_units": ["NO_UNITS"]
         }],
         "params": {
           "foodPreset": {
-            "cmds": ["ristretto:brew ristretto medium","espresso:brew espresso medium","lungo:brew lungo medium","americano:brew americano medium","hotwater:brew hotwater high"]
+            "cmds": ["ristretto:brew ristretto medium", "espresso:brew espresso medium", "lungo:brew lungo medium", "americano:brew americano medium", "hotwater:brew hotwater high"]
           }
         }
       }
@@ -1828,7 +1828,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.RunCycleCurrentTotalRemainingTime.reading2homekit = function (mapping, orig) {
         var a = orig.split(":")
-        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60;
         return seconds;
       };
       mappings.RunCycleCurrentCycleRemainingTime = {
@@ -1836,7 +1836,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
         var a = orig.split(":")
-        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60;
         return seconds;
       };
     } else if (s.Readings.deviceType && s.Readings.deviceType.Value === "Trockner") {
@@ -1857,7 +1857,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.RunCycleCurrentTotalRemainingTime.reading2homekit = function (mapping, orig) {
         var a = orig.split(":")
-        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60;
         return seconds;
       };
       mappings.RunCycleCurrentCycleRemainingTime = {
@@ -1865,7 +1865,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
       mappings.RunCycleCurrentCycleRemainingTime.reading2homekit = function (mapping, orig) {
         var a = orig.split(":")
-        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60; 
+        var seconds = (+a[0]) * 60 * 60 + (+a[1]) * 60;
         return seconds;
       };
     }
@@ -1966,7 +1966,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         part: 0
       };
     } else if (s.Readings.modelId && (s.Readings.modelId.Value === "008a-0004-0101" ||
-               s.Readings.modelId.Value === "0109-2001-0106")) {
+      s.Readings.modelId.Value === "0109-2001-0106")) {
       if (!service_name) service_name = 'window';
       mappings.OpenClose = {
         reading: 'basicSet',
@@ -2031,7 +2031,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       mappings.CurrentTemperature = {
         reading: '1.ACTUAL_TEMPERATURE'
       };
-      
+
       mappings.OpenClose = {
         reading: '1.VALVE_STATE',
         values: ['0:CLOSED', '/.*/:OPEN']
@@ -2108,7 +2108,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
         }
       }];
     } else if (s.Internals.ccutype === "HM-Sec-SCo" || s.Internals.ccutype === "HMIP-SWDO"
-              || s.Internals.ccutype === "HM-Sec-RHS") {
+      || s.Internals.ccutype === "HM-Sec-RHS") {
       if (!service_name) service_name = 'window';
       mappings.OpenClose = {
         reading: 'state',
@@ -2647,7 +2647,7 @@ async function generateTraits(uid, device, usedDeviceReadings) {
     mappings.Channel.availableChannels = [];
     mappings.Channel.cmds = [];
     for (var chDef in mappings.SimpleChannel) {
-      var gChDef = { "key": chDef.split(",")[0], "names": chDef.split(",")};
+      var gChDef = { "key": chDef.split(",")[0], "names": chDef.split(",") };
       mappings.Channel.availableChannels.push(gChDef);
       mappings.Channel.cmds.push(chDef.split(",")[0] + ":" + mappings.SimpleChannel[chDef]);
     }
