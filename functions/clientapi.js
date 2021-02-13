@@ -1985,12 +1985,14 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       };
     }
   } else if (s.Internals.TYPE === "HMCCUDEV") {
-    if (s.Internals.ccutype === "HmIP-BWTH") {
+    if (s.Internals.ccutype === "HmIP-BWTH" || s.Internals.ccutype === "HmIP-WTH-2") {
       if (!service_name) service_name = 'thermostat';
-      mappings.OpenClose = {
-        reading: '10.STATE',
-        values: ['0:CLOSED', '1:OPEN']
-      };
+      if (s.Internals.ccutype === "HmIP-BWTH") {
+        mappings.OpenClose = {
+          reading: '10.STATE',
+          values: ['0:CLOSED', '1:OPEN']
+        };
+      }
       mappings.TargetTemperature = {
         reading: '1.SET_POINT_TEMPERATURE',
         cmd: 'datapoint 1.SET_POINT_TEMPERATURE',
