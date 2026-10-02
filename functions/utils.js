@@ -1,7 +1,8 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions");
-const jwt = require('express-jwt');
-const fetch = require('node-fetch');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getDatabase } = require('firebase-admin/database');
+const functions = require("firebase-functions/v1");
+const { expressjwt } = require('express-jwt');
 const jwks = require('jwks-rsa');
 const jsonwt = require('jsonwebtoken');
 const uidlog = require('./logger').uidlog;
@@ -12,14 +13,11 @@ var allDevicesCache = {};
 //var allInformIds = {};
 var googleToken = '';
 
-admin.initializeApp(functions.config().firebase);
-const fssettings = {
-  timestampsInSnapshots: true
-};
-admin.firestore().settings(fssettings);
+// project configuration is provided by the Cloud Functions environment
+admin.initializeApp();
 
-const realdb = admin.database();
-const firestoredb = admin.firestore();
+const realdb = getDatabase();
+const firestoredb = getFirestore();
 
 var ratePerUser = {};
 
@@ -156,7 +154,9 @@ function getFirestoreDB() {
   return firestoredb;
 }
 
-const jwtCheck = jwt({
+const jwtCheck = expressjwt({
+  // keep the decoded token in req.user (default of express-jwt < 7)
+  requestProperty: 'user',
   secret: jwks.expressJwtSecret({
     cache: true,
     rateLimit: true,
@@ -170,7 +170,7 @@ const jwtCheck = jwt({
 
 async function sendCmd2Fhem(uid, fcmds) {
   for (var c in fcmds) {
-    await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
+    await getFirestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
       msg: 'EXECUTE',
       id: 0,
       cmd: fcmds[c],
@@ -180,19 +180,38 @@ async function sendCmd2Fhem(uid, fcmds) {
   }
 }
 
+// Request Sync needs a service account token, API keys are no longer supported by HomeGraph
 async function initSync(uid) {
   uidlog(uid, 'initiate sync');
-  var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync?key=' + settings.HOMEGRAPH_APIKEY, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      "agentUserId": uid,
-      "async": true
-    })
-  });
-  uidlog(uid, 'SYNC initiated');
+  var google_token = await getGoogleToken();
+  if (!google_token)
+    google_token = await retrieveGoogleToken(uid);
+
+  for (var i = 0; i < 2; i++) {
+    var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + google_token,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        "agentUserId": uid,
+        "async": true
+      })
+    });
+
+    if (response.status == 401 && i == 0) {
+      google_token = await retrieveGoogleToken(uid);
+      continue;
+    }
+    if (response.ok) {
+      setGoogleToken(google_token);
+      uidlog(uid, 'SYNC initiated');
+    } else {
+      uiderror(uid, 'Request SYNC failed: ' + response.status + ' ' + await response.text());
+    }
+    break;
+  }
 }
 
 function createDirective(reqId, payload) {
@@ -469,7 +488,8 @@ async function retrieveGoogleToken(uid) {
   const response = await fetch('https://accounts.google.com/o/oauth2/token', options);
   var resJson = await response.json();
 
-  uidlog(uid, 'access_token from Google: ' + await JSON.stringify(resJson));
+  if (!resJson.access_token)
+    uiderror(uid, 'Failed to get access token from Google: ' + JSON.stringify(resJson));
 
   //access token from google
   return await resJson.access_token;

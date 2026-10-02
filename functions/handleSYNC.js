@@ -1,5 +1,4 @@
-const admin = require("firebase-admin");
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const settings = require('./settings.json');
 
@@ -34,7 +33,7 @@ async function createSYNCPayloadResponse(uid, reqId, res) {
   var response = createDirective(reqId, payload);
   response.payload.agentUserId = uid;
   // Based on last comment from Google this is not required any more
-  // await admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
+  // await getFirestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
   //   msg: 'REPORTSTATEALL',
   //   id: reqId,
   //   delay: 40,

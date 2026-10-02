@@ -1,11 +1,11 @@
-const bodyParser = require('body-parser');
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch');
 const merge = require('deepmerge')
 const utils = require('./utils');
-const admin = require("firebase-admin");
-const functions = require("firebase-functions");
+const { getFirestore } = require('firebase-admin/firestore');
+const { getDatabase } = require('firebase-admin/database');
+const { getAuth } = require('firebase-admin/auth');
+const functions = require("firebase-functions/v1");
 const uidlog = require('./logger').uidlog;
 const uidlogfct = require('./logger').uidlogfct;
 const uiderror = require('./logger').uiderror;
@@ -40,7 +40,7 @@ async function generateAttributes(uid, attr) {
       }
     }
   } else {
-    var devicesRef = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
+    var devicesRef = await getFirestore().collection(uid).doc('devices').collection('devices').get();
     for (device of devicesRef.docs) {
       try {
         uidlog(uid, 'start generateTraits for ' + device.data().json.Internals.NAME);
@@ -3450,66 +3450,55 @@ function registerClientApi(app) {
     } = req.user;
     uidlog(uid, 'deleteuseraccount');
 
-    //delete all firestore data
-    var batch = admin.firestore().batch();
+    //delete all firestore data of the user incl. subcollections
     try {
-      var ref = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
-      for (var r of ref.docs) {
-        batch.delete(r.ref);
-      }
+      await getFirestore().recursiveDelete(getFirestore().collection(uid));
     } catch (err) {
-      uiderror(uid, 'Device deletion failed: ' + err);
+      console.error(uid + ': Firestore deletion failed', err);
     }
-    try {
-      var ref = await admin.firestore().collection(uid).doc('devices').collection('attributes').get();
-      for (var r of ref.docs) {
-        batch.delete(r.ref);
-      }
-    } catch (err) {
-      uiderror(uid, 'Attribute deletion failed: ' + err);
-    }
-    try {
-      var ref = await admin.firestore().collection(uid).get();
-      for (var r of ref.docs) {
-        batch.delete(r.ref);
-      }
-    } catch (err) {
-      uiderror(uid, 'Realtime DB deletion failed: ' + err);
-    }
-    batch.commit();
 
     //delete all realtime database data
-    await admin.database().ref('users/' + uid).remove();
+    try {
+      await getDatabase().ref('users/' + uid).remove();
+    } catch (err) {
+      console.error(uid + ': Realtime Database deletion failed', err);
+    }
 
     //delete user in auth0
-    var options = {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        "client_id": settings.AUTH0_MGM_CLIENTID,
-        "client_secret": settings.AUTH0_MGM_CLIENTSECRET,
-        "audience": settings.AUTH0_DOMAIN + "/api/v2/",
-        "grant_type": "client_credentials"
-      })
-    };
-    //get token
-    var token = await fetch(settings.AUTH0_DOMAIN + '/oauth/token', options);
-    var t = await token.json();
+    try {
+      var token = await fetch(settings.AUTH0_DOMAIN + '/oauth/token', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          "client_id": settings.AUTH0_MGM_CLIENTID,
+          "client_secret": settings.AUTH0_MGM_CLIENTSECRET,
+          "audience": settings.AUTH0_DOMAIN + "/api/v2/",
+          "grant_type": "client_credentials"
+        })
+      });
+      var t = await token.json();
 
-    //delete user
-    await fetch(settings.AUTH0_DOMAIN + '/api/v2/users/' + uid, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + t.access_token
-      }
-    });
+      var delRes = await fetch(settings.AUTH0_DOMAIN + '/api/v2/users/' + encodeURIComponent(uid), {
+        method: 'DELETE',
+        headers: {
+          Authorization: 'Bearer ' + t.access_token
+        }
+      });
+      if (!delRes.ok)
+        console.error(uid + ': Auth0 user deletion failed: ' + delRes.status + ' ' + await delRes.text());
+    } catch (err) {
+      console.error(uid + ': Auth0 user deletion failed', err);
+    }
 
     //delete Firebase user
-    var firebase = require('firebase');
-    var user = firebase.auth().currentUser;
-    await user.delete();
+    try {
+      await getAuth().deleteUser(uid);
+    } catch (err) {
+      if (err.code !== 'auth/user-not-found')
+        console.error(uid + ': Firebase user deletion failed', err);
+    }
 
     res.send({});
   });

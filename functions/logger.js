@@ -1,4 +1,4 @@
-const admin = require("firebase-admin");
+const { getFirestore } = require('firebase-admin/firestore');
 
 function uidlog(uid, msg) {
   console.log(uid + ': ' + msg);
@@ -9,10 +9,12 @@ function uidlogfct(uid, msg) {
 }
 
 function uiderror(uid, msg, err) {
-  admin.firestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
+  getFirestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
     'msg': 'LOG_ERROR',
     log: msg.toString(),
     ts: Date.now()
+  }).catch(function (err) {
+    console.error(uid + ': failed to send LOG_ERROR to client', err);
   });
 
   var errMsg = uid + ": " + msg;

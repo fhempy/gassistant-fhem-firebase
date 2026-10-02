@@ -1,12 +1,12 @@
-const admin = require("firebase-admin");
-const functions = require("firebase-functions");
+const { getFirestore } = require('firebase-admin/firestore');
+const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 
 const uidlog = require('./logger').uidlog;
 
 
 async function setDisconnected(uid) {
-  await admin.firestore().collection(uid).doc('state').set({
+  await getFirestore().collection(uid).doc('state').set({
     disconnected: 1
   }, {
     merge: true
@@ -24,15 +24,15 @@ async function handleDISCONNECT(uid, reqId, res) {
 async function deleteUserCollection(uid) {
   var batch = database.db.batch();
   //generate traits in firestore
-  var ref = await admin.firestore().collection(uid).doc('devices').collection('devices').get();
+  var ref = await getFirestore().collection(uid).doc('devices').collection('devices').get();
   for (var r of ref.docs) {
     batch.delete(r.ref);
   }
-  ref = await admin.firestore().collection(uid).doc('devices').collection('attributes').get();
+  ref = await getFirestore().collection(uid).doc('devices').collection('attributes').get();
   for (var r of ref.docs) {
     batch.delete(r.ref);
   }
-  ref = await admin.firestore().collection(uid).doc('devices').collection('informids').get();
+  ref = await getFirestore().collection(uid).doc('devices').collection('informids').get();
   for (var r of ref.docs) {
     batch.delete(r.ref);
   }
@@ -48,7 +48,6 @@ async function deleteHomegraph(uid) {
   uidlog(uid, 'google token: ' + google_token);
 
   //report state
-  const fetch = require('node-fetch');
   for (var i = 0; i < 2; i++) {
     var options = {
       method: 'DELETE',

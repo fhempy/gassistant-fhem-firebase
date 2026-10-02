@@ -1,8 +1,8 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const settings = require('./settings.json');
-var compareVersions = require('compare-versions');
+const { compareVersions } = require('compare-versions');
 
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
