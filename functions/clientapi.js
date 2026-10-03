@@ -2191,15 +2191,21 @@ async function generateTraits(uid, device, usedDeviceReadings) {
       }
       if (s.PossibleSets.match(/(^| )color\b/)) {
         mappings.RGB = {
-          reading: 'color',
           cmd: 'color'
-        };
-        mappings.RGB.reading2homekit = function (mapping, orig) {
-          return parseInt('0x' + orig);
         };
         mappings.RGB.homekit2reading = function (mapping, orig) {
           return ("000000" + orig.toString(16)).substr(-6);
         };
+        if (s.Readings.color && /^#?[0-9a-fA-F]{6}$/.test(s.Readings.color.Value)) {
+          // hex color reading, e.g. ff0000 or #ff0000
+          mappings.RGB.reading = 'color';
+          mappings.RGB.reading2homekit = function (mapping, orig) {
+            return parseInt(orig.replace('#', ''), 16);
+          };
+        } else {
+          // e.g. zigbee2mqtt reports color_x/color_y, color can only be set
+          mappings.RGB.commandOnlyColorSetting = true;
+        }
       }
       if (mappings.Brightness) {
         if (!service_name) service_name = 'light';
