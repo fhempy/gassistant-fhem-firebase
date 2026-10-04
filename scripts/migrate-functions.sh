@@ -2,8 +2,12 @@
 #
 # Interaktive Umstellung der FHEM Connect Cloud Functions:
 #   1. Deploy auf Node 22 (weiterhin 1st gen)
-#   2. Upgrade jeder Function auf Cloud Run functions (2nd gen) mit "gcloud functions upgrade"
-#   3. Code jeder Function auf 2nd gen umstellen (functions/generations.json) und mit Firebase deployen
+#   2. Optional: jede Function auf Cloud Run functions (2nd gen) umstellen, von Firebase verwaltet
+#      (functions/generations.json). Firebase kann 1st gen meist nicht direkt umstellen, die
+#      Function wird dann gelöscht und neu angelegt (einige Minuten Ausfall, URL bleibt gleich).
+#
+# Hinweis: "gcloud functions upgrade --commit" macht aus der Function einen reinen Cloud Run Dienst,
+# den Firebase nicht verwalten kann. Das Skript erkennt das und legt die Function neu an.
 #
 # Jeder Schritt wird vorher abgefragt, danach wird gefragt, ob der Test erfolgreich war.
 # Der Fortschritt wird gespeichert, das Skript kann jederzeit abgebrochen und neu gestartet werden.
@@ -180,15 +184,6 @@ firebase_cli() {
     firebase "$@"
   else
     npx -y firebase-tools@latest "$@"
-  fi
-}
-
-gcloud_upgrade() {
-  local name="$1"; shift
-  if gcloud functions upgrade --help >/dev/null 2>&1; then
-    run gcloud functions upgrade "$name" --region="$(region_of "$name")" --project="$PROJECT" "$@"
-  else
-    run gcloud beta functions upgrade "$name" --region="$(region_of "$name")" --project="$PROJECT" "$@"
   fi
 }
 
@@ -480,98 +475,114 @@ step_deploy_node22() {
   fi
 }
 
-copy_urls() {
-  gcloud functions describe "$1" --region="$(region_of "$1")" --project="$PROJECT" --format=json 2>/dev/null \
-    | grep -o 'https://[A-Za-z0-9.-]*run\.app' | sort -u
+# Wie existiert die Function aktuell?
+#   gen1     1st gen Cloud Function
+#   gen2     2nd gen Cloud Function (von Firebase verwaltet)
+#   run      nur Cloud Run Dienst (z.B. nach "gcloud functions upgrade --commit"), Firebase kennt ihn nicht
+#   missing  nicht vorhanden
+function_state() {
+  local name="$1" region env
+  region="$(region_of "$name")"
+  env="$(gcloud functions describe "$name" --region="$region" --project="$PROJECT" --format='value(environment)' 2>/dev/null)"
+  case "$env" in
+    GEN_2) echo gen2; return ;;
+    GEN_1) echo gen1; return ;;
+  esac
+  if gcloud functions describe "$name" --region="$region" --project="$PROJECT" >/dev/null 2>&1; then
+    echo gen1
+  elif gcloud run services describe "$name" --region="$region" --project="$PROJECT" >/dev/null 2>&1; then
+    echo run
+  else
+    echo missing
+  fi
+}
+
+# vorhandene Function/Cloud Run Dienst löschen, damit Firebase sie als 2nd gen neu anlegen kann
+delete_for_recreate() {
+  local name="$1" state="$2" region
+  region="$(region_of "$name")"
+  warn "Ab jetzt ist $name nicht erreichbar, bis die neue Function angelegt ist (meist 2-5 Minuten)."
+  ask_yn "$name ($state) jetzt löschen und als 2nd gen neu anlegen?" n || return 1
+  case "$state" in
+    gen1) run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --quiet ;;
+    run) run gcloud run services delete "$name" --region="$region" --project="$PROJECT" --quiet ;;
+  esac
 }
 
 step_enable_apis() {
   begin_step enable_apis "Google-APIs für Cloud Run functions aktivieren (Cloud Run, Cloud Build, Artifact Registry, Eventarc)" || return 0
   while true; do
     run gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-      cloudfunctions.googleapis.com eventarc.googleapis.com --project="$PROJECT" && break
+      cloudfunctions.googleapis.com eventarc.googleapis.com pubsub.googleapis.com storage.googleapis.com \
+      --project="$PROJECT" && break
     on_failure "APIs konnten nicht aktiviert werden." || return 0
   done
   mark_done enable_apis
 }
 
-step_upgrade_function() {
-  local name="$1" region; region="$(region_of "$name")"
+step_gen2_function() {
+  local name="$1" region state
+  region="$(region_of "$name")"
+  begin_step "gen2_$name" "$name ($region): auf 2nd gen (Cloud Run functions) umstellen, von Firebase verwaltet" || return 0
 
-  # 1. 2nd gen Kopie anlegen
-  if begin_step "upgrade_setup_$name" "$name ($region): 2nd gen Kopie anlegen (gcloud functions upgrade --setup-config)"; then
-    while true; do
-      gcloud_upgrade "$name" --setup-config && break
-      on_failure "Anlegen der 2nd gen Kopie fehlgeschlagen." || return 1
-    done
-    local urls url
-    urls="$(copy_urls "$name")"
-    if [ -n "$urls" ]; then
-      info "URL der 2nd gen Kopie:"; echo "$urls" | sed 's/^/   /'
-      for url in $urls; do smoke_test "$name" "$url"; done
-    fi
-    if confirm_test "Die Produktion läuft noch auf 1st gen. Optional die 2nd gen Kopie über die run.app-URL prüfen
-(der Kurztest oben hat das bereits ohne Anmeldung getan)."; then
-      mark_done "upgrade_setup_$name"
-    else
-      warn "Die 2nd gen Kopie hat keinen Einfluss auf die Produktion. Bitte Ursache prüfen."
-      return 1
-    fi
+  state="$(function_state "$name")"
+  info "Aktueller Zustand von $name: $state"
+  if [ "$state" = "gen2" ] && [ "$(node -p "require('$REPO_DIR/functions/generations.json').functions['$name']")" = "2" ]; then
+    ok "$name ist bereits eine 2nd gen Function"
   fi
 
-  # 2. Traffic umleiten
-  if begin_step "upgrade_redirect_$name" "$name ($region): Produktion auf 2nd gen umleiten (--redirect-traffic)"; then
-    while true; do
-      gcloud_upgrade "$name" --redirect-traffic && break
-      on_failure "Umleiten fehlgeschlagen." || return 1
-    done
-    smoke_test "$name"
-    if confirm_test "$(manual_test_text "$name")"; then
-      mark_done "upgrade_redirect_$name"
-    else
-      if ask_yn "Traffic zurück auf 1st gen leiten (--rollback-traffic)?" j; then
-        gcloud_upgrade "$name" --rollback-traffic && smoke_test "$name"
+  set_generation "$name" 2 || { err "functions/generations.json konnte nicht geändert werden."; return 1; }
+  info "functions/generations.json: $name = 2"
+
+  if [ "$state" = "gen1" ]; then
+    info "Zuerst wird versucht, $name direkt umzustellen. Lehnt Firebase das ab, muss die 1st gen Function gelöscht werden."
+  fi
+  if [ "$state" = "run" ]; then
+    warn "$name ist ein Cloud Run Dienst, den Firebase nicht verwalten kann (gcloud functions upgrade)."
+    delete_for_recreate "$name" run || { set_generation "$name" 1; return 1; }
+  fi
+
+  while true; do
+    if deploy_functions "functions:$name"; then
+      break
+    fi
+    state="$(function_state "$name")"
+    if [ "$state" = "gen1" ] || [ "$state" = "run" ]; then
+      warn "Firebase kann $name nicht direkt umstellen ($state vorhanden)."
+      if delete_for_recreate "$name" "$state"; then
+        continue
       fi
+      set_generation "$name" 1
       return 1
     fi
+    on_failure "Firebase-Deploy von $name fehlgeschlagen." || { set_generation "$name" 1; return 1; }
+  done
+
+  smoke_test "$name"
+  if confirm_test "$(manual_test_text "$name")"; then
+    mark_done "gen2_$name"
+    return 0
   fi
 
-  # 3. Upgrade abschließen
-  if begin_step "upgrade_commit_$name" "$name ($region): Upgrade abschließen, 1st gen Version endgültig löschen (--commit)"; then
-    warn "Danach ist kein Zurück auf 1st gen mehr möglich."
-    ask_yn "Wirklich abschließen?" n || return 1
-    while true; do
-      gcloud_upgrade "$name" --commit && break
-      on_failure "Abschließen fehlgeschlagen." || return 1
-    done
-    smoke_test "$name"
-    mark_done "upgrade_commit_$name"
+  err "Bitte die Logs prüfen: firebase functions:log --only $name --project $PROJECT"
+  if ask_yn "$name wieder als 1st gen anlegen (erneut einige Minuten Ausfall)?" n; then
+    set_generation "$name" 1
+    run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --quiet --gen2
+    deploy_functions "functions:$name" && smoke_test "$name"
   fi
-
-  # 4. Code auf 2nd gen umstellen und mit Firebase deployen
-  if begin_step "code_gen2_$name" "$name ($region): Code auf 2nd gen umstellen (generations.json) und mit Firebase deployen"; then
-    set_generation "$name" 2 || { err "functions/generations.json konnte nicht geändert werden."; return 1; }
-    info "functions/generations.json: $name = 2"
-    while true; do
-      deploy_functions "functions:$name" && break
-      on_failure "Firebase-Deploy von $name fehlgeschlagen." || return 1
-    done
-    smoke_test "$name"
-    if confirm_test "$(manual_test_text "$name")"; then
-      mark_done "code_gen2_$name"
-    else
-      err "Bitte die Logs prüfen: firebase functions:log --only $name --project $PROJECT"
-      return 1
-    fi
-  fi
-  return 0
+  return 1
 }
 
-step_upgrade_all() {
+step_gen2_all() {
+  echo
+  info "Umstellung auf 2nd gen: Firebase kann eine 1st gen Function meist nicht direkt umstellen,"
+  info "sie wird dann gelöscht und neu angelegt (einige Minuten Ausfall pro Function, URL bleibt gleich)."
+  info "Am besten zu einer Zeit, in der FHEM Connect wenig genutzt wird. 1st gen wird weiterhin unterstützt,"
+  info "die Umstellung kann also auch jederzeit übersprungen werden."
   local name
   for name in "${FUNCTIONS[@]}"; do
-    if ! step_upgrade_function "$name"; then
-      warn "Upgrade von $name nicht abgeschlossen."
+    if ! step_gen2_function "$name"; then
+      warn "Umstellung von $name nicht abgeschlossen."
       ask_yn "Mit der nächsten Function weitermachen?" n || { echo "Beim nächsten Start geht es hier weiter."; exit 1; }
     fi
   done
@@ -632,7 +643,7 @@ main() {
   step_install
   step_deploy_node22
   step_enable_apis
-  step_upgrade_all
+  step_gen2_all
   step_concurrency
   step_finish
 }

@@ -35,3 +35,23 @@ test('generation is selected per function', function () {
     config.functions = saved.functions;
   }
 });
+
+test('routes work with and without the function name in the path', async function () {
+  const http = require('http');
+  const app = express();
+  app.get('/start', (req, res) => res.send('code ' + req.query.code));
+  app.get('/', (req, res) => res.send('root'));
+  const server = http.createServer(https.stripFunctionName('codelanding', app));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = 'http://127.0.0.1:' + server.address().port;
+  try {
+    for (const path of ['/start?code=a', '/codelanding/start?code=a'])
+      assert.strictEqual(await (await fetch(base + path)).text(), 'code a', path);
+    for (const path of ['/', '/codelanding', '/codelanding?x=1'])
+      assert.strictEqual(await (await fetch(base + path)).text(), 'root', path);
+    // other paths starting with the name are not changed
+    assert.strictEqual((await fetch(base + '/codelandingx/start')).status, 404);
+  } finally {
+    server.close();
+  }
+});

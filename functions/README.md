@@ -36,10 +36,17 @@ clients don't change:
 ## Upgrade to Cloud Run functions (2nd gen)
 
 `functions/generations.json` selects the generation of each function (`1` or `2`) and the
-number of concurrent requests per instance for 2nd gen functions. The upgrade itself is done
-with `gcloud functions upgrade`, which keeps the cloudfunctions.net URLs.
+number of concurrent requests per instance for 2nd gen functions. 2nd gen functions keep
+their name, region and cloudfunctions.net URL. The routes accept paths with and without the
+function name (`/codelanding/start` and `/start`), as Cloud Run receives the full path.
+
+Firebase usually can't change an existing 1st gen function to 2nd gen, the function has to be
+deleted and is created again by `firebase deploy` (a few minutes downtime per function).
+
+Don't use `gcloud functions upgrade`: after `--commit` the function is a plain Cloud Run
+service, which the Firebase CLI can't manage (`firebase deploy` fails with HTTP 409).
 
 `scripts/migrate-functions.sh` guides through the whole process step by step (logins, backup,
-Node 22 deployment, upgrade of each function, switching the code to 2nd gen). Every step is
-confirmed before it runs and tested afterwards; the progress is saved, so the script can be
-restarted at any time.
+Node 22 deployment, switching each function to 2nd gen, also repairing functions upgraded with
+gcloud). Every step is confirmed before it runs and tested afterwards; the progress is saved,
+so the script can be restarted at any time.
