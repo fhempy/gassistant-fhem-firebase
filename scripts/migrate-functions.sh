@@ -449,9 +449,12 @@ step_install() {
   mark_done install
 }
 
+DEPLOY_LOG="$WORKDIR/.last-deploy.log"
+
 deploy_functions() {
-  # $1 = --only Argument
-  (cd "$REPO_DIR" && run firebase_cli deploy --only "$1" --project "$PROJECT")
+  # $1 = --only Argument, die Ausgabe wird zusätzlich in $DEPLOY_LOG gespeichert
+  (cd "$REPO_DIR" && run firebase_cli deploy --only "$1" --project "$PROJECT") 2>&1 | tee "$DEPLOY_LOG"
+  return "${PIPESTATUS[0]}"
 }
 
 step_deploy_node22() {
@@ -477,15 +480,20 @@ step_deploy_node22() {
 
 # Wie existiert die Function aktuell?
 #   gen1     1st gen Cloud Function
-#   gen2     2nd gen Cloud Function (von Firebase verwaltet)
-#   run      nur Cloud Run Dienst (z.B. nach "gcloud functions upgrade --commit"), Firebase kennt ihn nicht
+#   gen2     2nd gen Cloud Function, von Firebase verwaltet (Label deployment-tool=cli-firebase)
+#   foreign  2nd gen Function ohne Firebase-Label (z.B. nach "gcloud functions upgrade --commit"),
+#            Firebase sieht sie nicht und scheitert beim Anlegen mit HTTP 409
+#   run      nur Cloud Run Dienst, Firebase kennt ihn nicht
 #   missing  nicht vorhanden
 function_state() {
-  local name="$1" region env
+  local name="$1" region env tool
   region="$(region_of "$name")"
   env="$(gcloud functions describe "$name" --region="$region" --project="$PROJECT" --format='value(environment)' 2>/dev/null)"
   case "$env" in
-    GEN_2) echo gen2; return ;;
+    GEN_2)
+      tool="$(gcloud functions describe "$name" --region="$region" --project="$PROJECT" --format='value(labels.deployment-tool)' 2>/dev/null)"
+      if [ "$tool" = "cli-firebase" ]; then echo gen2; else echo foreign; fi
+      return ;;
     GEN_1) echo gen1; return ;;
   esac
   if gcloud functions describe "$name" --region="$region" --project="$PROJECT" >/dev/null 2>&1; then
@@ -505,8 +513,12 @@ delete_for_recreate() {
   ask_yn "$name ($state) jetzt löschen und als 2nd gen neu anlegen?" n || return 1
   case "$state" in
     gen1) run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --quiet ;;
-    run) run gcloud run services delete "$name" --region="$region" --project="$PROJECT" --quiet ;;
+    foreign) run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --gen2 --quiet ;;
   esac
+  # ein übrig gebliebener Cloud Run Dienst gleichen Namens verhindert das Anlegen (HTTP 409)
+  if gcloud run services describe "$name" --region="$region" --project="$PROJECT" >/dev/null 2>&1; then
+    run gcloud run services delete "$name" --region="$region" --project="$PROJECT" --quiet
+  fi
 }
 
 step_enable_apis() {
@@ -537,9 +549,9 @@ step_gen2_function() {
   if [ "$state" = "gen1" ]; then
     info "Zuerst wird versucht, $name direkt umzustellen. Lehnt Firebase das ab, muss die 1st gen Function gelöscht werden."
   fi
-  if [ "$state" = "run" ]; then
-    warn "$name ist ein Cloud Run Dienst, den Firebase nicht verwalten kann (gcloud functions upgrade)."
-    delete_for_recreate "$name" run || { set_generation "$name" 1; return 1; }
+  if [ "$state" = "run" ] || [ "$state" = "foreign" ]; then
+    warn "$name wurde nicht von Firebase angelegt (gcloud functions upgrade), Firebase kann es nicht verwalten."
+    delete_for_recreate "$name" "$state" || { set_generation "$name" 1; return 1; }
   fi
 
   while true; do
@@ -547,7 +559,11 @@ step_gen2_function() {
       break
     fi
     state="$(function_state "$name")"
-    if [ "$state" = "gen1" ] || [ "$state" = "run" ]; then
+    # HTTP 409: ein Cloud Run Dienst gleichen Namens existiert, den Firebase nicht als eigene Function erkennt
+    if [ "$state" = "gen2" ] && grep -q "HTTP Error: 409" "$DEPLOY_LOG" 2>/dev/null; then
+      state="foreign"
+    fi
+    if [ "$state" = "gen1" ] || [ "$state" = "run" ] || [ "$state" = "foreign" ]; then
       warn "Firebase kann $name nicht direkt umstellen ($state vorhanden)."
       if delete_for_recreate "$name" "$state"; then
         continue
