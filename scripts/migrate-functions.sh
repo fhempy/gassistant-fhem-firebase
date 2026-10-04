@@ -330,6 +330,22 @@ step_clone() {
     on_failure "Repository konnte nicht geholt werden." || return 0
   done
   ok "Code liegt in $REPO_DIR ($(git -C "$REPO_DIR" log --oneline -1))"
+  # firebase.json ist in .gitignore, im frischen Klon fehlt sie daher
+  if [ ! -f "$REPO_DIR/firebase.json" ]; then
+    cat > "$REPO_DIR/firebase.json" <<'JSON'
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22",
+    "ignore": ["node_modules", ".git", "test", "*.log"]
+  }
+}
+JSON
+    ok "firebase.json angelegt (nur Functions, Node 22)"
+  elif grep -q '"runtime"' "$REPO_DIR/firebase.json" && ! grep -q '"nodejs22"' "$REPO_DIR/firebase.json"; then
+    warn "firebase.json setzt eine andere Runtime als nodejs22:"
+    grep '"runtime"' "$REPO_DIR/firebase.json"
+  fi
   mark_done clone
 }
 
