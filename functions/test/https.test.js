@@ -7,9 +7,13 @@ const express = require('express');
 const config = require('../generations.json');
 const https = require('../https');
 
-test('all functions are 1st gen by default', function () {
-  for (const name of ['api', 'reportstate', 'dynamicfunctionsv1', 'codelanding', 'firebase', 'admin'])
-    assert.strictEqual(https.generation(name), 1, name);
+// generations.json changes during the migration, only check that it is valid
+test('generations.json configures all functions', function () {
+  for (const name of ['api', 'reportstate', 'dynamicfunctionsv1', 'codelanding', 'firebase', 'admin']) {
+    assert.ok([1, 2].includes(config.functions[name]), name);
+    assert.strictEqual(https.generation(name), config.functions[name], name);
+  }
+  assert.ok(Number.isInteger(config.concurrency) && config.concurrency >= 1);
 });
 
 test('generation is selected per function', function () {
