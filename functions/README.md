@@ -32,3 +32,14 @@ clients don't change:
 |---|---|
 | api, dynamicfunctionsv1, codelanding, firebase | europe-west1 |
 | reportstate, admin | us-central1 |
+
+## Upgrade to Cloud Run functions (2nd gen)
+
+`functions/generations.json` selects the generation of each function (`1` or `2`) and the
+number of concurrent requests per instance for 2nd gen functions. The upgrade itself is done
+with `gcloud functions upgrade`, which keeps the cloudfunctions.net URLs.
+
+`scripts/migrate-functions.sh` guides through the whole process step by step (logins, backup,
+Node 22 deployment, upgrade of each function, switching the code to 2nd gen). Every step is
+confirmed before it runs and tested afterwards; the progress is saved, so the script can be
+restarted at any time.

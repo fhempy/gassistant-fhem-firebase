@@ -1,6 +1,5 @@
 var cookieParser = require('cookie-parser');
 var flash = require('connect-flash');
-const functions = require("firebase-functions/v1");
 const express = require('express');
 const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
@@ -184,7 +183,7 @@ app.use(function (req, res, next) {
   next(err);
 });
 
-const admin = functions.region('us-central1').https.onRequest(app);
+const admin = require('./https').onRequest('admin', 'us-central1', app);
 
 module.exports = {
   admin

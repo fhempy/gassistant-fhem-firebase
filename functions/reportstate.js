@@ -3,7 +3,6 @@ const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
 const utils = require('./utils');
 const admin = require("firebase-admin");
-const functions = require("firebase-functions/v1");
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
 const hquery = require('./handleQUERY');
@@ -66,7 +65,7 @@ app3.get('/alldevices', async (req, res) => {
 });
 
 
-const reportstate = functions.region('us-central1').https.onRequest(app3);
+const reportstate = require('./https').onRequest('reportstate', 'us-central1', app3);
 
 module.exports = {
   reportstate

@@ -3,7 +3,6 @@ const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
 const utils = require('./utils');
 const admin = require("firebase-admin");
-const functions = require("firebase-functions/v1");
 
 const app3 = express();
 app3.use(cors());
@@ -14,7 +13,7 @@ app3.get('/start', (req, res) => {
   res.send('Your authentication code: ' + req.query.code);
 });
 
-const codelanding = functions.region('europe-west1').https.onRequest(app3);
+const codelanding = require('./https').onRequest('codelanding', 'europe-west1', app3);
 
 module.exports = {
   codelanding

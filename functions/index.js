@@ -1,4 +1,3 @@
-const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
@@ -107,7 +106,7 @@ if (isTarget('api')) {
 
   require('./clientapi').registerClientApi(app);
 
-  const api = functions.region('europe-west1').https.onRequest(app);
+  const api = require('./https').onRequest('api', 'europe-west1', app);
 
   exports["api"] = api;
 } //api/smarthome

@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
 const { getAuth } = require('firebase-admin/auth');
-const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const uidlog = require('./logger.js').uidlog;
 
@@ -30,7 +29,7 @@ app.get('/token', utils.jwtCheck, async (req, res) => {
   }
 });
 
-const firebase = functions.region('europe-west1').https.onRequest(app);
+const firebase = require('./https').onRequest('firebase', 'europe-west1', app);
 
 module.exports = {
   firebase
