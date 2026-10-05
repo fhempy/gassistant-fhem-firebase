@@ -512,7 +512,8 @@ delete_for_recreate() {
   warn "Ab jetzt ist $name nicht erreichbar, bis die neue Function angelegt ist (meist 2-5 Minuten)."
   ask_yn "$name ($state) jetzt löschen und als 2nd gen neu anlegen?" n || return 1
   case "$state" in
-    gen1) run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --quiet ;;
+    gen1) run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --no-gen2 --quiet \
+            || run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --quiet ;;
     foreign) run gcloud functions delete "$name" --region="$region" --project="$PROJECT" --gen2 --quiet ;;
   esac
   # ein übrig gebliebener Cloud Run Dienst gleichen Namens verhindert das Anlegen (HTTP 409)
@@ -559,9 +560,13 @@ step_gen2_function() {
       break
     fi
     state="$(function_state "$name")"
-    # HTTP 409: ein Cloud Run Dienst gleichen Namens existiert, den Firebase nicht als eigene Function erkennt
-    if [ "$state" = "gen2" ] && grep -q "HTTP Error: 409" "$DEPLOY_LOG" 2>/dev/null; then
-      state="foreign"
+    info "Zustand von $name nach dem fehlgeschlagenen Deploy: $state"
+    # die Fehlermeldung von Firebase ist verlässlicher als gcloud describe
+    if grep -q "Upgrading from 1st Gen to 2nd Gen is not yet supported" "$DEPLOY_LOG" 2>/dev/null; then
+      state="gen1"
+    elif grep -q "HTTP Error: 409" "$DEPLOY_LOG" 2>/dev/null; then
+      # ein Cloud Run Dienst gleichen Namens existiert, den Firebase nicht als eigene Function erkennt
+      [ "$state" = "gen1" ] || state="foreign"
     fi
     if [ "$state" = "gen1" ] || [ "$state" = "run" ] || [ "$state" = "foreign" ]; then
       warn "Firebase kann $name nicht direkt umstellen ($state vorhanden)."
