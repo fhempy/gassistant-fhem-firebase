@@ -266,8 +266,9 @@ async function getSyncFeatureLevel(uid) {
 
 function prepareDevice(uid, dev) {
   if (!dev || !dev.mappings) {
-    throw new Error('No mappings identified for ' + dev.name);
+    throw new Error('No mappings identified for ' + (dev ? dev.name : 'unknown device'));
   }
+  let characteristic_type, mappingElement, mapping;
   for (characteristic_type in dev.mappings) {
     let mappingChar = dev.mappings[characteristic_type];
     //mappingChar = Modes array

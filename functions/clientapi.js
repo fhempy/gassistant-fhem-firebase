@@ -16,6 +16,7 @@ const settings = require('./settings.json');
 var deviceRooms = {};
 
 async function generateAttributes(uid, attr) {
+  let device;
   //generate traits
   var usedDeviceReadings = {};
   var devicesJSON = attr.devicesJSON;
@@ -62,6 +63,8 @@ async function generateAttributes(uid, attr) {
 }
 
 async function generateTraits(uid, device, usedDeviceReadings) {
+  // local variables, module-wide variables would be shared between concurrent requests
+  let characteristic_type, mapping;
   var s = device.json;
   var connection = device.connection;
   //uidlog(uid, 'generateTraits: ' + JSON.stringify(s));
@@ -3342,6 +3345,7 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
 
 
 async function generateRoomHint(uid, realDBUpdateJSON) {
+  let d;
   //try to get the real room if no realRoom is defined
   let roomCheck = {};
   //deviceRooms

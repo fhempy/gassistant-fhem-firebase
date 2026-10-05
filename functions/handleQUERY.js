@@ -20,6 +20,8 @@ async function createQUERYPayloadResponse(input, uid, reqId, res) {
 }
 
 async function processQUERY(uid, input, reportstate) {
+  // local variables, module-wide variables would be shared between concurrent requests
+  let d, mode, toggle;
   let response = null;
 
   let devices = {};
