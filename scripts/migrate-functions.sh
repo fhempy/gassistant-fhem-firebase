@@ -513,9 +513,18 @@ copy_urls() {
     | grep -o 'https://[A-Za-z0-9.-]*run\.app' | sort -u
 }
 
+# 1st gen Functions, deren Upgrade noch nicht begonnen hat. Functions mitten im Upgrade dürfen nicht
+# per Firebase deployt werden (das würde nur die 1st gen Version ohne Traffic ändern).
+not_started_functions() {
+  local name
+  for name in $(gen1_functions); do
+    is_done "upgrade_setup_$name" || echo "$name"
+  done
+}
+
 step_deploy_current() {
   local names name only=""
-  names="$(gen1_functions)"
+  names="$(not_started_functions)"
   [ -z "$names" ] && return 0
   begin_step "deploy_current_$(echo $names | tr ' ' '_')" "Aktuellen Code als 1st gen deployen ($(echo $names)), damit das Upgrade ihn übernimmt" || return 0
   info "'gcloud functions upgrade' kopiert den deployten Code. Er muss den Pfad-Fix enthalten,"
@@ -588,13 +597,22 @@ step_upgrade_function() {
   fi
 
   if begin_step "upgrade_commit_$name" "$name ($region): Upgrade abschließen, 1st gen Version löschen (--commit)"; then
-    warn "Danach ist kein Zurück auf 1st gen mehr möglich."
-    ask_yn "Wirklich abschließen?" n || return 1
+    warn "Danach ist kein Zurück auf 1st gen mehr möglich. Das Abschließen kann auch später erfolgen,"
+    warn "dazu das Skript erneut starten. Bis dahin ist ein Rollback jederzeit möglich."
+    if ! ask_yn "Jetzt abschließen?" n; then
+      postpone_commit "$name"
+      return 0
+    fi
     while true; do
       gcloud_upgrade "$name" --commit && break
       on_failure "Abschließen fehlgeschlagen." || return 1
     done
     mark_done "upgrade_commit_$name"
+  fi
+
+  if ! is_done "upgrade_commit_$name"; then
+    postpone_commit "$name"
+    return 0
   fi
 
   if begin_step "upgrade_run_$name" "$name ($region): als Cloud Run Function eintragen (generations.json = \"run\") und prüfen"; then
@@ -609,6 +627,14 @@ step_upgrade_function() {
     fi
   fi
   return 0
+}
+
+postpone_commit() {
+  local name="$1" region; region="$(region_of "$name")"
+  info "$name: Abschluss verschoben. Die 2nd gen Kopie bekommt den Traffic, die 1st gen Version bleibt als Rückfallebene."
+  info "  Rollback:   gcloud functions upgrade $name --region=$region --project=$PROJECT --rollback-traffic"
+  info "  Abschließen: Skript erneut starten (oder --commit), danach wird $name als \"run\" eingetragen."
+  warn "Bis zum Abschluss $name nicht mit firebase deploy / scripts/deploy.sh deployen."
 }
 
 step_upgrade_all() {
