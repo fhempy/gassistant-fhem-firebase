@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const createDirective = require('./utils.js').createDirective;
 
@@ -20,6 +20,8 @@ async function createQUERYPayloadResponse(input, uid, reqId, res) {
 }
 
 async function processQUERY(uid, input, reportstate) {
+  // local variables, module-wide variables would be shared between concurrent requests
+  let d, mode, toggle;
   let response = null;
 
   let devices = {};
@@ -205,7 +207,7 @@ async function processQUERY(uid, input, reportstate) {
         if (device.mappings.CurrentRelativeHumidity) {
           devices[d.id].humidityAmbientPercent = await utils.cached2Format(uid, device.mappings.CurrentRelativeHumidity, readings);
         }
-        devices.status = "SUCCESS";
+        devices[d.id].status = "SUCCESS";
       }
 
       //Dispense

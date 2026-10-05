@@ -1,8 +1,8 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const settings = require('./settings.json');
-var compareVersions = require('compare-versions');
+const { compareVersions } = require('compare-versions');
 
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
@@ -35,6 +35,8 @@ async function handleEXECUTE(uid, reqId, res, input) {
 module.exports.handleEXECUTE = handleEXECUTE;
 
 async function processEXECUTE(uid, reqId, input) {
+  // local variables, module-wide variables would be shared between concurrent requests
+  let cmd, exec, d, params, res, response;
 
   // trait commands => https://developers.google.com/actions/smarthome/traits/
   const REQUEST_SET_BRIGHTNESSABSOLUTE = "action.devices.commands.BrightnessAbsolute";
@@ -944,6 +946,7 @@ async function processEXECUTESetInput(uid, reqId, device, readings, params, fhem
 module.exports.processEXECUTESetInput = processEXECUTESetInput;
 
 async function processEXECUTESelectChannel(uid, reqId, device, readings, params, fhemExecCmd) {
+  let res;
   if (params.channelCode) {
     fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.Channel, params.channelCode, params));
   } else {
@@ -968,6 +971,7 @@ async function processEXECUTESelectChannel(uid, reqId, device, readings, params,
 module.exports.processEXECUTESelectChannel = processEXECUTESelectChannel;
 
 async function processEXECUTERelativeChannel(uid, reqId, device, readings, params, fhemExecCmd) {
+  let res;
   fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.ChannelRelativeChannel, params.relativeChannelChange, params));
 
   res = {
@@ -981,6 +985,7 @@ async function processEXECUTERelativeChannel(uid, reqId, device, readings, param
 module.exports.processEXECUTERelativeChannel = processEXECUTERelativeChannel;
 
 async function processEXECUTEReturnChannel(uid, reqId, device, readings, params, fhemExecCmd) {
+  let res;
   fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, device.mappings.ChannelRelativeChannel));
 
   res = {
@@ -1239,6 +1244,7 @@ async function processEXECUTESetColorAbsolute(uid, reqId, device, color, fhemExe
 module.exports.processEXECUTESetColorAbsolute = processEXECUTESetColorAbsolute;
 
 async function processEXECUTESetToggles(uid, reqId, device, toggleSettings, fhemExecCmd) {
+  let toggle, mappingToggle;
   let retArr = [];
 
   for (toggle of Object.keys(toggleSettings)) {
@@ -1265,7 +1271,7 @@ async function processEXECUTESetToggles(uid, reqId, device, toggleSettings, fhem
 module.exports.processEXECUTESetToggles = processEXECUTESetToggles;
 
 async function processEXECUTEActivateScene(uid, reqId, device, scenename, deactivate, fhemExecCmd) {
-  for (s of device.mappings.Scene) {
+  for (const s of device.mappings.Scene) {
     if (s.scenename == scenename) {
       fhemExecCmd.push(...await generateFHEMCommands(uid, reqId, device, s, deactivate ? 0 : 1));
     }
@@ -1329,6 +1335,7 @@ async function processEXECUTERotationAbsolute(uid, reqId, device, readings, even
 module.exports.processEXECUTERotationAbsolute = processEXECUTERotationAbsolute;
 
 async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
+  let mode, mappingMode;
   let retArr = [];
   for (mode of Object.keys(event.params.updateModeSettings)) {
     let value = event.params.updateModeSettings[mode];
@@ -1353,17 +1360,17 @@ async function processEXECUTESetModes(uid, reqId, device, event, fhemExecCmd) {
 } //processEXECUTESetModes
 module.exports.processEXECUTESetModes = processEXECUTESetModes;
 
-async function paramValues2FHEM(uid, mapping, params) {
+async function paramValues2FHEM(uid, mapping, params, device) {
   for (var key in params) {
     if (mapping.params && mapping.params[key])
-      params[key] = await value2FHEM(uid, mapping.params[key], params[key]);
+      params[key] = await value2FHEM(uid, mapping.params[key], params[key], device);
     else
-      params[key] = await value2FHEM(uid, mapping, params[key]);
+      params[key] = await value2FHEM(uid, mapping, params[key], device);
   }
 }
 module.exports.paramValues2FHEM = paramValues2FHEM;
 
-async function value2FHEM(uid, mapping, value) {
+async function value2FHEM(uid, mapping, value, device) {
   var c = mapping;
   if (typeof mapping === 'object') {
     c = mapping.cmd;
@@ -1436,9 +1443,9 @@ module.exports.value2FHEM = value2FHEM;
 async function generateFHEMCommands(uid, reqId, device, mapping, mainparam, params, traitCommand) {
   // convert values to FHEM
   if (params)
-    await paramValues2FHEM(uid, mapping, params);
+    await paramValues2FHEM(uid, mapping, params, device);
   if (mainparam)
-    mainparam = await value2FHEM(uid, mapping, mainparam);
+    mainparam = await value2FHEM(uid, mapping, mainparam, device);
   else
     mainparam = "";
 

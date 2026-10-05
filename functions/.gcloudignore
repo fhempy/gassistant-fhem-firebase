@@ -1,0 +1,5 @@
+# upload for "gcloud run deploy --source functions" (scripts/deploy.sh)
+.gcloudignore
+node_modules/
+test/
+*.log

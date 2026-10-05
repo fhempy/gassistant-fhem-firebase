@@ -1,0 +1,11 @@
+{
+  "concurrency": 1,
+  "functions": {
+    "api": "run",
+    "reportstate": "run",
+    "dynamicfunctionsv1": "run",
+    "codelanding": 2,
+    "firebase": "run",
+    "admin": "run"
+  }
+}

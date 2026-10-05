@@ -1,10 +1,17 @@
-const functions = require("firebase-functions");
 const utils = require('./utils');
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
 const settings = require('./settings.json');
 
 var clientConnectionOk = {};
+
+// Name of the function served by this instance. Only the required modules are loaded,
+// during deployment (no target set) all functions are exported.
+const FUNCTION_TARGET = process.env.FUNCTION_TARGET || process.env.K_SERVICE;
+
+function isTarget(name) {
+  return !FUNCTION_TARGET || FUNCTION_TARGET === name;
+}
 
 async function checkClientConnection(uid) {
   var connectionOk = 0;
@@ -25,17 +32,14 @@ async function checkClientConnection(uid) {
   return connectionOk;
 }
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
-  const bodyParser = require('body-parser');
+if (isTarget('api')) {
   const express = require('express');
   const cors = require('cors');
 
   const app = express();
   app.use(cors());
-  app.use(bodyParser.json());
-  app.use(bodyParser.urlencoded({
-    extended: true
-  }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(utils.jwtCheck);
   app.use(function (req, res, next) {
     const {
@@ -57,6 +61,10 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
     //TODO check client version support and send UPDATE_CLIENT message if on version mismatch
 
     //handler SYNC, EXECUTE, QUERY
+    if (!req.body || !Array.isArray(req.body.inputs) || !req.body.inputs[0]) {
+      res.status(400).send({ error: 'invalid request' });
+      return;
+    }
     var intent = req.body.inputs[0].intent;
     var input = req.body.inputs[0];
     if (intent == 'action.devices.SYNC') {
@@ -70,7 +78,7 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
         await query.handleQUERY(uid, reqId, res, input);
       } else {
         //report client not connected
-        error = require('./handleERROR');
+        const error = require('./handleERROR');
         await error.handleERROR(uid, reqId, res, input, {
           clientnotconnected: 1
         });
@@ -82,7 +90,7 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
         await execute.handleEXECUTE(uid, reqId, res, input);
       } else {
         //report client not connected
-        error = require('./handleERROR');
+        const error = require('./handleERROR');
         await error.handleERROR(uid, reqId, res, input, {
           clientnotconnected: 1
         });
@@ -91,32 +99,34 @@ if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'api') {
       //DISCONNECT
       const disconnect = require('./handleDISCONNECT');
       await disconnect.handleDISCONNECT(uid, reqId, res);
+    } else {
+      res.status(400).send({ error: 'unsupported intent' });
     }
   });
 
   require('./clientapi').registerClientApi(app);
 
-  const api = functions.region('europe-west1').https.onRequest(app);
+  const api = require('./https').onRequest('api', 'europe-west1', app);
 
   exports["api"] = api;
 } //api/smarthome
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'reportstate') {
+if (isTarget('reportstate')) {
   exports["reportstate"] = require('./reportstate').reportstate;
 }
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'dynamicfunctionsv1') {
+if (isTarget('dynamicfunctionsv1')) {
   exports["dynamicfunctionsv1"] = require('./clientfunctions').clientfunctions;
 }
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'codelanding') {
+if (isTarget('codelanding')) {
   exports["codelanding"] = require('./codelanding').codelanding;
 } //codelanding/start
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'firebase') {
+if (isTarget('firebase')) {
   exports["firebase"] = require('./firebase_token').firebase;
 } //firebase/token
 
-if (!process.env.FUNCTION_NAME || process.env.FUNCTION_NAME === 'admin') {
+if (isTarget('admin')) {
   exports["admin"] = require('./admin').admin;
 } //admin/

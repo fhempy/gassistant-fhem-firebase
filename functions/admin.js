@@ -1,7 +1,5 @@
-const bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var flash = require('connect-flash');
-const functions = require("firebase-functions");
 const express = require('express');
 const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
@@ -13,14 +11,14 @@ var authRouter = require('./adminauth');
 
 //session handling
 var session = require('express-session');
-const FirebaseStore = require('connect-session-firebase')(session);
-const firebase = require('firebase-admin');
+const { RealtimeDatabaseStore } = require('./sessionstore');
+const { getDatabase } = require('firebase-admin/database');
 var passport = require('passport');
 var Auth0Strategy = require('passport-auth0');
 
 var sess = {
-  store: new FirebaseStore({
-    database: firebase.database()
+  store: new RealtimeDatabaseStore({
+    database: getDatabase()
   }),
   name: '__session',
   secret: settings.COOKIE_SECRET,
@@ -60,8 +58,7 @@ const app = express();
 //app.use(utils.jwtCheck);
 //app.use(cors());
 app.use(cookieParser());
-//app.use(bodyParser.json());
-//app.use(bodyParser.urlencoded({extended: true}));
+//app.use(express.json({ limit: '10mb' }));
 
 app.use(session(sess));
 app.use(passport.initialize());
@@ -100,7 +97,7 @@ var secured = function () {
   };
 };
 
-app.get('deleteinactive', secured(), async (req, res) => {
+app.get('/deleteinactive', secured(), async (req, res) => {
   const {
     id: uid
   } = req.user;
@@ -136,6 +133,9 @@ app.get('deleteinactive', secured(), async (req, res) => {
       }
       result = result + "<br>";
     }
+    res.send(result);
+  } else {
+    res.sendStatus(401);
   }
 });
 
@@ -183,7 +183,7 @@ app.use(function (req, res, next) {
   next(err);
 });
 
-const admin = functions.region('us-central1').https.onRequest(app);
+const admin = require('./https').onRequest('admin', 'us-central1', app);
 
 module.exports = {
   admin
