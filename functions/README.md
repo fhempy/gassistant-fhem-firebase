@@ -35,18 +35,26 @@ clients don't change:
 
 ## Upgrade to Cloud Run functions (2nd gen)
 
-`functions/generations.json` selects the generation of each function (`1` or `2`) and the
-number of concurrent requests per instance for 2nd gen functions. 2nd gen functions keep
-their name, region and cloudfunctions.net URL. The routes accept paths with and without the
-function name (`/codelanding/start` and `/start`), as Cloud Run receives the full path.
+`functions/generations.json` configures how each function is deployed:
 
-Firebase usually can't change an existing 1st gen function to 2nd gen, the function has to be
-deleted and is created again by `firebase deploy` (a few minutes downtime per function).
+| Value | Meaning | Deployed with |
+|---|---|---|
+| `1` | 1st gen Cloud Function | `firebase deploy` |
+| `2` | 2nd gen, created by Firebase | `firebase deploy` |
+| `"run"` | upgraded with `gcloud functions upgrade` (Cloud Run service) | `gcloud run deploy` |
 
-Don't use `gcloud functions upgrade`: after `--commit` the function is a plain Cloud Run
-service, which the Firebase CLI can't manage (`firebase deploy` fails with HTTP 409).
+`gcloud functions upgrade` switches a function without downtime: a 2nd gen copy is created and
+can be tested, traffic is redirected (rollback possible) and only then the 1st gen version is
+deleted. The URLs don't change. Afterwards the function is a Cloud Run service which the
+Firebase CLI can't manage, so it is exported as plain HTTP handler (not deployed by
+`firebase deploy`) and deployed with `gcloud run deploy --function <name>`.
 
-`scripts/migrate-functions.sh` guides through the whole process step by step (logins, backup,
-Node 22 deployment, switching each function to 2nd gen, also repairing functions upgraded with
-gcloud). Every step is confirmed before it runs and tested afterwards; the progress is saved,
-so the script can be restarted at any time.
+Before upgrading, the current code has to be deployed as 1st gen: the upgrade copies the
+deployed code, and only the current code accepts the full path that Cloud Run receives
+(`/api/...` instead of `/...`).
+
+- `scripts/migrate-functions.sh` guides through the migration step by step (logins, backup,
+  Node 22 deployment, upgrade of each function). Every step is confirmed before it runs and
+  tested afterwards; the progress is saved, so the script can be restarted at any time.
+- `scripts/deploy.sh [function ...]` deploys the functions afterwards (firebase deploy for
+  `1`/`2`, gcloud run deploy for `"run"`).

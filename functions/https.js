@@ -1,10 +1,21 @@
-// Creates the HTTP functions as 1st gen (Cloud Functions) or 2nd gen (Cloud Run functions).
-// The generation of each function is configured in generations.json, so the functions can be
-// switched one after another (see scripts/migrate-functions.sh).
+// Creates the HTTP functions. How each function is deployed is configured in generations.json:
+//   1      1st gen Cloud Function, deployed with "firebase deploy"
+//   2      2nd gen Cloud Function (Cloud Run functions), deployed with "firebase deploy"
+//   "run"  upgraded with "gcloud functions upgrade": a Cloud Run service which Firebase can't
+//          manage. It is exported as plain HTTP handler (invisible for "firebase deploy") and
+//          deployed with "gcloud run deploy --function <name>" (scripts/deploy.sh).
 const config = require('./generations.json');
 
 function generation(name) {
-  return (config.functions && config.functions[name]) === 2 ? 2 : 1;
+  const gen = config.functions && config.functions[name];
+  if (gen === 2 || gen === 'run')
+    return gen;
+  return 1;
+}
+
+// names of the functions deployed with gcloud run deploy
+function cloudRunFunctions() {
+  return Object.keys(config.functions || {}).filter((name) => generation(name) === 'run');
 }
 
 // 1st gen cloudfunctions.net URLs remove the function name from the path
@@ -23,7 +34,12 @@ function stripFunctionName(name, app) {
 
 function onRequest(name, region, app) {
   const handler = stripFunctionName(name, app);
-  if (generation(name) === 2) {
+  const gen = generation(name);
+  if (gen === 'run') {
+    // plain handler for the Functions Framework, without Firebase metadata
+    return handler;
+  }
+  if (gen === 2) {
     const { onRequest } = require('firebase-functions/v2/https');
     const concurrency = config.concurrency || 1;
     return onRequest({
@@ -41,5 +57,6 @@ function onRequest(name, region, app) {
 module.exports = {
   onRequest,
   generation,
+  cloudRunFunctions,
   stripFunctionName
 };

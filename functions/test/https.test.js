@@ -10,7 +10,7 @@ const https = require('../https');
 // generations.json changes during the migration, only check that it is valid
 test('generations.json configures all functions', function () {
   for (const name of ['api', 'reportstate', 'dynamicfunctionsv1', 'codelanding', 'firebase', 'admin']) {
-    assert.ok([1, 2].includes(config.functions[name]), name);
+    assert.ok([1, 2, 'run'].includes(config.functions[name]), name);
     assert.strictEqual(https.generation(name), config.functions[name], name);
   }
   assert.ok(Number.isInteger(config.concurrency) && config.concurrency >= 1);
@@ -19,6 +19,9 @@ test('generations.json configures all functions', function () {
 test('generation is selected per function', function () {
   const saved = JSON.parse(JSON.stringify(config));
   try {
+    // independent of the current generations.json
+    config.concurrency = 1;
+    config.functions = { api: 1, reportstate: 1, dynamicfunctionsv1: 1, codelanding: 1, firebase: 1, admin: 1 };
     config.functions.codelanding = 2;
     const gen2 = https.onRequest('codelanding', 'europe-west1', express());
     assert.strictEqual(gen2.__endpoint.platform, 'gcfv2');
@@ -57,5 +60,31 @@ test('routes work with and without the function name in the path', async functio
     assert.strictEqual((await fetch(base + '/codelandingx/start')).status, 404);
   } finally {
     server.close();
+  }
+});
+
+test('"run" functions are plain handlers, invisible for firebase deploy', async function () {
+  const saved = JSON.parse(JSON.stringify(config));
+  try {
+    config.functions = { api: 1, reportstate: 1, dynamicfunctionsv1: 1, codelanding: 1, firebase: 1, admin: 1 };
+    config.functions.api = 'run';
+    const app = express();
+    app.get('/getfeaturelevel', (req, res) => res.send('ok'));
+    const handler = https.onRequest('api', 'europe-west1', app);
+    assert.strictEqual(handler.__endpoint, undefined);
+    assert.deepStrictEqual(https.cloudRunFunctions(), ['api']);
+
+    const http = require('http');
+    const server = http.createServer(handler);
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    try {
+      const base = 'http://127.0.0.1:' + server.address().port;
+      assert.strictEqual(await (await fetch(base + '/api/getfeaturelevel')).text(), 'ok');
+      assert.strictEqual(await (await fetch(base + '/getfeaturelevel')).text(), 'ok');
+    } finally {
+      server.close();
+    }
+  } finally {
+    config.functions = saved.functions;
   }
 });

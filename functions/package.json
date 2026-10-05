@@ -11,6 +11,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google-cloud/functions-framework": "^5.0.5",
     "compare-versions": "^6.1.1",
     "connect-flash": "^0.1.1",
     "cookie-parser": "^1.4.7",
