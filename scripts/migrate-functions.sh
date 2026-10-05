@@ -682,6 +682,25 @@ step_finish() {
 
 # ---------------------------------------------------------------------------
 
+# gcloud/Firebase CLI müssen bei jedem Start gefunden werden, nicht nur im Schritt "Voraussetzungen"
+ensure_tools() {
+  local dir
+  if ! command -v gcloud >/dev/null 2>&1; then
+    for dir in "$HOME/google-cloud-sdk/bin" "/usr/lib/google-cloud-sdk/bin" "/opt/google-cloud-sdk/bin" "/snap/bin"; do
+      if [ -x "$dir/gcloud" ]; then
+        export PATH="$dir:$PATH"
+        info "gcloud gefunden in $dir (für spätere Shells: source \$HOME/google-cloud-sdk/path.bash.inc)"
+        break
+      fi
+    done
+  fi
+  if ! command -v gcloud >/dev/null 2>&1 && is_done prerequisites; then
+    err "gcloud wurde nicht gefunden (PATH: $PATH)."
+    err "Bitte gcloud in den PATH aufnehmen (z.B. 'source \$HOME/google-cloud-sdk/path.bash.inc') und das Skript neu starten."
+    exit 1
+  fi
+}
+
 main() {
   mkdir -p "$WORKDIR"
   [ -f "$WORKDIR/.migration-project" ] && . "$WORKDIR/.migration-project"
@@ -691,6 +710,7 @@ main() {
   echo "  Arbeitsordner:  $WORKDIR"
   [ -f "$STATE_FILE" ] && echo "  Fortschritt:    $(wc -l < "$STATE_FILE") Schritte erledigt"
 
+  ensure_tools
   step_prerequisites
   step_login
   step_clone
