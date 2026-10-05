@@ -496,35 +496,102 @@ async function retrieveGoogleToken(uid) {
   return await resJson.access_token;
 }
 
-async function reportStateWithData(uid, data) {
-  //TODO check if token is already older than one hour and renew it if so
+// QUERY responses contain fields which are not valid states for HomeGraph Report State
+const QUERY_ONLY_FIELDS = ['status', 'errorCode', 'debugString', 'currentStatusReport'];
+
+// remove undefined, null and NaN values and empty objects (invalid for HomeGraph)
+function cleanStateValue(v) {
+  if (v === null || v === undefined)
+    return undefined;
+  if (typeof v === 'number')
+    return Number.isFinite(v) ? v : undefined;
+  if (Array.isArray(v))
+    return v.map(cleanStateValue).filter((x) => x !== undefined);
+  if (typeof v === 'object') {
+    const o = {};
+    for (const k of Object.keys(v)) {
+      const c = cleanStateValue(v[k]);
+      if (c !== undefined)
+        o[k] = c;
+    }
+    return Object.keys(o).length ? o : undefined;
+  }
+  return v;
+}
+
+// Prepare a QUERY result for reportStateAndNotification. Returns undefined if nothing is left to report.
+function sanitizeReportState(uid, data) {
+  const states = data && data.payload && data.payload.devices && data.payload.devices.states;
+  if (!states || typeof states !== 'object')
+    return undefined;
+  const clean = {};
+  for (const id of Object.keys(states)) {
+    const s = states[id];
+    if (!s || typeof s !== 'object' || Array.isArray(s)) {
+      uidlog(uid, 'reportState: ignoring invalid state for ' + id + ': ' + JSON.stringify(s));
+      continue;
+    }
+    // device could not be queried, nothing to report
+    if (s.status === 'ERROR' || s.errorCode)
+      continue;
+    const copy = Object.assign({}, s);
+    for (const f of QUERY_ONLY_FIELDS)
+      delete copy[f];
+    const c = cleanStateValue(copy);
+    if (c)
+      clean[id] = c;
+  }
+  if (Object.keys(clean).length === 0)
+    return undefined;
+  return Object.assign({}, data, {
+    payload: Object.assign({}, data.payload, {
+      devices: Object.assign({}, data.payload.devices, { states: clean })
+    })
+  });
+}
+
+// send to HomeGraph, the error message of HomeGraph is logged
+async function postReportState(uid, data) {
   var google_token = await getGoogleToken();
   if (!google_token)
     google_token = await retrieveGoogleToken(uid);
 
-  //report state
   for (var i = 0; i < 2; i++) {
-    var options = {
+    const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + google_token,
-        'X-GFE-SSL': 'yes',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
-    };
-    uidlog(uid, 'reportState fetch');
-    const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', options);
-    uidlog(uid, 'reportState response: ' + await reportStateRes.status);
+    });
+    uidlog(uid, 'reportState response: ' + reportStateRes.status);
 
-    if (reportStateRes.status == 401) {
+    if (reportStateRes.status == 401 && i == 0) {
       google_token = await retrieveGoogleToken(uid);
-    } else {
-      //save the token to database
-      setGoogleToken(google_token);
-      break;
+      continue;
     }
+    if (reportStateRes.ok) {
+      setGoogleToken(google_token);
+    } else {
+      const text = await reportStateRes.text();
+      console.error(uid + ': reportState failed with ' + reportStateRes.status + ': ' + text.substring(0, 2000) +
+        '\nrequest: ' + JSON.stringify(data).substring(0, 2000));
+    }
+    return reportStateRes.status;
   }
+}
+
+async function reportStateWithData(uid, data) {
+  // only report for the authenticated user, never for an agentUserId sent by the client
+  if (data && typeof data === 'object')
+    data.agentUserId = uid;
+  const payload = sanitizeReportState(uid, data);
+  if (!payload) {
+    uidlog(uid, 'reportState: nothing to report');
+    return;
+  }
+  return await postReportState(uid, payload);
 }
 
 
@@ -572,34 +639,12 @@ async function reportState(uid, device) {
   };
   dev.payload.devices.states = deviceQueryRes.devices;
 
-  //TODO check if token is already older than one hour and renew it if so
-  var google_token = await getGoogleToken();
-  if (!google_token)
-    google_token = await retrieveGoogleToken(uid);
-
-  //report state
-  for (var i = 0; i < 2; i++) {
-    var options = {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + google_token,
-        'X-GFE-SSL': 'yes',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(dev)
-    };
-    uidlog(uid, 'reportState fetch');
-    const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', options);
-    uidlog(uid, 'reportState response: ' + await reportStateRes.status);
-
-    if (reportStateRes.status == 401) {
-      google_token = await retrieveGoogleToken(uid);
-    } else {
-      //save the token to database
-      setGoogleToken(google_token);
-      break;
-    }
+  const payload = sanitizeReportState(uid, dev);
+  if (!payload) {
+    uidlog(uid, 'reportState: nothing to report');
+    return;
   }
+  return await postReportState(uid, payload);
 }
 
 function FHEM_reading2homekit_(uid, mapping, readings) {
@@ -1009,6 +1054,7 @@ async function cached2Format(uid, mapping, readings) {
 }
 
 module.exports = {
+  sanitizeReportState,
   cached2Format,
   checkExceptions,
   checkLinkedDevices,

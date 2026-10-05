@@ -207,7 +207,7 @@ async function processQUERY(uid, input, reportstate) {
         if (device.mappings.CurrentRelativeHumidity) {
           devices[d.id].humidityAmbientPercent = await utils.cached2Format(uid, device.mappings.CurrentRelativeHumidity, readings);
         }
-        devices.status = "SUCCESS";
+        devices[d.id].status = "SUCCESS";
       }
 
       //Dispense
