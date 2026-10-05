@@ -497,7 +497,11 @@ gen1_functions() {
   local name gen
   for name in "${FUNCTIONS[@]}"; do
     gen="$(get_generation "$name")"
-    if [ "$gen" = "run" ] || is_done "upgrade_run_$name"; then
+    if is_done "upgrade_run_$name"; then
+      continue
+    fi
+    # "run" ohne begonnenes Upgrade im Skript: bereits außerhalb des Skripts umgestellt
+    if [ "$gen" = "run" ] && ! is_done "upgrade_setup_$name"; then
       continue
     fi
     # per Firebase als 2nd gen angelegt (z.B. codelanding)
@@ -522,14 +526,15 @@ not_started_functions() {
   done
 }
 
-# Functions mitten im Upgrade (Kopie angelegt, noch nicht abgeschlossen) existieren noch als 1st gen.
-# Firebase prüft beim Deploy alle Functions im Code, auch die nicht deployten. Stehen sie in
-# generations.json auf 2, bricht der Deploy ab ("Cannot set CPU ... because they are GCF gen 1").
+# Sobald das Upgrade einer Function begonnen hat, darf Firebase sie nicht mehr sehen: Firebase prüft
+# beim Deploy alle Functions im Code und übernimmt Einstellungen der bestehenden (2nd gen Kopie),
+# das bricht den Deploy der anderen Functions ab ("Cannot set CPU ... because they are GCF gen 1").
+# Mit "run" wird sie nur noch als einfacher HTTP-Handler exportiert und von Firebase ignoriert.
 fix_upgrading_generations() {
   local name
   for name in "${FUNCTIONS[@]}"; do
-    if is_done "upgrade_setup_$name" && ! is_done "upgrade_commit_$name" && [ "$(get_generation "$name")" != "1" ]; then
-      set_generation "$name" 1 && info "functions/generations.json: $name = 1 (Upgrade läuft noch, 1st gen existiert)"
+    if is_done "upgrade_setup_$name" && [ "$(get_generation "$name")" != "run" ]; then
+      set_generation "$name" run && info "functions/generations.json: $name = run (Upgrade begonnen, von Firebase ausgeblendet)"
     fi
   done
 }
@@ -578,6 +583,7 @@ step_upgrade_function() {
       gcloud_upgrade "$name" --setup-config && break
       on_failure "Anlegen der 2nd gen Kopie fehlgeschlagen." || return 1
     done
+    set_generation "$name" run && info "functions/generations.json: $name = run (von Firebase ausgeblendet)"
     local urls url
     urls="$(copy_urls "$name")"
     if [ -n "$urls" ]; then
