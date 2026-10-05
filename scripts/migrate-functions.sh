@@ -522,8 +522,21 @@ not_started_functions() {
   done
 }
 
+# Functions mitten im Upgrade (Kopie angelegt, noch nicht abgeschlossen) existieren noch als 1st gen.
+# Firebase prüft beim Deploy alle Functions im Code, auch die nicht deployten. Stehen sie in
+# generations.json auf 2, bricht der Deploy ab ("Cannot set CPU ... because they are GCF gen 1").
+fix_upgrading_generations() {
+  local name
+  for name in "${FUNCTIONS[@]}"; do
+    if is_done "upgrade_setup_$name" && ! is_done "upgrade_commit_$name" && [ "$(get_generation "$name")" != "1" ]; then
+      set_generation "$name" 1 && info "functions/generations.json: $name = 1 (Upgrade läuft noch, 1st gen existiert)"
+    fi
+  done
+}
+
 step_deploy_current() {
   local names name only=""
+  fix_upgrading_generations
   names="$(not_started_functions)"
   [ -z "$names" ] && return 0
   begin_step "deploy_current_$(echo $names | tr ' ' '_')" "Aktuellen Code als 1st gen deployen ($(echo $names)), damit das Upgrade ihn übernimmt" || return 0
@@ -639,6 +652,7 @@ postpone_commit() {
 
 step_upgrade_all() {
   local names name
+  fix_upgrading_generations
   names="$(gen1_functions)"
   [ -z "$names" ] && return 0
   echo
