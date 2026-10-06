@@ -14,6 +14,32 @@ const settings = require('./settings.json');
 
 var deviceRooms = {};
 
+// Report state timing for readings without a special handling, executed in the client
+// (sent as source code, must not use anything outside the function).
+// A change is reported after 1s. A reading which changed again within 10s (e.g. every second)
+// is only reported again once it did not change for 10s. The time of the last change is kept on the
+// returned timer, as the client only keeps the timer between the calls.
+function reportStateCompareFunction(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
+  var STABLE_DELAY = 1000;
+  var FLAPPING_DELAY = 10000;
+  if (oldValue === newValue)
+    return cancelOldTimeout;
+  var now = Date.now();
+  var lastChange = cancelOldTimeout && cancelOldTimeout.lastChange;
+  var flapping = !!lastChange && (lastChange + FLAPPING_DELAY) > now;
+  // a pending 1s report is kept, it may also report another reading of the device (see below)
+  if (cancelOldTimeout && (!flapping || cancelOldTimeout.flapping))
+    clearTimeout(cancelOldTimeout);
+  // a pending report of another reading of this device is replaced, the new one contains all states.
+  // Not for a flapping reading, otherwise it would delay the report of the other reading.
+  if (!flapping && cancelOldDevTimeout && (oldDevTimestamp + 900) > now && cancelOldDevTimeout !== cancelOldTimeout)
+    clearTimeout(cancelOldDevTimeout);
+  var timer = setTimeout(reportStateFunction.bind(null, device), flapping ? FLAPPING_DELAY : STABLE_DELAY);
+  timer.lastChange = now;
+  timer.flapping = flapping;
+  return timer;
+}
+
 async function generateAttributes(uid, attr) {
   let device;
   //generate traits
@@ -3191,16 +3217,7 @@ function prepare(uid, characteristic_type, s, device, mapping, usedDeviceReading
           return undefined;
         };
       } else {
-        compareFunction = function (oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
-          if (oldValue !== newValue) {
-            if ((oldDevTimestamp + 900) > Date.now()) {
-              if (cancelOldDevTimeout) clearTimeout(cancelOldDevTimeout);
-            }
-            if (cancelOldTimeout) clearTimeout(cancelOldTimeout);
-            return setTimeout(reportStateFunction.bind(null, device), 1000);
-          }
-          return undefined;
-        };
+        compareFunction = reportStateCompareFunction;
       }
       //BACKWARD COMPATIBILITY: delete format
       uidlog(uid, ' use reading: ' + r);
@@ -3546,5 +3563,6 @@ function registerClientApi(app) {
 }
 
 module.exports = {
-  registerClientApi
+  registerClientApi,
+  reportStateCompareFunction
 }
