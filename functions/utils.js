@@ -153,7 +153,7 @@ const jwtCheck = createJwtCheck({
 
 async function sendCmd2Fhem(uid, fcmds) {
   for (var c in fcmds) {
-    await getFirestore().collection(uid).doc('msgs').collection('firestore2fhem').add({
+    await getFirestoreDB().collection(uid).doc('msgs').collection('firestore2fhem').add({
       msg: 'EXECUTE',
       id: 0,
       cmd: fcmds[c],

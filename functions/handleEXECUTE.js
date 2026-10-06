@@ -514,7 +514,8 @@ async function processEXECUTE(uid, reqId, input) {
   for (var c of fhemExecCmd) {
     fcmds[c.connection] = fcmds[c.connection] ? fcmds[c.connection] + ';' + c.cmd : c.cmd;
   }
-  utils.sendCmd2Fhem(uid, fcmds);
+  // awaited: Cloud Run throttles the CPU after the response, errors must not crash the instance
+  await utils.sendCmd2Fhem(uid, fcmds);
 
   //create response payload
   return {
