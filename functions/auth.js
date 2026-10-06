@@ -7,27 +7,36 @@ const jsonwt = require('jsonwebtoken');
 
 // an unknown key id (Auth0 key rotation) fetches the JWKS again, at most once per minute
 const JWKS_MIN_REFRESH_INTERVAL = 60 * 1000;
+// retry after a failed JWKS request
+const JWKS_RETRY_INTERVAL = 5 * 1000;
 
 function createJwtCheck(options) {
   const { jwksUri, audience, issuer } = options;
-  let keys = {};
-  let lastFetch = 0;
+  let keys; // undefined until the JWKS was loaded once
+  let lastFetch = -Infinity;
+  let lastError;
   let pending;
 
   function loadKeys() {
     if (!pending) {
       lastFetch = Date.now();
       pending = (async () => {
-        const res = await fetch(jwksUri, { signal: AbortSignal.timeout(10000) });
-        if (!res.ok)
-          throw new Error('JWKS request failed with ' + res.status);
-        const jwks = await res.json();
-        const loaded = {};
-        for (const jwk of (jwks && jwks.keys) || []) {
-          if (jwk && jwk.kid && jwk.kty === 'RSA' && (!jwk.use || jwk.use === 'sig'))
-            loaded[jwk.kid] = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+        try {
+          const res = await fetch(jwksUri, { signal: AbortSignal.timeout(10000) });
+          if (!res.ok)
+            throw new Error('JWKS request failed with ' + res.status);
+          const jwks = await res.json();
+          const loaded = {};
+          for (const jwk of (jwks && jwks.keys) || []) {
+            if (jwk && jwk.kid && jwk.kty === 'RSA' && (!jwk.use || jwk.use === 'sig'))
+              loaded[jwk.kid] = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+          }
+          keys = loaded;
+          lastError = undefined;
+        } catch (err) {
+          lastError = err;
+          console.error('Failed to load the Auth0 signing keys', err);
         }
-        keys = loaded;
       })().finally(() => {
         pending = undefined;
       });
@@ -35,9 +44,13 @@ function createJwtCheck(options) {
     return pending;
   }
 
+  // throws if the keys were never loaded (Auth0 not reachable)
   async function getKey(kid) {
-    if (!keys[kid] && Date.now() - lastFetch > JWKS_MIN_REFRESH_INTERVAL)
+    const interval = lastError ? JWKS_RETRY_INTERVAL : JWKS_MIN_REFRESH_INTERVAL;
+    if ((!keys || !keys[kid]) && Date.now() - lastFetch > interval)
       await loadKeys();
+    if (!keys)
+      throw lastError || new Error('Auth0 signing keys not loaded');
     return keys[kid];
   }
 
@@ -57,7 +70,6 @@ function createJwtCheck(options) {
       key = await getKey(decoded.header.kid);
     } catch (err) {
       // Auth0 not reachable, the token might be valid
-      console.error('Failed to load the Auth0 signing keys', err);
       res.status(503).send({ error: 'jwks_unavailable' });
       return;
     }

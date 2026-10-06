@@ -101,12 +101,21 @@ test('unknown key ids fetch the keys at most once per minute', async function ()
   assert.strictEqual(jwksRequests, before);
 });
 
-test('Auth0 not reachable is not reported as invalid token', async function () {
+test('Auth0 not reachable is not reported as invalid token, retried after 5 s', async function (t) {
+  t.mock.timers.enable({ apis: ['Date'] });
+  const jwtCheck = check();
   jwksStatus = 500;
   try {
-    const r = await run(check(), 'Bearer ' + sign());
-    assert.strictEqual(r.status, 503);
-    assert.strictEqual(r.next, false);
+    for (let i = 0; i < 2; i++) {
+      const r = await run(jwtCheck, 'Bearer ' + sign());
+      assert.strictEqual(r.status, 503);
+      assert.strictEqual(r.next, false);
+    }
+    jwksStatus = 200;
+    // no new request within 5 s
+    assert.strictEqual((await run(jwtCheck, 'Bearer ' + sign())).status, 503);
+    t.mock.timers.tick(6000);
+    assert.strictEqual((await run(jwtCheck, 'Bearer ' + sign())).next, true);
   } finally {
     jwksStatus = 200;
   }
