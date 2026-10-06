@@ -1,8 +1,5 @@
-const admin = require("firebase-admin");
-const { getFirestore } = require('firebase-admin/firestore');
-const { getDatabase } = require('firebase-admin/database');
-const { expressjwt } = require('express-jwt');
-const jwks = require('jwks-rsa');
+const firebase = require('./firebase');
+const { createJwtCheck } = require('./auth');
 const jsonwt = require('jsonwebtoken');
 const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
@@ -11,12 +8,6 @@ const settings = require('./settings.json');
 var allDevicesCache = {};
 //var allInformIds = {};
 var googleToken = { token: '', expires: 0 };
-
-// project configuration is provided by the Cloud Functions environment
-admin.initializeApp();
-
-const realdb = getDatabase();
-const firestoredb = getFirestore();
 
 var ratePerUser = {};
 
@@ -145,26 +136,19 @@ function rateLimiter(rate, seconds) {
   }
 }
 
+// loaded on first use (see firebase.js)
 function getRealDB() {
-  return realdb;
+  return firebase.getDatabase();
 }
 
 function getFirestoreDB() {
-  return firestoredb;
+  return firebase.getFirestore();
 }
 
-const jwtCheck = expressjwt({
-  // keep the decoded token in req.user (default of express-jwt < 7)
-  requestProperty: 'user',
-  secret: jwks.expressJwtSecret({
-    cache: true,
-    rateLimit: true,
-    jwksRequestsPerMinute: 5,
-    jwksUri: settings.AUTH0_DOMAIN + '/.well-known/jwks.json',
-  }),
+const jwtCheck = createJwtCheck({
+  jwksUri: settings.AUTH0_DOMAIN + '/.well-known/jwks.json',
   audience: settings.AUDIENCE_URI,
-  issuer: settings.AUTH0_DOMAIN + '/',
-  algorithms: ['RS256']
+  issuer: settings.AUTH0_DOMAIN + '/'
 });
 
 async function sendCmd2Fhem(uid, fcmds) {
@@ -224,26 +208,16 @@ function googleTokenValid(t) {
   return !!(t && t.token && t.expires && t.expires - GOOGLE_TOKEN_MARGIN > Date.now());
 }
 
-// HomeGraph access token, cached in memory and in Firestore (shared by all instances)
+// HomeGraph access token, cached in memory. Every instance requests its own token from Google
+// (one request per hour), reading a shared token from Firestore costs much more at startup.
 async function getGoogleToken(uid) {
   if (googleTokenValid(googleToken))
     return googleToken.token;
-
-  try {
-    const stored = (await firestoredb.collection('settings').doc('googletoken').get()).data();
-    if (googleTokenValid(stored)) {
-      googleToken = { token: stored.token, expires: stored.expires };
-      return googleToken.token;
-    }
-  } catch (err) {
-    console.error('Failed to read the Google token from Firestore', err);
-  }
-
   return await retrieveGoogleToken(uid);
 }
 
 async function getSyncFeatureLevel(uid) {
-  var state = await firestoredb.collection(uid).doc('state').get();
+  var state = await getFirestoreDB().collection(uid).doc('state').get();
 
   if (state.data() && state.data().featurelevel)
     return state.data().featurelevel;
@@ -260,7 +234,7 @@ async function getSyncFeatureLevel(uid) {
 //     format = 'float0.5';
 
 //   reading = reading.replace(/\.|\#|\[|\]|\$/g, '_');
-//   await realdb.ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
+//   await getRealDB().ref('/users/' + uid + '/devices/' + device.replace(/\.|\#|\[|\]|\$/g, '_') + '/' + reading).set({value: val, 'format': format});
 
 //   uidlog(uid, 'Reading updated ' + device + ':' + reading + ' = ' + val);
 // }
@@ -302,7 +276,7 @@ function prepareDevice(uid, dev) {
 }
 
 async function getLastSyncTimestamp(uid) {
-  var lastSyncRef = await realdb.ref('/users/' + uid + '/lastSync').once('value');
+  var lastSyncRef = await getRealDB().ref('/users/' + uid + '/lastSync').once('value');
   uidlog(uid, 'getLastSyncTimestamp');
   if (lastSyncRef.val() && lastSyncRef.val().ts)
     return lastSyncRef.val().ts;
@@ -337,7 +311,7 @@ async function loadDevice(uid, devicename) {
   }
 
   if (updateDevFromDb) {
-    var ref = await realdb.ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
+    var ref = await getRealDB().ref('/users/' + uid + '/devices/' + devicename.replace(/\.|\#|\[|\]|\$/g, '_') + '/').once('value');
     ref.forEach(function (child) {
       if (child.key === 'XXXDEVICEDEFXXX') {
         allDevicesCache[uid]['devices'][devicename] = {
@@ -381,7 +355,7 @@ async function loadDevices(uid, nocache) {
     updateDevFromDb = 1;
 
   if (updateDevFromDb) {
-    var allDevices = await realdb.ref('/users/' + uid + '/devices').once('value');
+    var allDevices = await getRealDB().ref('/users/' + uid + '/devices').once('value');
     allDevices.forEach(function (device) {
       device.forEach(function (child) {
         if (child.key === 'XXXDEVICEDEFXXX') {
@@ -419,7 +393,7 @@ async function getAllDevicesAndReadings(uid) {
 
   await loadDevices(uid);
 
-  var allReadings = await realdb.ref('/users/' + uid + '/readings').once('value');
+  var allReadings = await getRealDB().ref('/users/' + uid + '/readings').once('value');
   allReadings.forEach(function (device) {
     tmpReadings = {};
 
@@ -442,7 +416,7 @@ async function getDeviceAndReadings(uid, devname) {
 
   var dev = await loadDevice(uid, devname);
 
-  var readings = await realdb.ref('/users/' + uid + '/readings/' + devname.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
+  var readings = await getRealDB().ref('/users/' + uid + '/readings/' + devname.replace(/\.|\#|\[|\]|\$/g, '_')).once('value');
   readings.forEach(function (child) {
     readings[child.key] = child.val().value;
   });
@@ -477,7 +451,7 @@ async function getDevicesAndReadings(uid, devname) {
 
   const names = mappingDevices(dev);
   const snaps = await Promise.all(names.map((name) =>
-    realdb.ref('/users/' + uid + '/readings/' + name.replace(/\.|\#|\[|\]|\$/g, '_')).once('value')));
+    getRealDB().ref('/users/' + uid + '/readings/' + name.replace(/\.|\#|\[|\]|\$/g, '_')).once('value')));
   names.forEach(function (name, i) {
     const readings = {};
     snaps[i].forEach(function (child) {
@@ -489,7 +463,7 @@ async function getDevicesAndReadings(uid, devname) {
 }
 
 async function getClientVersion(uid) {
-  var docRef = await firestoredb.collection(uid).doc('client').get();
+  var docRef = await getFirestoreDB().collection(uid).doc('client').get();
   var client = docRef.data();
   var usedVersion = "0.0.1";
   if (client && client.packageversion)
@@ -530,14 +504,11 @@ async function retrieveGoogleToken(uid) {
     return undefined;
   }
 
-  //access token from google, only written to Firestore when renewed (about once per hour)
+  //access token from google
   googleToken = {
     token: resJson.access_token,
     expires: Date.now() + (resJson.expires_in || 3600) * 1000
   };
-  firestoredb.collection('settings').doc('googletoken').set(googleToken).catch(function (err) {
-    console.error('Failed to store the Google token in Firestore', err);
-  });
   return googleToken.token;
 }
 

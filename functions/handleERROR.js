@@ -1,4 +1,3 @@
-const admin = require("firebase-admin");
 const utils = require('./utils');
 
 const uidlog = require('./logger').uidlog;

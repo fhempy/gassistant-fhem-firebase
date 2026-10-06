@@ -12,7 +12,7 @@ var authRouter = require('./adminauth');
 //session handling
 var session = require('express-session');
 const { RealtimeDatabaseStore } = require('./sessionstore');
-const { getDatabase } = require('firebase-admin/database');
+const { getDatabase } = require('./firebase');
 var passport = require('passport');
 var Auth0Strategy = require('passport-auth0');
 

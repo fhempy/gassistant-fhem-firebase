@@ -18,12 +18,10 @@
     "cors": "^2.8.6",
     "deepmerge": "^4.3.1",
     "express": "^5.2.1",
-    "express-jwt": "^8.5.1",
     "express-session": "^1.19.0",
     "firebase-admin": "^14.5.0",
     "firebase-functions": "^7.4.0",
     "jsonwebtoken": "^9.0.3",
-    "jwks-rsa": "^4.1.0",
     "passport": "^0.7.0",
     "passport-auth0": "^1.4.5"
   },

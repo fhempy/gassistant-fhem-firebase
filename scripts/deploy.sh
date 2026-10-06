@@ -28,8 +28,9 @@ ALL=(api reportstate dynamicfunctionsv1 codelanding firebase admin)
 SELECTED=("$@")
 [ ${#SELECTED[@]} -eq 0 ] && SELECTED=("${ALL[@]}")
 
-echo "==> Tests"
-(cd functions && npm test)
+echo "==> Abhängigkeiten und Tests"
+# package-lock.json wird mit hochgeladen und muss zu package.json passen (npm ci beim Build)
+(cd functions && npm install --no-audit --no-fund && npm test)
 
 firebase_only=""
 run_functions=()
