@@ -29,8 +29,10 @@ async function processQUERY(uid, input, reportstate) {
   //if (input.payload.devices.length > 1) {
   //preload all devices
   try {
-    // a single device (e.g. report state) only needs its own readings, not those of all devices
-    if (input.payload.devices.length === 1 && input.payload.devices[0].customData)
+    // a single device (e.g. report state) only needs its own readings, not those of all devices.
+    // processQUERY is also executed in the client (dynamicfunctionsv1), its utils don't have getDevicesAndReadings.
+    if (input.payload.devices.length === 1 && input.payload.devices[0].customData &&
+      typeof utils.getDevicesAndReadings === 'function')
       allDevices = await utils.getDevicesAndReadings(uid, input.payload.devices[0].customData.device);
     else
       allDevices = await utils.getAllDevicesAndReadings(uid);
