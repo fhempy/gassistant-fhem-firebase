@@ -54,3 +54,20 @@ test('concurrent QUERY requests return their own devices', async function () {
     utils.cached2Format = orig.cached;
   }
 });
+
+test('processQUERY works in the client, whose utils have no getDevicesAndReadings', async function () {
+  // as in the client (lib/localhandleQUERY.js): source code evaluated with the client utils
+  const clientUtils = {
+    getAllDevicesAndReadings: async () => ({ lamp: lamp('lamp', 'on') }),
+    cached2Format: async (uid, mapping, readings) => readings.state === 'on'
+  };
+  const errors = [];
+  const processQUERY = new Function('utils', 'uidlog', 'uiderror',
+    'return (' + hquery.processQUERY.toString() + ')')(clientUtils, () => {}, (uid, msg) => errors.push(msg));
+  const res = await processQUERY('uid', {
+    intent: 'action.devices.QUERY',
+    payload: { devices: [{ id: 'lamp', customData: { device: 'lamp' } }] }
+  }, 1);
+  assert.deepStrictEqual(errors, []);
+  assert.strictEqual(res.devices.lamp.on, true);
+});
