@@ -686,6 +686,20 @@ step_concurrency() {
   fi
 }
 
+# CPU wie bei 1st gen, abhängig vom Speicher des Dienstes
+gen1_cpu() {
+  local memory
+  memory="$(gcloud run services describe "$1" --region="$(region_of "$1")" --project="$PROJECT" \
+    --format='value(spec.template.spec.containers[0].resources.limits.memory)' 2>/dev/null)"
+  case "$memory" in
+    128Mi) echo 0.08 ;;
+    256Mi|"") echo 0.17 ;;
+    512Mi) echo 0.33 ;;
+    1Gi|1024Mi) echo 0.58 ;;
+    *) echo 1 ;;
+  esac
+}
+
 # concurrency für 2nd gen Firebase Functions (generations.json) und Cloud Run Functions setzen
 apply_concurrency() {
   local value="$1" name only="" cpu
@@ -700,7 +714,9 @@ apply_concurrency() {
       if [ "$value" -gt 1 ]; then
         run gcloud run services update "$name" --region="$(region_of "$name")" --project="$PROJECT" --concurrency="$value" --cpu="$cpu"
       else
-        run gcloud run services update "$name" --region="$(region_of "$name")" --project="$PROJECT" --concurrency=1
+        # CPU wieder auf den 1st gen Wert setzen, 1 vCPU mit 1 Anfrage pro Instanz kostet ein Vielfaches
+        run gcloud run services update "$name" --region="$(region_of "$name")" --project="$PROJECT" --concurrency=1 \
+          --cpu="$(gen1_cpu "$name")"
       fi
     fi
   done
