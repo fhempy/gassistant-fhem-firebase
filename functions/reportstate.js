@@ -1,24 +1,14 @@
 const express = require('express');
 const cors = require('cors');
-const jsonwt = require('jsonwebtoken');
 const utils = require('./utils');
-const admin = require("firebase-admin");
-const uidlog = require('./logger').uidlog;
 const uiderror = require('./logger').uiderror;
-const hquery = require('./handleQUERY');
 
 const app3 = express();
 app3.use(cors());
 app3.use(express.json({ limit: '10mb' }));
 app3.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app3.use(utils.jwtCheck);
-app3.use(function (req, res, next) {
-  const {
-    sub: uid
-  } = req.user;
-  uidlog(uid, 'Function called: ' + req.originalUrl);
-  next();
-});
+// no log per request, Cloud Run writes a request log anyway (report state is called very often)
 
 app3.post('/singledevice_v2', async (req, res)  => {
   const {

@@ -1,5 +1,4 @@
 const { getFirestore } = require('firebase-admin/firestore');
-const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 
 const uidlog = require('./logger').uidlog;
@@ -41,11 +40,7 @@ async function deleteUserCollection(uid) {
 }
 
 async function deleteHomegraph(uid) {
-  var google_token = await utils.getGoogleToken();
-  if (!google_token)
-    google_token = await utils.retrieveGoogleToken(uid);
-
-  uidlog(uid, 'google token: ' + google_token);
+  var google_token = await utils.getGoogleToken(uid);
 
   //report state
   for (var i = 0; i < 2; i++) {
@@ -63,9 +58,7 @@ async function deleteHomegraph(uid) {
     if (deleteRes.status == 401) {
       google_token = await utils.retrieveGoogleToken(uid);
     } else {
-      //save the token to database
       uidlog(uid, 'homegraph DELETED from uid=' + uid);
-      await utils.setGoogleToken(google_token);
       break;
     }
   }

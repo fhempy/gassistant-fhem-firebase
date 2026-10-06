@@ -1,4 +1,3 @@
-const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const settings = require('./settings.json');
 

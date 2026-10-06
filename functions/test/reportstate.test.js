@@ -40,3 +40,15 @@ test('nothing to report returns undefined', function () {
   assert.strictEqual(utils.sanitizeReportState('uid', report({})), undefined);
   assert.strictEqual(utils.sanitizeReportState('uid', {}), undefined);
 });
+
+test('readings of other devices used by the mappings are loaded', function () {
+  const names = utils.mappingDevices({
+    name: 'lamp',
+    mappings: {
+      On: { device: 'switch', reading: ['state'] },
+      Brightness: { device: 'lamp', reading: ['pct'] },
+      Modes: [[{ device: 'mode' }]]
+    }
+  });
+  assert.deepStrictEqual(names.sort(), ['lamp', 'mode', 'switch']);
+});

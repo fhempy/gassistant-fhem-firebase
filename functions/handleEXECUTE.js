@@ -1,5 +1,4 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const settings = require('./settings.json');
 const { compareVersions } = require('compare-versions');

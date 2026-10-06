@@ -1,5 +1,4 @@
 const admin = require("firebase-admin");
-const functions = require("firebase-functions/v1");
 const utils = require('./utils');
 const createDirective = require('./utils.js').createDirective;
 
@@ -30,7 +29,11 @@ async function processQUERY(uid, input, reportstate) {
   //if (input.payload.devices.length > 1) {
   //preload all devices
   try {
-    allDevices = await utils.getAllDevicesAndReadings(uid);
+    // a single device (e.g. report state) only needs its own readings, not those of all devices
+    if (input.payload.devices.length === 1 && input.payload.devices[0].customData)
+      allDevices = await utils.getDevicesAndReadings(uid, input.payload.devices[0].customData.device);
+    else
+      allDevices = await utils.getAllDevicesAndReadings(uid);
     uidlog(uid, "getAllDevicesAndReadings finished");
   } catch (err) {
     uiderror(uid, 'getAllDevicesAndReadings failed with ' + err.stack, err);

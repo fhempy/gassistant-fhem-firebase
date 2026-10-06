@@ -1,7 +1,6 @@
 const admin = require("firebase-admin");
 const { getFirestore } = require('firebase-admin/firestore');
 const { getDatabase } = require('firebase-admin/database');
-const functions = require("firebase-functions/v1");
 const { expressjwt } = require('express-jwt');
 const jwks = require('jwks-rsa');
 const jsonwt = require('jsonwebtoken');
@@ -11,7 +10,7 @@ const settings = require('./settings.json');
 
 var allDevicesCache = {};
 //var allInformIds = {};
-var googleToken = '';
+var googleToken = { token: '', expires: 0 };
 
 // project configuration is provided by the Cloud Functions environment
 admin.initializeApp();
@@ -183,9 +182,7 @@ async function sendCmd2Fhem(uid, fcmds) {
 // Request Sync needs a service account token, API keys are no longer supported by HomeGraph
 async function initSync(uid) {
   uidlog(uid, 'initiate sync');
-  var google_token = await getGoogleToken();
-  if (!google_token)
-    google_token = await retrieveGoogleToken(uid);
+  var google_token = await getGoogleToken(uid);
 
   for (var i = 0; i < 2; i++) {
     var response = await fetch('https://homegraph.googleapis.com/v1/devices:requestSync', {
@@ -205,7 +202,6 @@ async function initSync(uid) {
       continue;
     }
     if (response.ok) {
-      setGoogleToken(google_token);
       uidlog(uid, 'SYNC initiated');
     } else {
       uiderror(uid, 'Request SYNC failed: ' + response.status + ' ' + await response.text());
@@ -221,24 +217,29 @@ function createDirective(reqId, payload) {
   };
 } // createDirective
 
-async function getGoogleToken() {
-  if (googleToken != '')
-    return googleToken;
+// renew the access token 5 minutes before it expires
+const GOOGLE_TOKEN_MARGIN = 5 * 60 * 1000;
 
-  var googleTokenRef = await firestoredb.collection('settings').doc('googletoken').get();
-
-  if (googleTokenRef.data() && googleTokenRef.data().token)
-    return googleTokenRef.data().token;
-
-  return undefined;
+function googleTokenValid(t) {
+  return !!(t && t.token && t.expires && t.expires - GOOGLE_TOKEN_MARGIN > Date.now());
 }
 
-function setGoogleToken(google_token) {
-  googleToken = google_token;
-  firestoredb.collection('settings').doc('googletoken').set({
-    token: google_token
-  })
-    .then(r => { });
+// HomeGraph access token, cached in memory and in Firestore (shared by all instances)
+async function getGoogleToken(uid) {
+  if (googleTokenValid(googleToken))
+    return googleToken.token;
+
+  try {
+    const stored = (await firestoredb.collection('settings').doc('googletoken').get()).data();
+    if (googleTokenValid(stored)) {
+      googleToken = { token: stored.token, expires: stored.expires };
+      return googleToken.token;
+    }
+  } catch (err) {
+    console.error('Failed to read the Google token from Firestore', err);
+  }
+
+  return await retrieveGoogleToken(uid);
 }
 
 async function getSyncFeatureLevel(uid) {
@@ -452,6 +453,41 @@ async function getDeviceAndReadings(uid, devname) {
   };
 }
 
+// names of the FHEM devices whose readings are used by the mappings of a device
+function mappingDevices(dev) {
+  const names = new Set([dev.name]);
+  const add = function (m) {
+    if (Array.isArray(m))
+      m.forEach(add);
+    else if (m && typeof m === 'object' && typeof m.device === 'string')
+      names.add(m.device);
+  };
+  for (const key of Object.keys(dev.mappings || {}))
+    add(dev.mappings[key]);
+  return Array.from(names);
+}
+
+// Same structure as getAllDevicesAndReadings, but only loads one device and the readings it uses.
+// Much less data than the readings of all devices, e.g. for report state of a single device.
+async function getDevicesAndReadings(uid, devname) {
+  const result = {};
+  const dev = await loadDevice(uid, devname);
+  if (!dev || Object.keys(dev).length === 0)
+    return result;
+
+  const names = mappingDevices(dev);
+  const snaps = await Promise.all(names.map((name) =>
+    realdb.ref('/users/' + uid + '/readings/' + name.replace(/\.|\#|\[|\]|\$/g, '_')).once('value')));
+  names.forEach(function (name, i) {
+    const readings = {};
+    snaps[i].forEach(function (child) {
+      readings[child.key] = child.val().value;
+    });
+    result[name] = { device: name === devname ? dev : {}, readings: readings };
+  });
+  return result;
+}
+
 async function getClientVersion(uid) {
   var docRef = await firestoredb.collection(uid).doc('client').get();
   var client = docRef.data();
@@ -489,11 +525,20 @@ async function retrieveGoogleToken(uid) {
   const response = await fetch('https://accounts.google.com/o/oauth2/token', options);
   var resJson = await response.json();
 
-  if (!resJson.access_token)
+  if (!resJson.access_token) {
     uiderror(uid, 'Failed to get access token from Google: ' + JSON.stringify(resJson));
+    return undefined;
+  }
 
-  //access token from google
-  return await resJson.access_token;
+  //access token from google, only written to Firestore when renewed (about once per hour)
+  googleToken = {
+    token: resJson.access_token,
+    expires: Date.now() + (resJson.expires_in || 3600) * 1000
+  };
+  firestoredb.collection('settings').doc('googletoken').set(googleToken).catch(function (err) {
+    console.error('Failed to store the Google token in Firestore', err);
+  });
+  return googleToken.token;
 }
 
 // QUERY responses contain fields which are not valid states for HomeGraph Report State
@@ -552,9 +597,7 @@ function sanitizeReportState(uid, data) {
 
 // send to HomeGraph, the error message of HomeGraph is logged
 async function postReportState(uid, data) {
-  var google_token = await getGoogleToken();
-  if (!google_token)
-    google_token = await retrieveGoogleToken(uid);
+  var google_token = await getGoogleToken(uid);
 
   for (var i = 0; i < 2; i++) {
     const reportStateRes = await fetch('https://homegraph.googleapis.com/v1/devices:reportStateAndNotification', {
@@ -565,15 +608,12 @@ async function postReportState(uid, data) {
       },
       body: JSON.stringify(data)
     });
-    uidlog(uid, 'reportState response: ' + reportStateRes.status);
-
     if (reportStateRes.status == 401 && i == 0) {
       google_token = await retrieveGoogleToken(uid);
       continue;
     }
-    if (reportStateRes.ok) {
-      setGoogleToken(google_token);
-    } else {
+    // successful reports are not logged, Cloud Run writes a request log anyway
+    if (!reportStateRes.ok) {
       const text = await reportStateRes.text();
       console.error(uid + ': reportState failed with ' + reportStateRes.status + ': ' + text.substring(0, 2000) +
         '\nrequest: ' + JSON.stringify(data).substring(0, 2000));
@@ -1067,12 +1107,13 @@ module.exports = {
   loadDevices,
   retrieveGoogleToken,
   getGoogleToken,
-  setGoogleToken,
   getSyncFeatureLevel,
   getRealDB,
   getFirestoreDB,
   getAllDevicesAndReadings,
   getDeviceAndReadings,
+  getDevicesAndReadings,
+  mappingDevices,
   rateLimiter,
   getClientVersion,
   getGoogleDeviceTypes,
