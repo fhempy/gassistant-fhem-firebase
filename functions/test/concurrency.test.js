@@ -30,12 +30,13 @@ test.after(async function () {
 });
 
 test('concurrent QUERY requests return their own devices', async function () {
-  const orig = { all: utils.getAllDevicesAndReadings, cached: utils.cached2Format };
+  const orig = { all: utils.getAllDevicesAndReadings, single: utils.getDevicesAndReadings, cached: utils.cached2Format };
   const devices = {};
   for (let i = 0; i < 20; i++)
     devices['lamp' + i] = lamp('lamp' + i, i % 2 ? 'on' : 'off');
   // random delays force the requests to interleave at every await
   utils.getAllDevicesAndReadings = async () => { await sleep(Math.random() * 5); return devices; };
+  utils.getDevicesAndReadings = async (uid, name) => { await sleep(Math.random() * 5); return { [name]: devices[name] }; };
   utils.cached2Format = async (uid, mapping, readings) => { await sleep(Math.random() * 5); return readings.state === 'on'; };
   try {
     const names = Object.keys(devices);
@@ -49,6 +50,7 @@ test('concurrent QUERY requests return their own devices', async function () {
     });
   } finally {
     utils.getAllDevicesAndReadings = orig.all;
+    utils.getDevicesAndReadings = orig.single;
     utils.cached2Format = orig.cached;
   }
 });

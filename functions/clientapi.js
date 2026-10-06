@@ -5,7 +5,6 @@ const utils = require('./utils');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getDatabase } = require('firebase-admin/database');
 const { getAuth } = require('firebase-admin/auth');
-const functions = require("firebase-functions/v1");
 const uidlog = require('./logger').uidlog;
 const uidlogfct = require('./logger').uidlogfct;
 const uiderror = require('./logger').uiderror;
