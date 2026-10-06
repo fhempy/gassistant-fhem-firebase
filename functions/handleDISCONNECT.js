@@ -21,7 +21,7 @@ async function handleDISCONNECT(uid, reqId, res) {
 }
 
 async function deleteUserCollection(uid) {
-  var batch = database.db.batch();
+  var batch = getFirestore().batch();
   //generate traits in firestore
   var ref = await getFirestore().collection(uid).doc('devices').collection('devices').get();
   for (var r of ref.docs) {
