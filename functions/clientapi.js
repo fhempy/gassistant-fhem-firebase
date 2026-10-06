@@ -2,9 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const merge = require('deepmerge')
 const utils = require('./utils');
-const { getFirestore } = require('firebase-admin/firestore');
-const { getDatabase } = require('firebase-admin/database');
-const { getAuth } = require('firebase-admin/auth');
+const { getFirestore, getDatabase, getAuth } = require('./firebase');
 const uidlog = require('./logger').uidlog;
 const uidlogfct = require('./logger').uidlogfct;
 const uiderror = require('./logger').uiderror;
@@ -17,11 +15,32 @@ var deviceRooms = {};
 // Report state timing for readings without a special handling, executed in the client
 // (sent as source code, must not use anything outside the function).
 // A change is reported after 1s. A reading which changed again within 10s (e.g. every second)
-// is only reported again once it did not change for 10s. The time of the last change is kept on the
-// returned timer, as the client only keeps the timer between the calls.
+// is only reported again once it did not change for 10s. The time of the last change is kept on
+// the returned timer, as the client only keeps the timer between the calls.
+// States equal to the last reported states of the device are not reported again (up to an hour).
 function reportStateCompareFunction(oldValue, oldTimestamp, newValue, cancelOldTimeout, oldDevTimestamp, cancelOldDevTimeout, reportStateFunction, device) {
   var STABLE_DELAY = 1000;
   var FLAPPING_DELAY = 10000;
+  // an unchanged state is reported again at the earliest after this time
+  var UNCHANGED_RESEND = 60 * 60 * 1000;
+
+  // Clients >= 4.0 pass the states of the device (QUERY result), older clients only the device name.
+  // A reading change often doesn't change the state reported to Google (e.g. "set_on" -> "on"),
+  // such reports are skipped. The last reported states are shared by all readings of the client.
+  function report() {
+    var states = device && device.payload && device.payload.devices && device.payload.devices.states;
+    if (states && typeof states === 'object' && typeof global !== 'undefined') {
+      var reported = global.fhemConnectReportedStates || (global.fhemConnectReportedStates = {});
+      var key = Object.keys(states).sort().join(',');
+      var json = JSON.stringify(states);
+      var last = reported[key];
+      if (last && last.json === json && Date.now() - last.ts < UNCHANGED_RESEND)
+        return;
+      reported[key] = { json: json, ts: Date.now() };
+    }
+    reportStateFunction(device);
+  }
+
   if (oldValue === newValue)
     return cancelOldTimeout;
   var now = Date.now();
@@ -34,7 +53,7 @@ function reportStateCompareFunction(oldValue, oldTimestamp, newValue, cancelOldT
   // Not for a flapping reading, otherwise it would delay the report of the other reading.
   if (!flapping && cancelOldDevTimeout && (oldDevTimestamp + 900) > now && cancelOldDevTimeout !== cancelOldTimeout)
     clearTimeout(cancelOldDevTimeout);
-  var timer = setTimeout(reportStateFunction.bind(null, device), flapping ? FLAPPING_DELAY : STABLE_DELAY);
+  var timer = setTimeout(report, flapping ? FLAPPING_DELAY : STABLE_DELAY);
   timer.lastChange = now;
   timer.flapping = flapping;
   return timer;

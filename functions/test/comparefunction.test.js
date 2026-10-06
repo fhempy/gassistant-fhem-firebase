@@ -85,3 +85,40 @@ test('a flapping reading does not delay another reading of the device', function
   assert.ok(reports.length >= 1 && reports.length <= 2, JSON.stringify(reports));
   assert.ok(reports[0] === 'state=on' || reports[0] === 'power=1', JSON.stringify(reports));
 });
+
+// clients >= 4.0 pass the QUERY result of the device
+function payload(states) {
+  return { requestId: '1', agentUserId: 'uid', payload: { devices: { states: { lamp: states } } } };
+}
+
+test('unchanged states are not reported again', function (t) {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  delete global.fhemConnectReportedStates;
+  const reports = [];
+  const store = {};
+  const report = (d) => reports.push(d.payload.devices.states.lamp);
+  function update(value, states) {
+    const s = store.state || (store.state = {});
+    s.cancelOldTimeout = !s.oldValue
+      ? compareFunction('', 0, value, undefined, 0, undefined, report, payload(states))
+      : compareFunction(s.oldValue, s.oldTimestamp, value, s.cancelOldTimeout, 0, undefined, report, payload(states));
+    s.oldValue = value;
+    s.oldTimestamp = Date.now();
+  }
+  update('on', { on: true, online: true });
+  t.mock.timers.tick(20000);
+  assert.deepStrictEqual(reports, [{ on: true, online: true }]);
+  // reading changed, state for Google didn't
+  update('set_on', { on: true, online: true });
+  t.mock.timers.tick(20000);
+  assert.strictEqual(reports.length, 1);
+  update('off', { on: false, online: true });
+  t.mock.timers.tick(20000);
+  assert.deepStrictEqual(reports[1], { on: false, online: true });
+  // the same state is reported again after an hour
+  t.mock.timers.tick(60 * 60 * 1000);
+  update('set_off', { on: false, online: true });
+  t.mock.timers.tick(20000);
+  assert.strictEqual(reports.length, 3);
+  delete global.fhemConnectReportedStates;
+});

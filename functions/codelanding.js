@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
 const utils = require('./utils');
-const admin = require("firebase-admin");
 
 const app3 = express();
 app3.use(cors());

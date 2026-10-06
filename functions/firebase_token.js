@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jsonwt = require('jsonwebtoken');
-const { getAuth } = require('firebase-admin/auth');
+const { getAuth } = require('./firebase');
 const utils = require('./utils');
 const uidlog = require('./logger.js').uidlog;
 
