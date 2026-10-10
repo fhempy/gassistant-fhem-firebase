@@ -567,6 +567,20 @@ function sanitizeReportState(uid, data) {
 }
 
 // send to HomeGraph, the error message of HomeGraph is logged
+// "<uid>: reportState sent" at most once per hour and user in an instance, for the statistics of
+// active users (scripts/active-users.sh). Not logged per request, report state is called very often.
+const REPORT_STATE_LOG_INTERVAL = 60 * 60 * 1000;
+const reportStateLogged = new Map();
+
+function logReportStateSent(uid) {
+  const now = Date.now();
+  const last = reportStateLogged.get(uid);
+  if (last !== undefined && now - last < REPORT_STATE_LOG_INTERVAL)
+    return;
+  reportStateLogged.set(uid, now);
+  uidlog(uid, 'reportState sent');
+}
+
 async function postReportState(uid, data) {
   var google_token = await getGoogleToken(uid);
 
@@ -583,8 +597,10 @@ async function postReportState(uid, data) {
       google_token = await retrieveGoogleToken(uid);
       continue;
     }
-    // successful reports are not logged, Cloud Run writes a request log anyway
-    if (!reportStateRes.ok) {
+    // successful reports are not logged per request, Cloud Run writes a request log anyway
+    if (reportStateRes.ok) {
+      logReportStateSent(uid);
+    } else {
       const text = await reportStateRes.text();
       console.error(uid + ': reportState failed with ' + reportStateRes.status + ': ' + text.substring(0, 2000) +
         '\nrequest: ' + JSON.stringify(data).substring(0, 2000));
@@ -1074,6 +1090,7 @@ module.exports = {
   jwtCheck,
   reportState,
   reportStateWithData,
+  logReportStateSent,
   loadDevice,
   loadDevices,
   retrieveGoogleToken,

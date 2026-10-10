@@ -52,3 +52,18 @@ test('readings of other devices used by the mappings are loaded', function () {
   });
   assert.deepStrictEqual(names.sort(), ['lamp', 'mode', 'switch']);
 });
+
+test('reportState sent is logged at most once per hour and user', function (t) {
+  const lines = [];
+  t.mock.method(console, 'log', (msg) => lines.push(msg));
+  let now = 1000000;
+  t.mock.method(Date, 'now', () => now);
+  utils.logReportStateSent('uid-a');
+  utils.logReportStateSent('uid-a');
+  utils.logReportStateSent('uid-b');
+  now += 60 * 60 * 1000 - 1;
+  utils.logReportStateSent('uid-a');
+  now += 1;
+  utils.logReportStateSent('uid-a');
+  assert.deepStrictEqual(lines, ['uid-a: reportState sent', 'uid-b: reportState sent', 'uid-a: reportState sent']);
+});
